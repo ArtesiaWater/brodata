@@ -1,0 +1,16 @@
+"ALGEMENE GEGEVENS BORING",,,,,,,,,,,,,,,,,,,
+"NITG-nr","X-coordinaat","Y-coordinaat","CRS","Kaartblad","Bepaling locatie","Plaatsnaam","Provincie","Maaiveldhoogte (m tov NAP)","Bepaling maaiveldhoogte","Boormethode","Einddiepte (m beneden maaiveld)","Datum boring","Eigenaar","Uitvoerder","","","","",""
+"B38B2152","118435","439819","RD2000","38B","Onbekend","Onbekend","Zuid-Holland","","","","5","01-01-1966","Onbekend","Fugro B.V.","","","","",""
+,,,,,,,,,,,,,,,,,,,
+"ALGEMENE GEGEVENS LITHOLOGIE",,,,,,,,,,,,,,,,,,,
+"Organisatie Beschrijver","Beschrijvingsmethode","Nat/Droog beschreven","Datum boring","Kwaliteit beschrijving lithologie","","","","","","","","","","","","","","",""
+"Onbekend","Onbekend","","","C","","","","","","","","","","","","","","",""
+,,,,,,,,,,,,,,,,,,,
+"LITHOLOGIE LAGEN",,,,,,,,,,,,,,,,,,,
+"Bovenkant laag (m beneden maaiveld)","Onderkant laag (m beneden maaiveld)","Kleur","Hoofdgrondsoort","Sublaag","Zandmediaan M63","Zandmediaanklasse","Bijmenging kei","Lutum %","Bijmenging silt","Silt %","Bijmenging zand","Zand %","Bijmenging grind","Grind %","Bijmenging humus","Organische stof %","Kalkgehalte","",""
+"0.0","1.5","grijs","klei","","","","","","","","sterk zandig","","","","","","","",""
+"1.5","1.9","bruin","klei","","","","","","matig siltig","","","","","","","","","",""
+"1.9","2.2","bruin","klei","","","","","","","","","","","","humeus","","","",""
+"2.2","3.6","grijs","klei","","","","","","matig siltig","","","","","","","","","",""
+"3.6","4.8","grijs","klei","","","","","","","","","","","","","","","",""
+"4.8","5.0","grijs","klei","","","","","","","","sterk zandig","","","","sterk humeus","","","",""
