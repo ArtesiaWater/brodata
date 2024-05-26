@@ -2,7 +2,7 @@ import requests
 from tqdm import tqdm
 import pandas as pd
 from .webservices import get_configuration, get_gdf
-from .util import FileOrUrl
+from io import StringIO
 
 
 def get_verticaal_elektrisch_sondeeronderzoek(
@@ -79,7 +79,17 @@ def get_geologisch_booronderzoek(extent, config=None, timeout=5, silent=False):
         data[name] = GeologischBooronderzoek(url, timeout=timeout)
 
 
-class CsvFileOrUrl(FileOrUrl):
+class CsvFileOrUrl:
+    def __init__(self, fname, timeout=5):
+        if fname.startswith("http"):
+            r = requests.get(fname, timeout=timeout)
+            if not r.ok:
+                raise (Exception((f"Retieving data from {fname} failed")))
+            self._read_contents(StringIO(r.text))
+        else:
+            with open(fname, "r") as f:
+                self._read_contents(f)
+
     def _read_properties_csv_rows(self, f, merge_columns=False, **kwargs):
         # this is the new format of properties from dinoloket
         df, line = self._read_csv_part(f, header=None, index_col=0, **kwargs)

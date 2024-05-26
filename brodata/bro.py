@@ -1,6 +1,7 @@
 import logging
 import requests
 import xml
+import types
 import pandas as pd
 from pyproj import Transformer
 import geopandas as gpd
@@ -104,9 +105,9 @@ def get_characteristics(
             if len(child) == 0:
                 d[key] = child.text
             elif key == "standardizedLocation":
-                d["lat"], d["lon"] = read_point(child)
+                d["lat"], d["lon"] = XmlFileOrUrl.read_point(child)
             elif key == "deliveredLocation":
-                d["x"], d["y"] = read_point(child)
+                d["x"], d["y"] = XmlFileOrUrl.read_point(child)
             elif key.endswith("Date") or key.endswith("Overview"):
                 d[key] = child[0].text
             elif key in ["diameterRange", "screenPositionRange"]:
@@ -127,7 +128,36 @@ def get_characteristics(
     return gdf
 
 
-def read_point(point):
-    ns = "{http://www.opengis.net/gml/3.2}"
-    xy = [float(x) for x in point.find(f"{ns}pos").text.split()]
-    return xy
+class XmlFileOrUrl:
+    def __init__(self, url_or_file, timeout=5, to_file=None, **kwargs):
+        if url_or_file.startswith("http"):
+            r = requests.get(url_or_file, timeout=timeout, **kwargs)
+            if not r.ok:
+                # msg = r.json()["errors"][0]["message"]
+                raise (Exception((f"Retieving data from {url_or_file} failed")))
+            if to_file is not None:
+                with open(to_file, "w") as f:
+                    f.write(r.text)
+            root = xml.etree.ElementTree.fromstring(r.text)
+            self._read_contents(root)
+        else:
+            tree = xml.etree.ElementTree.parse(url_or_file)
+            root = tree.getroot()
+            self._read_contents(root)
+
+    def to_dict(self):
+        d = {}
+        for attrib in dir(self):
+            if attrib.startswith("_"):
+                continue
+            value = getattr(self, attrib)
+            if type(value) == types.MethodType:
+                continue
+            d[attrib] = value
+        return d
+
+    @staticmethod
+    def _read_point(point):
+        ns = "{http://www.opengis.net/gml/3.2}"
+        xy = [float(x) for x in point.find(f"{ns}pos").text.split()]
+        return xy

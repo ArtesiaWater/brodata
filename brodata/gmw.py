@@ -72,79 +72,76 @@ def get_gmw(bro_id):
 
     """
     url = f"https://publiek.broservices.nl/gm/gmw/v1/objects/{bro_id}"
-    req = requests.get(url)
-    if req.status_code > 200:
-        logger.error(req.json()["errors"][0]["message"])
-        return
-    return read_gmw(req.text)
+    return GroundwaterMonitoringWell(url)
 
 
-def read_gmw(fname):
-    # read results
-    tree = xml.etree.ElementTree.fromstring(fname)
-    ns = "{http://www.broservices.nl/xsd/dsgmw/1.1}"
+class GroundwaterMonitoringWell(bro.XmlFileOrUrl):
+    def _read_contents(self, tree):
+        ns = "{http://www.broservices.nl/xsd/dsgmw/1.1}"
 
-    gmws = tree.findall(f".//{ns}GMW_PO")
-    if len(gmws) == 0:
-        ns = {"brocom": "http://www.broservices.nl/xsd/brocommon/3.0"}
-        response_type = tree.find("brocom:responseType", ns)
-        if response_type.text == "rejection":
-            criterionError = tree.find("brocom:criterionError", ns)
-            if criterionError is None:
-                msg = tree.find("brocom:rejectionReason", ns).text
-            else:
-                msg = criterionError.find("brocom:specification", ns).text
-            raise (ValueError(msg))
-        else:
-            raise (ValueError("No gmw found"))
-    elif len(gmws) > 1:
-        raise (Exception("Only one gmw supported"))
-    gmw = gmws[0]
-    d = {}
-    for key in gmw.attrib:
-        d[key.split("}", 1)[1]] = gmw.attrib[key]
-    for child in gmw:
-        key = child.tag.split("}", 1)[1]
-        if len(child) == 0:
-            d[key] = child.text
-        elif key == "standardizedLocation":
-            ns = "{http://www.broservices.nl/xsd/brocommon/3.0}"
-            d["lat"], d["lon"] = bro.read_point(child.find(f"{ns}location"))
-        elif key == "deliveredLocation":
-            ns = "{http://www.broservices.nl/xsd/gmwcommon/1.1}"
-            d["x"], d["y"] = bro.read_point(child.find(f"{ns}location"))
-        elif key in ["wellConstructionDate"]:
-            d[key] = child[0].text
-        elif key == "wellHistory":
-            for grandchild in child:
-                key = grandchild.tag.split("}", 1)[1]
-                d[key] = grandchild[0].text
-        elif key in ["deliveredVerticalPosition", "registrationHistory"]:
-            for grandchild in child:
-                key = grandchild.tag.split("}", 1)[1]
-                d[key] = grandchild.text
-        elif key in ["monitoringTube"]:
-            tube = {}
-            for grandchild in child:
-                if len(grandchild) == 0:
-                    tube_key = grandchild.tag.split("}", 1)[1]
-                    tube[tube_key] = grandchild.text
+        gmws = tree.findall(f".//{ns}GMW_PO")
+        if len(gmws) == 0:
+            ns = {"brocom": "http://www.broservices.nl/xsd/brocommon/3.0"}
+            response_type = tree.find("brocom:responseType", ns)
+            if response_type.text == "rejection":
+                criterionError = tree.find("brocom:criterionError", ns)
+                if criterionError is None:
+                    msg = tree.find("brocom:rejectionReason", ns).text
                 else:
-                    for greatgrandchild in grandchild:
-                        tube_key = greatgrandchild.tag.split("}", 1)[1]
-                        tube[tube_key] = greatgrandchild.text
-            if key not in d:
-                d[key] = []
-            d[key].append(tube)
-        else:
-            logger.warning(f"Unknown key: {key}")
-    if "monitoringTube" in d:
-        d["monitoringTube"] = pd.DataFrame(d["monitoringTube"])
-        tubeNumber = d["monitoringTube"]["tubeNumber"].astype(int)
-        d["monitoringTube"]["tubeNumber"] = tubeNumber
-        d["monitoringTube"] = d["monitoringTube"].set_index("tubeNumber")
-    s = pd.Series(d)
-    return s
+                    msg = criterionError.find("brocom:specification", ns).text
+                raise (ValueError(msg))
+            else:
+                raise (ValueError("No gmw found"))
+        elif len(gmws) > 1:
+            raise (Exception("Only one gmw supported"))
+        gmw = gmws[0]
+
+        for key in gmw.attrib:
+            setattr(self, key.split("}", 1)[1], gmw.attrib[key])
+        for child in gmw:
+            key = child.tag.split("}", 1)[1]
+            if len(child) == 0:
+                setattr(self, key, child.text)
+            elif key == "standardizedLocation":
+                ns = "{http://www.broservices.nl/xsd/brocommon/3.0}"
+                lat, lon = self._read_point(child.find(f"{ns}location"))
+                setattr(self, "lat", lat)
+                setattr(self, "lon", lon)
+            elif key == "deliveredLocation":
+                ns = "{http://www.broservices.nl/xsd/gmwcommon/1.1}"
+                x, y = self._read_point(child.find(f"{ns}location"))
+                setattr(self, "x", x)
+                setattr(self, "y", y)
+            elif key in ["wellConstructionDate"]:
+                setattr(self, key, child[0].text)
+            elif key == "wellHistory":
+                for grandchild in child:
+                    key = grandchild.tag.split("}", 1)[1]
+                    setattr(self, key, grandchild[0].text)
+            elif key in ["deliveredVerticalPosition", "registrationHistory"]:
+                for grandchild in child:
+                    key = grandchild.tag.split("}", 1)[1]
+                    setattr(self, key, grandchild.text)
+            elif key in ["monitoringTube"]:
+                tube = {}
+                for grandchild in child:
+                    if len(grandchild) == 0:
+                        tube_key = grandchild.tag.split("}", 1)[1]
+                        tube[tube_key] = grandchild.text
+                    else:
+                        for greatgrandchild in grandchild:
+                            tube_key = greatgrandchild.tag.split("}", 1)[1]
+                            tube[tube_key] = greatgrandchild.text
+                if not hasattr(self, key):
+                    self.monitoringTube = []
+                self.monitoringTube.append(tube)
+            else:
+                logger.warning(f"Unknown key: {key}")
+        if hasattr(self, "monitoringTube"):
+            self.monitoringTube = pd.DataFrame(self.monitoringTube)
+            tubeNumber = self.monitoringTube["tubeNumber"].astype(int)
+            self.monitoringTube["tubeNumber"] = tubeNumber
+            self.monitoringTube = self.monitoringTube.set_index("tubeNumber")
 
 
 def get_observations(
