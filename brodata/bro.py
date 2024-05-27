@@ -105,9 +105,9 @@ def get_characteristics(
             if len(child) == 0:
                 d[key] = child.text
             elif key == "standardizedLocation":
-                d["lat"], d["lon"] = XmlFileOrUrl.read_point(child)
+                d["lat"], d["lon"] = XmlFileOrUrl._read_pos(child)
             elif key == "deliveredLocation":
-                d["x"], d["y"] = XmlFileOrUrl.read_point(child)
+                d["x"], d["y"] = XmlFileOrUrl._read_pos(child)
             elif key.endswith("Date") or key.endswith("Overview"):
                 d[key] = child[0].text
             elif key in ["diameterRange", "screenPositionRange"]:
@@ -156,8 +156,31 @@ class XmlFileOrUrl:
             d[attrib] = value
         return d
 
+    def read_children_of_children(self, node, d=None):
+        if len(node) == 0:
+            key = node.tag.split("}", 1)[1]
+            if d is None:
+                setattr(self, key, node.text)
+            else:
+                d[key] = node.text
+        else:
+            for child in node:
+                self.read_children_of_children(child, d=d)
+
     @staticmethod
-    def _read_point(point):
-        ns = "{http://www.opengis.net/gml/3.2}"
-        xy = [float(x) for x in point.find(f"{ns}pos").text.split()]
+    def _read_pos(node):
+        ns = {"gml": "http://www.opengis.net/gml/3.2"}
+        xy = [float(x) for x in node.find("gml:pos", ns).text.split()]
         return xy
+
+    @staticmethod
+    def _read_date(node):
+        ns = {"brocom": "http://www.broservices.nl/xsd/brocommon/3.0"}
+        date = node.find("brocom:date", ns)
+        return pd.to_datetime(date.text)
+
+    @staticmethod
+    def _read_time_instant(node):
+        ns = {"gml": "http://www.opengis.net/gml/3.2"}
+        time_instant = node.find("gml:TimeInstant", ns)
+        return pd.to_datetime(time_instant.text)

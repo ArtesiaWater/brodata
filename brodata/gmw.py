@@ -4,7 +4,6 @@ import numpy as np
 import pandas as pd
 from tqdm import tqdm
 import geopandas as gpd
-import xml
 
 from . import bro, gld
 
@@ -104,36 +103,31 @@ class GroundwaterMonitoringWell(bro.XmlFileOrUrl):
                 setattr(self, key, child.text)
             elif key == "standardizedLocation":
                 ns = "{http://www.broservices.nl/xsd/brocommon/3.0}"
-                lat, lon = self._read_point(child.find(f"{ns}location"))
+                lat, lon = self._read_pos(child.find(f"{ns}location"))
                 setattr(self, "lat", lat)
                 setattr(self, "lon", lon)
             elif key == "deliveredLocation":
                 ns = "{http://www.broservices.nl/xsd/gmwcommon/1.1}"
-                x, y = self._read_point(child.find(f"{ns}location"))
+                x, y = self._read_pos(child.find(f"{ns}location"))
                 setattr(self, "x", x)
                 setattr(self, "y", y)
-            elif key in ["wellConstructionDate"]:
-                setattr(self, key, child[0].text)
             elif key == "wellHistory":
                 for grandchild in child:
                     key = grandchild.tag.split("}", 1)[1]
-                    setattr(self, key, grandchild[0].text)
+                    if key == "wellConstructionDate":
+                        setattr(self, key, self._read_date(grandchild))
+                    else:
+                        logger.warning(f"Unknown key: {key}")
+
             elif key in ["deliveredVerticalPosition", "registrationHistory"]:
                 for grandchild in child:
                     key = grandchild.tag.split("}", 1)[1]
                     setattr(self, key, grandchild.text)
             elif key in ["monitoringTube"]:
-                tube = {}
-                for grandchild in child:
-                    if len(grandchild) == 0:
-                        tube_key = grandchild.tag.split("}", 1)[1]
-                        tube[tube_key] = grandchild.text
-                    else:
-                        for greatgrandchild in grandchild:
-                            tube_key = greatgrandchild.tag.split("}", 1)[1]
-                            tube[tube_key] = greatgrandchild.text
                 if not hasattr(self, key):
                     self.monitoringTube = []
+                tube = {}
+                self.read_children_of_children(child, tube)
                 self.monitoringTube.append(tube)
             else:
                 logger.warning(f"Unknown key: {key}")
