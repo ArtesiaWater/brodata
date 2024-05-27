@@ -1,7 +1,7 @@
 import logging
 import pandas as pd
 from . import bro
-from ..webservices import get_gdf
+from .webservices import get_gdf
 
 logger = logging.getLogger(__name__)
 
@@ -75,7 +75,7 @@ class Booronderzoek(bro.XmlFileOrUrl):
                     elif key in ["boringStartDate", "boringEndDate"]:
                         setattr(self, key, self._read_date(grandchild))
                     elif key in ["boredInterval", "completedInterval"]:
-                        self.read_children_of_children(grandchild)
+                        self._read_children_of_children(grandchild)
                     elif key == "sampledInterval":
                         self._read_sampled_interval(grandchild)
                     else:
@@ -98,20 +98,7 @@ class Booronderzoek(bro.XmlFileOrUrl):
         if not hasattr(self, "sampledInterval"):
             self.sampledInterval = []
         d = {}
-        for child in node:
-            key = child.tag.split("}", 1)[1]
-            if len(child) == 0:
-                d[key] = child.text
-            elif key == "sampler":
-                for grandchild in child:
-                    key = grandchild.tag.split("}", 1)[1]
-                    if len(grandchild) == 0:
-                        d[key] = grandchild.text
-                    else:
-                        logger.warning(f"Unknown key: {key}")
-            else:
-                logger.warning(f"Unknown key: {key}")
-
+        self._read_children_of_children(node, d)
         self.sampledInterval.append(d)
 
     def _read_descriptive_borehole_log(self, node):
@@ -126,7 +113,7 @@ class Booronderzoek(bro.XmlFileOrUrl):
                 if key not in d:
                     d[key] = []
                 layer = {}
-                self.read_children_of_children(child, d=layer)
+                self._read_children_of_children(child, d=layer)
                 d[key].append(layer)
             else:
                 logger.warning(f"Unknown key: {key}")

@@ -107,10 +107,7 @@ class GroundwaterMonitoringWell(bro.XmlFileOrUrl):
                 setattr(self, "lat", lat)
                 setattr(self, "lon", lon)
             elif key == "deliveredLocation":
-                ns = "{http://www.broservices.nl/xsd/gmwcommon/1.1}"
-                x, y = self._read_pos(child.find(f"{ns}location"))
-                setattr(self, "x", x)
-                setattr(self, "y", y)
+                self._read_delivered_location(child)
             elif key == "wellHistory":
                 for grandchild in child:
                     key = grandchild.tag.split("}", 1)[1]
@@ -127,7 +124,7 @@ class GroundwaterMonitoringWell(bro.XmlFileOrUrl):
                 if not hasattr(self, key):
                     self.monitoringTube = []
                 tube = {}
-                self.read_children_of_children(child, tube)
+                self._read_children_of_children(child, tube)
                 self.monitoringTube.append(tube)
             else:
                 logger.warning(f"Unknown key: {key}")

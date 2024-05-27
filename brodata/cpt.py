@@ -1,4 +1,6 @@
 import logging
+import pandas as pd
+from io import StringIO
 from . import bro
 
 logger = logging.getLogger(__name__)
@@ -35,10 +37,7 @@ class GeotechnischSondeeronderzoek(bro.XmlFileOrUrl):
                 setattr(self, "lat", lat)
                 setattr(self, "lon", lon)
             elif key == "deliveredLocation":
-                location = child.find("cptcommon:location", ns)
-                x, y = self._read_pos(location)
-                setattr(self, "x", x)
-                setattr(self, "y", y)
+                self._read_delivered_location(child)
             elif key in ["researchReportDate"]:
                 setattr(self, key, self._read_date(child))
             elif key in ["deliveredVerticalPosition", "registrationHistory"]:
@@ -57,7 +56,7 @@ class GeotechnischSondeeronderzoek(bro.XmlFileOrUrl):
                         "procedure",
                         "parameters",
                     ]:
-                        self.read_children_of_children(grandchild)
+                        self._read_children_of_children(grandchild)
                     elif key == "conePenetrationTest":
                         self.read_cone_penetration_test(grandchild)
                     else:
@@ -71,12 +70,25 @@ class GeotechnischSondeeronderzoek(bro.XmlFileOrUrl):
             if key in ["phenomenonTime", "resultTime"]:
                 setattr(self, key, self._read_time_instant(child))
             elif key in ["procedure", "observedProperty", "featureOfInterest"]:
-                self.read_children_of_children(child)
+                self._read_children_of_children(child)
             elif key == "cptResult":
                 for grandchild in child:
                     key = grandchild.tag.split("}", 1)[1]
-                    if key == "values":
-                        setattr(self, key, grandchild.text)
+                    if key == "encoding":
+                        ns = {"swe": "http://www.opengis.net/swe/2.0"}
+                        text_encoding = grandchild.find("swe:TextEncoding", ns)
+                        for key in text_encoding.attrib:
+                            setattr(self, key, text_encoding.attrib[key])
+
+                    elif key == "values":
+                        values = pd.read_csv(
+                            StringIO(grandchild.text),
+                            header=None,
+                            decimal=self.decimalSeparator,
+                            sep=self.tokenSeparator,
+                            lineterminator=self.blockSeparator,
+                        )
+                        setattr(self, key, values)
                     else:
                         logger.warning(f"Unknown key: {key}")
             else:

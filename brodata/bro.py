@@ -156,7 +156,7 @@ class XmlFileOrUrl:
             d[attrib] = value
         return d
 
-    def read_children_of_children(self, node, d=None):
+    def _read_children_of_children(self, node, d=None):
         if len(node) == 0:
             key = node.tag.split("}", 1)[1]
             if d is None:
@@ -165,7 +165,21 @@ class XmlFileOrUrl:
                 d[key] = node.text
         else:
             for child in node:
-                self.read_children_of_children(child, d=d)
+                self._read_children_of_children(child, d=d)
+
+    def _read_delivered_location(self, node):
+        for child in node:
+            key = child.tag.split("}", 1)[1]
+            if key == "location":
+                x, y = self._read_pos(child)
+                setattr(self, "x", x)
+                setattr(self, "y", y)
+            elif key == "horizontalPositioningDate":
+                setattr(self, key, self._read_date(child))
+            elif key == "horizontalPositioningMethod":
+                setattr(self, key, child.text)
+            else:
+                logger.warning(f"Unknown key: {key}")
 
     @staticmethod
     def _read_pos(node):
