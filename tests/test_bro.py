@@ -8,7 +8,7 @@ def test_get_gwm_of_bronhouder(bronhouder):
 
 def test_get_gmw_characteristics():
     extent = [117700, 118700, 439400, 440400]
-    brodata.gmw.get_characteristics(extent=extent)
+    gmws = brodata.gmw.get_characteristics(extent=extent)
 
 
 def tets_get_well_code():
@@ -36,9 +36,14 @@ def test_bodemkundig_booronderzoek():
 
 def test_get_cpt_characteristics():
     extent = [117700, 118700, 439400, 440400]
-    brodata.cpt.get_characteristics(extent=extent)
+    cpts = brodata.cpt.get_characteristics(extent=extent)
 
 
 def test_get_geotechnisch_sondeeronderzoek():
     fname = os.path.join("data", "CPT000000005925.xml")
+    cpt = brodata.cpt.GeotechnischSondeeronderzoek(fname)
+
+
+def test_get_geotechnisch_sondeeronderzoek_with_dissipation_test():
+    fname = os.path.join("data", "CPT000000115243.xml")
     cpt = brodata.cpt.GeotechnischSondeeronderzoek(fname)

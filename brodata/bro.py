@@ -197,4 +197,5 @@ class XmlFileOrUrl:
     def _read_time_instant(node):
         ns = {"gml": "http://www.opengis.net/gml/3.2"}
         time_instant = node.find("gml:TimeInstant", ns)
-        return pd.to_datetime(time_instant.text)
+        time_position = time_instant.find("gml:timePosition", ns)
+        return pd.to_datetime(time_position.text)

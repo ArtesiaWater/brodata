@@ -54,41 +54,66 @@ class GeotechnischSondeeronderzoek(bro.XmlFileOrUrl):
                         "trajectory",
                         "conePenetrometer",
                         "procedure",
-                        "parameters",
                     ]:
                         self._read_children_of_children(grandchild)
+                    elif key == "parameters":
+                        self._read_parameters(grandchild)
                     elif key == "conePenetrationTest":
-                        self.read_cone_penetration_test(grandchild)
+                        self._read_cone_penetration_test(grandchild, key)
+                    elif key == "dissipationTest":
+                        self._read_cone_penetration_test(grandchild, key)
                     else:
                         logger.warning(f"Unknown key: {key}")
             else:
                 logger.warning(f"Unknown key: {key}")
+        if hasattr(self, "conePenetrationTest") and hasattr(self, "parameters"):
+            self.conePenetrationTest.columns = self.parameters.index
+            if "conePenetrationTest" in self.conePenetrationTest.columns:
+                self.conePenetrationTest = self.conePenetrationTest.set_index(
+                    "penetrationLength"
+                )
 
-    def read_cone_penetration_test(self, node):
+    def _read_parameters(self, node):
+        self.parameters = pd.Series()
+        for child in node:
+            key = child.tag.split("}", 1)[1]
+            self.parameters[key] = child.text
+
+    def _read_cone_penetration_test(self, node, name):
         for child in node:
             key = child.tag.split("}", 1)[1]
             if key in ["phenomenonTime", "resultTime"]:
-                setattr(self, key, self._read_time_instant(child))
-            elif key in ["procedure", "observedProperty", "featureOfInterest"]:
+                setattr(self, f"{name}_{key}", self._read_time_instant(child))
+            elif key in [
+                "procedure",
+                "observedProperty",
+                "featureOfInterest",
+                "penetrationLength",
+            ]:
                 self._read_children_of_children(child)
-            elif key == "cptResult":
+            elif key in ["cptResult", "disResult"]:
                 for grandchild in child:
-                    key = grandchild.tag.split("}", 1)[1]
-                    if key == "encoding":
+                    key2 = grandchild.tag.split("}", 1)[1]
+                    if key2 == "encoding":
                         ns = {"swe": "http://www.opengis.net/swe/2.0"}
                         text_encoding = grandchild.find("swe:TextEncoding", ns)
-                        for key in text_encoding.attrib:
-                            setattr(self, key, text_encoding.attrib[key])
+                        for key3 in text_encoding.attrib:
+                            setattr(self, f"{name}_{key3}", text_encoding.attrib[key3])
 
-                    elif key == "values":
+                    elif key2 == "elementCount":
+                        pass
+                    elif key2 == "elementType":
+                        pass
+                    elif key2 == "values":
                         values = pd.read_csv(
                             StringIO(grandchild.text),
                             header=None,
-                            decimal=self.decimalSeparator,
-                            sep=self.tokenSeparator,
-                            lineterminator=self.blockSeparator,
+                            decimal=getattr(self, f"{name}_decimalSeparator"),
+                            sep=getattr(self, f"{name}_tokenSeparator"),
+                            lineterminator=getattr(self, f"{name}_blockSeparator"),
+                            na_values=-999999,
                         )
-                        setattr(self, key, values)
+                        setattr(self, name, values)
                     else:
                         logger.warning(f"Unknown key: {key}")
             else:
