@@ -68,7 +68,7 @@ class GeotechnischSondeeronderzoek(bro.XmlFileOrUrl):
                 logger.warning(f"Unknown key: {key}")
         if hasattr(self, "conePenetrationTest") and hasattr(self, "parameters"):
             self.conePenetrationTest.columns = self.parameters.index
-            if "conePenetrationTest" in self.conePenetrationTest.columns:
+            if "penetrationLength" in self.conePenetrationTest.columns:
                 self.conePenetrationTest = self.conePenetrationTest.set_index(
                     "penetrationLength"
                 )
