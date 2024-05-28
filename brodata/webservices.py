@@ -277,6 +277,7 @@ def get_configuration():
     config["Grondwatersamenstelling"] = {
         "mapserver": config["Put met onderzoekgegevens"]["mapserver"],
         "table": 2,  # Grondwatersamenstelling
+        "download": "https://www.dinoloket.nl/uitgifteloket/api/wo/gwo/qua/report",
     }
     config["Grondwaterstand"] = {
         "mapserver": config["Put met onderzoekgegevens"]["mapserver"],

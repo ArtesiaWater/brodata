@@ -1,0 +1,7 @@
+"LOCATIE gegevens",,,,,,,,,,,,,,,,,,,,,,,,,,
+"NITG-nr","X-coordinaat","Y-coordinaat","CRS","Kaartblad","Bepaling locatie","Maaiveldhoogte (m tov NAP)","Bepaling maaiveldhoogte","OLGA-nr","RIVM-nr","Aantal analyses",,,,,,,,,,,,,,,,
+"B38B0079","118590","439850","Rijksdriehoeksmeting","38B","Onbekend","-0.06","Onbekend","38BA3079",,"1",,,,,,,,,,,,,,,,
+,,,,,,,,,,,,,,,,,,,,,,,,,,
+"KWALITEIT gegevens VLOEIBAAR",,,,,,,,,,,,,,,,,,,,,,,,,,
+"NITG-nr","Monster datum","Monster-nr","Monster apparatuur","Mengmonster","Bovenkant monster (cm tov MV)","Onderkant monster (cm tov MV)","Analyse datum","CO2 (mg/l)","CO3 (mg/l)","Cl (mg/l)","EGV (uS/cm)","Fe (mg/l)","HCO3 (mg/l)","HH (mmol/l)","HHT (mmol/l)","Kleur (mgPt/l)","Mn (mg/l)","NH4 (mg/l)","NO2 (mg/l)","NO3 (mg/l)","NaHCO3 (mg/l)","PMV-ongf (mg/l)","PO4-tot (mg/l)","SO4 (mg/l)","T(5min)_veld (C)","pH (-)"
+"B38B0079","22-06-1959","C1959-06-1018",,"nee","1400.0","3900.0","22-06-1959","12","0","92","57.6","2.6","207","2.538","3.42","19",".96","1.4","0","0","0","6",".46","51.9","18","7.62"

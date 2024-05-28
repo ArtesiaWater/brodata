@@ -26,6 +26,11 @@ def test_grondwaterstand_from_file():
     brodata.dino.Grondwaterstand(fname)
 
 
+def test_grondwatersamenstelling_from_file():
+    fname = os.path.join("data", "B38B0079_qua.csv")
+    qua = brodata.dino.Grondwatersamenstelling(fname)
+
+
 def test_geologisch_booronderzoek():
     url = config["Geologisch booronderzoek"]["download"]
     url = f"{url}/B42E0199"
@@ -45,3 +50,8 @@ def test_ves_within_extent():
 def test_grondwaterstanden_within_extent():
     extent = [200000, 220000, 605000, 615000]
     brodata.dino.get_grondwaterstanden(extent)
+
+
+def test_grondwatersamenstelling_within_extent():
+    extent = [200000, 220000, 605000, 615000]
+    brodata.dino.get_grondwatersamenstelling(extent)

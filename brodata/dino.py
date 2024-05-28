@@ -62,6 +62,26 @@ def get_grondwaterstand(extent, config=None, timeout=5, silent=False):
     return gdf, data
 
 
+def get_grondwatersamenstelling(extent, config=None, timeout=5, silent=False):
+    kind = "Grondwatersamenstelling"
+    if config is None:
+        config = get_configuration()
+    gdf = get_gdf(
+        kind,
+        config=config,
+        extent=extent,
+        timeout=timeout,
+    )
+    gdf = gdf[gdf["SA_CNT"] > 0]
+    download_url = config[kind]["download"]
+    data = {}
+    for name in tqdm(gdf.index, disable=silent):
+        url = f"{download_url}/{name}"
+        data[name] = Grondwatersamenstelling(url)
+
+    return gdf, data
+
+
 def get_geologisch_booronderzoek(extent, config=None, timeout=5, silent=False):
     kind = "Geologisch booronderzoek"
     if config is None:
@@ -153,6 +173,30 @@ class Grondwaterstand(CsvFileOrUrl):
             d["meta"] = self.meta
         if hasattr(self, "data"):
             d["data"] = self.data
+        return d
+
+
+class Grondwatersamenstelling(CsvFileOrUrl):
+    def _read_contents(self, f):
+        # read first line and place cursor at start of document again
+        start = f.tell()
+        line = f.readline().rstrip("\n")
+        f.seek(start)
+
+        # LOCATIE gegevens
+        if line.startswith('"LOCATIE gegevens"'):
+            line = f.readline()
+            self.locatie_gegevens, line = self._read_properties_csv_columns(f)
+
+        # KWALITEIT gegevens VLOEIBAAR
+        if line.startswith('"KWALITEIT gegevens VLOEIBAAR"'):
+            line = f.readline()
+            self.kwaliteit_gegevens_vloeibaar, line = self._read_csv_part(f)
+
+    def to_dict(self):
+        d = {**self.locatie_gegevens}
+        if hasattr(self, "kwaliteit_gegevens_vloeibaar"):
+            d["kwaliteit_gegevens_vloeibaar"] = self.kwaliteit_gegevens_vloeibaar
         return d
 
 
