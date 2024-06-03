@@ -32,7 +32,7 @@ class Booronderzoek(bro.XmlFileOrUrl):
             "brocom": "http://www.broservices.nl/xsd/brocommon/3.0",
             "gml": "http://www.opengis.net/gml/3.2",
             "bhrgtcom": "http://www.broservices.nl/xsd/bhrgtcommon/2.1",
-            "xmlns": "http://www.broservices.nl/xsd/dsbhr-gt/2.1",
+            "xmlns": self._xmlns,
         }
         bhrs = tree.findall(f".//xmlns:{self._object_name}", ns)
         if len(bhrs) != 1:
@@ -50,11 +50,7 @@ class Booronderzoek(bro.XmlFileOrUrl):
                 setattr(self, "lat", lat)
                 setattr(self, "lon", lon)
             elif key == "deliveredLocation":
-                location = child.find("bhrgtcom:location", ns)
-                point = location.find("gml:Point", ns)
-                x, y = self._read_pos(point)
-                setattr(self, "x", x)
-                setattr(self, "y", y)
+                self._read_delivered_location(child)
             elif key in ["researchReportDate"]:
                 setattr(self, key, self._read_date(child))
             elif key in ["siteCharacteristic"]:
@@ -74,10 +70,17 @@ class Booronderzoek(bro.XmlFileOrUrl):
                         setattr(self, key, grandchild.text)
                     elif key in ["boringStartDate", "boringEndDate"]:
                         setattr(self, key, self._read_date(grandchild))
-                    elif key in ["boredInterval", "completedInterval"]:
+                    elif key in [
+                        "boredInterval",
+                        "completedInterval",
+                        "boringProcedure",
+                        "boredTrajectory",
+                    ]:
                         self._read_children_of_children(grandchild)
                     elif key == "sampledInterval":
                         self._read_sampled_interval(grandchild)
+                    elif key == "boringTool":
+                        self._read_boring_tool(grandchild)
                     else:
                         logger.warning(f"Unknown key: {key}")
             elif key == "boreholeSampleDescription":
@@ -100,6 +103,11 @@ class Booronderzoek(bro.XmlFileOrUrl):
         d = {}
         self._read_children_of_children(node, d)
         self.sampledInterval.append(d)
+
+    def _read_boring_tool(self, node):
+        d = {}
+        self._read_children_of_children(node, d)
+        self.boringTool = d
 
     def _read_descriptive_borehole_log(self, node):
         if not hasattr(self, "descriptiveBoreholeLog"):
@@ -125,7 +133,9 @@ class Booronderzoek(bro.XmlFileOrUrl):
 
 class GeotechnischBooronderzoek(Booronderzoek):
     _object_name = "BHR_GT_O"
+    _xmlns = "http://www.broservices.nl/xsd/dsbhr-gt/2.1"
 
 
 class BodemkundigBooronderzoek(Booronderzoek):
     _object_name = "BHR_O"
+    _xmlns = "http://www.broservices.nl/xsd/dsbhr/2.0"

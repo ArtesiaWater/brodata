@@ -2,7 +2,7 @@ import os
 import brodata
 
 
-def test_get_gwm_of_bronhouder(bronhouder):
+def test_get_gwm_of_bronhouder():
     brodata.gmw.get_bro_ids_of_bronhouder(30277172)
 
 
@@ -42,6 +42,8 @@ def test_get_cpt_characteristics():
 def test_get_geotechnisch_sondeeronderzoek():
     fname = os.path.join("data", "CPT000000005925.xml")
     cpt = brodata.cpt.GeotechnischSondeeronderzoek(fname)
+    # also test the plot
+    brodata.plot.cone_penetration_test(cpt)
 
 
 def test_get_geotechnisch_sondeeronderzoek_with_dissipation_test():

@@ -42,16 +42,16 @@ def test_geologisch_booronderzoek_from_file():
     brodata.dino.GeologischBooronderzoek(fname)
 
 
-def test_ves_within_extent():
-    extent = [200000, 220000, 605000, 615000]
-    brodata.dino.get_ves_within_extent(extent)
+def test_get_verticaal_elektrisch_sondeeronderzoek_within_extent():
+    extent = [116000, 120000, 439400, 442000]
+    brodata.dino.get_verticaal_elektrisch_sondeeronderzoek(extent)
 
 
 def test_grondwaterstanden_within_extent():
-    extent = [200000, 220000, 605000, 615000]
-    brodata.dino.get_grondwaterstanden(extent)
+    extent = [117700, 118700, 439400, 440400]
+    brodata.dino.get_grondwaterstand(extent)
 
 
 def test_grondwatersamenstelling_within_extent():
-    extent = [200000, 220000, 605000, 615000]
-    brodata.dino.get_grondwatersamenstelling(extent)
+    extent = [117700, 118700, 439400, 440400]
+    gdf = brodata.dino.get_grondwatersamenstelling(extent)

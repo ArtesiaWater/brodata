@@ -19,7 +19,9 @@ def get_gdf(kind, extent=None, config=None, **kwargs):
     layer = 0
     if "layer" in config[kind]:
         layer = config[kind]["layer"]
-    gdf = arcrest(url, layer, extent=extent, **kwargs).set_index("DINO_NR")
+    gdf = arcrest(url, layer, extent=extent, **kwargs)
+    if not gdf.empty and "DINO_NR" in gdf.columns:
+        gdf = gdf.set_index("DINO_NR")
     if "table" in config[kind]:
         logger.warning("Table not yet supported")
     return gdf

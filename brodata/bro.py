@@ -184,13 +184,20 @@ class XmlFileOrUrl:
     @staticmethod
     def _read_pos(node):
         ns = {"gml": "http://www.opengis.net/gml/3.2"}
-        xy = [float(x) for x in node.find("gml:pos", ns).text.split()]
+        point = node.find("gml:Point", ns)
+        if point is None:
+            pos = node.find("gml:pos", ns)
+        else:
+            pos = point.find("gml:pos", ns)
+        xy = [float(x) for x in pos.text.split()]
         return xy
 
     @staticmethod
     def _read_date(node):
         ns = {"brocom": "http://www.broservices.nl/xsd/brocommon/3.0"}
         date = node.find("brocom:date", ns)
+        if date is None:
+            date = node.find("brocom:yearMonth", ns)
         return pd.to_datetime(date.text)
 
     @staticmethod

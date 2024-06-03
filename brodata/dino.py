@@ -1,8 +1,9 @@
 import requests
 from tqdm import tqdm
 import pandas as pd
-from .webservices import get_configuration, get_gdf
 from io import StringIO
+from .webservices import get_configuration, get_gdf
+from .util import objects_to_gdf
 
 
 def get_verticaal_elektrisch_sondeeronderzoek(
@@ -23,7 +24,10 @@ def get_verticaal_elektrisch_sondeeronderzoek(
     for name in tqdm(gdf.index, disable=silent):
         url = f"{download_url}/{name}"
         data[name] = VerticaalElektrischSondeeronderzoek(url, timeout=timeout)
-    return gdf, data
+
+    df = pd.DataFrame([x.to_dict() for x in data.values()]).set_index("NITG-nr")
+    gdf = pd.concat((gdf, df), axis=1)
+    return gdf
 
 
 def get_grondwaterstand(extent, config=None, timeout=5, silent=False):
@@ -58,8 +62,8 @@ def get_grondwaterstand(extent, config=None, timeout=5, silent=False):
                 piezometer_nr = feature["attributes"]["PIEZOMETER_NR"]
                 url = f"{download_url}/{name}/{piezometer_nr}"
                 data[f"{name}_{piezometer_nr}"] = Grondwaterstand(url, timeout=timeout)
-
-    return gdf, data
+    gdf = objects_to_gdf(data, x="X-coordinaat", y="Y-coordinaat")
+    return gdf
 
 
 def get_grondwatersamenstelling(extent, config=None, timeout=5, silent=False):
@@ -78,8 +82,7 @@ def get_grondwatersamenstelling(extent, config=None, timeout=5, silent=False):
     for name in tqdm(gdf.index, disable=silent):
         url = f"{download_url}/{name}"
         data[name] = Grondwatersamenstelling(url)
-
-    return gdf, data
+    return objects_to_gdf(data, x="X-coordinaat", y="Y-coordinaat")
 
 
 def get_geologisch_booronderzoek(extent, config=None, timeout=5, silent=False):
@@ -100,11 +103,14 @@ def get_geologisch_booronderzoek(extent, config=None, timeout=5, silent=False):
 
 
 class CsvFileOrUrl:
-    def __init__(self, fname, timeout=5):
+    def __init__(self, fname, timeout=5, to_file=None):
         if fname.startswith("http"):
             r = requests.get(fname, timeout=timeout)
             if not r.ok:
                 raise (Exception((f"Retieving data from {fname} failed")))
+            if to_file is not None:
+                with open(to_file, "w") as f:
+                    f.write(r.text)
             self._read_contents(StringIO(r.text))
         else:
             with open(fname, "r") as f:
@@ -169,8 +175,10 @@ class Grondwaterstand(CsvFileOrUrl):
 
     def to_dict(self):
         d = {**self.props, **self.props2}
-        if hasattr(self, "data"):
+        if hasattr(self, "meta"):
             d["meta"] = self.meta
+            d["X-coordinaat"] = d["meta"]["X-coordinaat"].iloc[-1]
+            d["Y-coordinaat"] = d["meta"]["Y-coordinaat"].iloc[-1]
         if hasattr(self, "data"):
             d["data"] = self.data
         return d
