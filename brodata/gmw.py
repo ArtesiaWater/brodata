@@ -80,6 +80,8 @@ class GroundwaterMonitoringWell(bro.XmlFileOrUrl):
 
         gmws = tree.findall(f".//{ns}GMW_PO")
         if len(gmws) == 0:
+            gmws = tree.findall(f".//{ns}GMW_PPO")
+        if len(gmws) == 0:
             ns = {"brocom": "http://www.broservices.nl/xsd/brocommon/3.0"}
             response_type = tree.find("brocom:responseType", ns)
             if response_type.text == "rejection":

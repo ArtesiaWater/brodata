@@ -1,7 +1,7 @@
 import requests
 from tqdm import tqdm
 import pandas as pd
-from io import StringIO
+from io import StringIO, TextIOWrapper
 from .webservices import get_configuration, get_gdf
 from .util import objects_to_gdf
 
@@ -103,17 +103,20 @@ def get_geologisch_booronderzoek(extent, config=None, timeout=5, silent=False):
 
 
 class CsvFileOrUrl:
-    def __init__(self, fname, timeout=5, to_file=None):
-        if fname.startswith("http"):
-            r = requests.get(fname, timeout=timeout)
+    def __init__(self, url_or_file, zipfile=None, timeout=5, to_file=None):
+        if zipfile is not None:
+            with zipfile.open(url_or_file) as f:
+                self._read_contents(TextIOWrapper(f))
+        elif url_or_file.startswith("http"):
+            r = requests.get(url_or_file, timeout=timeout)
             if not r.ok:
-                raise (Exception((f"Retieving data from {fname} failed")))
+                raise (Exception((f"Retieving data from {url_or_file} failed")))
             if to_file is not None:
                 with open(to_file, "w") as f:
                     f.write(r.text)
             self._read_contents(StringIO(r.text))
         else:
-            with open(fname, "r") as f:
+            with open(url_or_file, "r") as f:
                 self._read_contents(f)
 
     def _read_properties_csv_rows(self, f, merge_columns=False, **kwargs):
@@ -170,6 +173,10 @@ class Grondwaterstand(CsvFileOrUrl):
     def _read_contents(self, f):
         self.props, line = self._read_properties_csv_rows(f, merge_columns=True)
         self.props2, line = self._read_properties_csv_rows(f)
+        if line.startswith(
+            '"Van deze put zijn geen standen opgenomen in de DINO-database"'
+        ):
+            return
         self.meta, line = self._read_csv_part(f)
         self.data, line = self._read_csv_part(f)
 

@@ -129,8 +129,10 @@ def get_characteristics(
 
 
 class XmlFileOrUrl:
-    def __init__(self, url_or_file, timeout=5, to_file=None, **kwargs):
-        if url_or_file.startswith("http"):
+    def __init__(self, url_or_file, zipfile=None, timeout=5, to_file=None, **kwargs):
+        if zipfile is not None:
+            root = xml.etree.ElementTree.fromstring(zipfile.read(url_or_file))
+        elif url_or_file.startswith("http"):
             r = requests.get(url_or_file, timeout=timeout, **kwargs)
             if not r.ok:
                 # msg = r.json()["errors"][0]["message"]
@@ -139,11 +141,10 @@ class XmlFileOrUrl:
                 with open(to_file, "w") as f:
                     f.write(r.text)
             root = xml.etree.ElementTree.fromstring(r.text)
-            self._read_contents(root)
         else:
             tree = xml.etree.ElementTree.parse(url_or_file)
             root = tree.getroot()
-            self._read_contents(root)
+        self._read_contents(root)
 
     def to_dict(self):
         d = {}
@@ -198,6 +199,10 @@ class XmlFileOrUrl:
         date = node.find("brocom:date", ns)
         if date is None:
             date = node.find("brocom:yearMonth", ns)
+        if date is None:
+            voidReason = node.find("brocom:voidReason", ns)
+            if voidReason is not None:
+                return pd.NaT
         return pd.to_datetime(date.text)
 
     @staticmethod
