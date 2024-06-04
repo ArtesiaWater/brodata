@@ -49,3 +49,8 @@ def test_get_geotechnisch_sondeeronderzoek():
 def test_get_geotechnisch_sondeeronderzoek_with_dissipation_test():
     fname = os.path.join("data", "CPT000000115243.xml")
     cpt = brodata.cpt.GeotechnischSondeeronderzoek(fname)
+
+
+def test_grondwatergebruiksysteem():
+    fname = os.path.join("data", "GUF000000016723.xml")
+    guf = brodata.guf.Grondwatergebruiksysteem(fname)

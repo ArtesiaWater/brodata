@@ -185,6 +185,12 @@ class XmlFileOrUrl:
     @staticmethod
     def _read_pos(node):
         ns = {"gml": "http://www.opengis.net/gml/3.2"}
+        multipoint = node.find("gml:MultiPoint", ns)
+        if multipoint is not None:
+            xy = []
+            for pointmember in multipoint.findall("gml:pointMember", ns):
+                xy.append(XmlFileOrUrl._read_pos(pointmember))
+            return xy
         point = node.find("gml:Point", ns)
         if point is None:
             pos = node.find("gml:pos", ns)

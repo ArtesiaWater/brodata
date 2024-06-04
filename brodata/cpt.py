@@ -41,9 +41,7 @@ class GeotechnischSondeeronderzoek(bro.XmlFileOrUrl):
             elif key in ["researchReportDate"]:
                 setattr(self, key, self._read_date(child))
             elif key in ["deliveredVerticalPosition", "registrationHistory"]:
-                for grandchild in child:
-                    key = grandchild.tag.split("}", 1)[1]
-                    setattr(self, key, grandchild.text)
+                self._read_children_of_children(child)
             elif key in ["conePenetrometerSurvey"]:
                 for grandchild in child:
                     key = grandchild.tag.split("}", 1)[1]

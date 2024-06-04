@@ -52,8 +52,10 @@ def read_zipfile(fname, pathnames=None):
                 cl = GroundwaterMonitoringWell
                 ext = ".xml"
             elif pathname == "BRO_Grondwatergebruiksysteem":
-                logger.warning(f"Folder {pathname} not supported yet")
-                cl = None
+                from .guf import Grondwatergebruiksysteem
+
+                cl = Grondwatergebruiksysteem
+                ext = ".xml"
             elif pathname == "BRO_Grondwatermonitoringnet":
                 logger.warning(f"Folder {pathname} not supported yet")
                 cl = None
