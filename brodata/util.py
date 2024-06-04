@@ -44,7 +44,7 @@ def read_zipfile(fname, pathnames=None):
 
         data = {}
         for pathname in pathnames:
-            data[pathname] = []
+            data[pathname] = {}
             logger.info(f"Reading {pathname} from {fname}")
             if pathname == "BRO_Grondwatermonitoringput":
                 from .gmw import GroundwaterMonitoringWell
@@ -80,8 +80,8 @@ def read_zipfile(fname, pathnames=None):
                 cl = GeologischBooronderzoek
                 ext = ".csv"
             elif pathname == "DINO_GeotechnischSondeeronderzoek":
-                logger.warning(f"Folder {pathname} not supported yet")
                 cl = None
+                ext = ".tif"
             elif pathname == "DINO_GeologischBooronderzoekKorrelgrootteAnalyse":
                 logger.warning(f"Folder {pathname} not supported yet")
                 cl = None
@@ -107,10 +107,16 @@ def read_zipfile(fname, pathnames=None):
                 logger.warning(f"Folder {pathname} not supported yet")
                 cl = None
 
-            if cl is not None:
+            if cl is not None or ext == ".tif":
                 mask = (dirnames == pathname) & (extensions == ext)
                 if not mask.any():
                     logger.warning(f"No {ext} files found in {pathname}.")
                 for file in namelist[mask]:
-                    data[pathname].append(cl(file, zipfile=zf))
+                    name = os.path.splitext(os.path.basename(file))[0]
+                    if ext == ".tif":
+                        from PIL import Image
+
+                        data[pathname][name] = Image.open(zf.open(file))
+                    else:
+                        data[pathname][name] = cl(file, zipfile=zf)
         return data
