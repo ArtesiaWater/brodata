@@ -7,13 +7,14 @@ logger = logging.getLogger(__name__)
 
 class GroundwaterUtilisationFacility(bro.XmlFileOrUrl):
     _rest_url = "https://publiek.broservices.nl/gu/guf/v1"
+    _xmlns = "http://www.broservices.nl/xsd/dsguf/1.0"
 
     def _read_contents(self, tree):
         ns = {
             "brocom": "http://www.broservices.nl/xsd/brocommon/3.0",
             "gml": "http://www.opengis.net/gml/3.2",
             "gufcommon": "http://www.broservices.nl/xsd/gufcommon/1.0",
-            "xmlns": "http://www.broservices.nl/xsd/dsguf/1.0",
+            "xmlns": self._xmlns,
         }
         gufs = tree.findall(".//xmlns:GUF_PO", ns)
         if len(gufs) == 0:
