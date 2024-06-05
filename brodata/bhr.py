@@ -21,12 +21,7 @@ def get_bhrp_within_extent(extent, config=None, timeout=5, silent=False):
     return gdf, bhrp_data
 
 
-def get_bhrgt(bro_id):
-    url = f"https://publiek.broservices.nl/sr/bhrgt/v2/objects/{bro_id}"
-    return GeotechnicalBoreholeResearch(url)
-
-
-class BoreholeResearch(bro.XmlFileOrUrl):
+class _BoreholeResearch(bro.XmlFileOrUrl):
     def _read_contents(self, tree):
         ns = {
             "brocom": "http://www.broservices.nl/xsd/brocommon/3.0",
@@ -131,11 +126,22 @@ class BoreholeResearch(bro.XmlFileOrUrl):
         self.descriptiveBoreholeLog.append(d)
 
 
-class GeotechnicalBoreholeResearch(BoreholeResearch):
+class GeotechnicalBoreholeResearch(_BoreholeResearch):
     _object_name = "BHR_GT_O"
     _xmlns = "http://www.broservices.nl/xsd/dsbhr-gt/2.1"
+    _rest_url = "https://publiek.broservices.nl/sr/bhrgt/v2"
+    _char = "BHR_GT_C"
 
 
-class PedologicalBoreholeResearch(BoreholeResearch):
+class PedologicalBoreholeResearch(_BoreholeResearch):
     _object_name = "BHR_O"
     _xmlns = "http://www.broservices.nl/xsd/dsbhr/2.0"
+    _rest_url = "https://publiek.broservices.nl/sr/bhrp/v2"
+    _char = "BHR_C"
+
+
+class GeologicalBoreholeResearch(_BoreholeResearch):
+    _object_name = "BHR_O"
+    _xmlns = "http://www.broservices.nl/xsd/dsbhrg/2.0"
+    _rest_url = "https://publiek.broservices.nl/sr/bhrg/v3"
+    _char = "BHR_C"

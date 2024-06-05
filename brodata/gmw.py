@@ -12,7 +12,7 @@ logger = logging.getLogger(__name__)
 
 def get_bro_ids_of_bronhouder(bronhouder):
     """get bro-id's from bronhouder"""
-    url = "https://publiek.broservices.nl/gm/gmw/v1/bro-ids?"
+    url = f"{GroundwaterMonitoringWell._rest_url}/bro-ids?"
     params = dict(bronhouder=bronhouder)
     req = requests.get(url, params=params)
     if req.status_code > 200:
@@ -26,7 +26,7 @@ def get_characteristics(**kwargs):
     """
     Get characteristics of Groundwater Monitoring Wells (see bro.get_characteristics)
     """
-    return bro.get_characteristics("gmw", **kwargs)
+    return bro.get_characteristics(GroundwaterMonitoringWell, **kwargs)
 
 
 def get_well_code(bro_id):
@@ -35,16 +35,16 @@ def get_well_code(bro_id):
 
     Parameters
     ----------
-    bro_id : TYPE
+    bro_id : str
         DESCRIPTION.
 
     Returns
     -------
-    well_code : TYPE
+    well_code : str
         DESCRIPTION.
 
     """
-    url = f"https://publiek.broservices.nl/gm/gmw/v1/well-code/{bro_id}"
+    url = f"{GroundwaterMonitoringWell._rest_url}/well-code/{bro_id}"
     req = requests.get(url)
     if req.status_code > 200:
         logger.error(req.reason)
@@ -53,34 +53,20 @@ def get_well_code(bro_id):
     return well_code
 
 
-def get_gmw(bro_id):
-    """
-    Haalt een putcode op, op basis van een BRO-ID.
-
-    Retourneert de putcode als 'plain text'
-
-    Parameters
-    ----------
-    bro_id : str
-        Het BRO-ID van de gmw.
-
-    Returns
-    -------
-    str
-        De putcode.
-
-    """
-    url = f"https://publiek.broservices.nl/gm/gmw/v1/objects/{bro_id}"
-    return GroundwaterMonitoringWell(url)
-
-
 class GroundwaterMonitoringWell(bro.XmlFileOrUrl):
-    def _read_contents(self, tree):
-        ns = "{http://www.broservices.nl/xsd/dsgmw/1.1}"
+    _rest_url = "https://publiek.broservices.nl/gm/gmw/v1"
+    _xmlns = "http://www.broservices.nl/xsd/dsgmw/1.1"
+    _char = "GMW_C"
 
-        gmws = tree.findall(f".//{ns}GMW_PO")
+    def _read_contents(self, tree):
+        ns = {
+            "brocom": "http://www.broservices.nl/xsd/brocommon/3.0",
+            "xmlns": self._xmlns,
+        }
+
+        gmws = tree.findall(".//xmlns:GMW_PO", ns)
         if len(gmws) == 0:
-            gmws = tree.findall(f".//{ns}GMW_PPO")
+            gmws = tree.findall(".//xmlns:GMW_PPO", ns)
         if len(gmws) == 0:
             raise (ValueError("No gmw found"))
         elif len(gmws) > 1:
@@ -94,8 +80,7 @@ class GroundwaterMonitoringWell(bro.XmlFileOrUrl):
             if len(child) == 0:
                 setattr(self, key, child.text)
             elif key == "standardizedLocation":
-                ns = "{http://www.broservices.nl/xsd/brocommon/3.0}"
-                lat, lon = self._read_pos(child.find(f"{ns}location"))
+                lat, lon = self._read_pos(child.find("brocom:location", ns))
                 setattr(self, "lat", lat)
                 setattr(self, "lon", lon)
             elif key == "deliveredLocation":
@@ -319,7 +304,7 @@ def get_data_in_extent(
         return gmw
     logger.info("Downloading tube-properties")
     # get the properties of the monitoringTubes
-    props = [get_gmw(bro_id) for bro_id in gmw.index.unique()]
+    props = [GroundwaterMonitoringWell.from_bro_id(id) for bid in gmw.index.unique()]
     props = pd.DataFrame(props).set_index("broId")
     logger.info(f"Downloading {kind}-observations")
     obs_df = get_observations(gmw, kind=kind, tmin=tmin, tmax=tmax)

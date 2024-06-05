@@ -11,7 +11,7 @@ logger = logging.getLogger(__name__)
 
 # %%
 def get_characteristics(
-    kind, tmin=None, tmax=None, extent=None, x=None, y=None, radius=1000.0, epsg=28992
+    cl, tmin=None, tmax=None, extent=None, x=None, y=None, radius=1000.0, epsg=28992
 ):
     """
     Haalt de karakteristieken op van een set van registratie objecten, gegeven een kenmerkenverzameling (kenset).
@@ -46,20 +46,9 @@ def get_characteristics(
         DESCRIPTION.
 
     """
-    if kind == "gmw":
-        url = "https://publiek.broservices.nl/gm/gmw/v1/characteristics/searches?"
-        ns = "{http://www.broservices.nl/xsd/dsgmw/1.1}"
-        name = "GMW_C"
-    elif kind == "cpt":
-        url = "https://publiek.broservices.nl/sr/cpt/v1/characteristics/searches?"
-        ns = "{http://www.broservices.nl/xsd/dscpt/1.1}"
-        name = "CPT_C"
-    elif kind == "bhrgt":
-        url = "https://publiek.broservices.nl/sr/bhrgt/v2/characteristics/searches?"
-        ns = "{http://www.broservices.nl/xsd/dsbhr-gt/2.1}"
-        name = "BHR_GT_C"
-    else:
-        raise (ValueError("Unknown kind: {kind}"))
+    url = f"{cl._rest_url}/characteristics/searches?"
+    ns = {"xmlns": cl._xmlns}
+
     data = {}
     if tmin is not None or tmax is not None:
         data["registrationPeriod"] = {}
@@ -96,7 +85,7 @@ def get_characteristics(
     tree = xml.etree.ElementTree.fromstring(req.text)
 
     data = []
-    for gmw in tree.findall(f".//{ns}{name}"):
+    for gmw in tree.findall(f".//xmlns:{cl._char}", ns):
         d = {}
         for key in gmw.attrib:
             d[key.split("}", 1)[1]] = gmw.attrib[key]
@@ -147,6 +136,12 @@ class XmlFileOrUrl:
 
         self._check_for_rejection(root)
         self._read_contents(root)
+
+    @classmethod
+    def from_bro_id(cls, bro_id, **kwargs):
+        if not hasattr(cls, "_rest_url"):
+            raise (NotImplementedError(f"No rest-service defined for {cls.__name__}"))
+        return cls(f"{cls._rest_url}/objects/{bro_id}", **kwargs)
 
     def to_dict(self):
         d = {}

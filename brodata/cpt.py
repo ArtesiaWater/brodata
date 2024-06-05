@@ -10,16 +10,20 @@ def get_characteristics(**kwargs):
     """
     Get characteristics of Cone Penetration Tests (see bro.get_characteristics)
     """
-    return bro.get_characteristics("cpt", **kwargs)
+    return bro.get_characteristics(ConePenetrationTest, **kwargs)
 
 
 class ConePenetrationTest(bro.XmlFileOrUrl):
+    _rest_url = "https://publiek.broservices.nl/sr/cpt/v1"
+    _xmlns = "http://www.broservices.nl/xsd/dscpt/1.1"
+    _char = "CPT_C"
+
     def _read_contents(self, tree):
         ns = {
             "brocom": "http://www.broservices.nl/xsd/brocommon/3.0",
             "gml": "http://www.opengis.net/gml/3.2",
             "cptcommon": "http://www.broservices.nl/xsd/cptcommon/1.1",
-            "xmlns": "http://www.broservices.nl/xsd/dscpt/1.1",
+            "xmlns": self._xmlns,
         }
         cpts = tree.findall(".//xmlns:CPT_O", ns)
         if len(cpts) != 1:

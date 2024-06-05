@@ -279,7 +279,7 @@ def get_configuration():
         "class": "GroundwaterUtilisationFacility",
         "abbr": "guf",
         "object": "GUF_PO",
-        "rest_url": "https://publiek.broservices.nl/gu/guf/v1/",
+        "rest_url": "https://publiek.broservices.nl/gu/guf/v1",
     }
 
     # DINO

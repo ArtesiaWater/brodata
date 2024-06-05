@@ -52,27 +52,29 @@ def read_zipfile(fname, pathnames=None):
                 cl = GroundwaterMonitoringWell
                 ext = ".xml"
             elif pathname == "BRO_Grondwatergebruiksysteem":
-                from .guf import Grondwatergebruiksysteem
+                from .guf import GroundwaterUtilisationFacility
 
-                cl = Grondwatergebruiksysteem
+                cl = GroundwaterUtilisationFacility
                 ext = ".xml"
             elif pathname == "BRO_Grondwatermonitoringnet":
-                logger.warning(f"Folder {pathname} not supported yet")
-                cl = None
+                from .gmn import GroundwaterMonitoringNetwork
+
+                cl = GroundwaterMonitoringNetwork
+                ext = ".xml"
             elif pathname == "BRO_Grondwaterstandonderzoek":
                 from .gld import GroundwaterLevelDossier
 
                 cl = GroundwaterLevelDossier
                 ext = ".xml"
             elif pathname == "BRO_GeotechnischSondeeronderzoek":
-                from .cpt import GeotechnischSondeeronderzoek
+                from .cpt import ConePenetrationTest
 
-                cl = GeotechnischSondeeronderzoek
+                cl = ConePenetrationTest
                 ext = ".xml"
             elif pathname == "BRO_GeotechnischBooronderzoek":
-                from .bhr import GeotechnischBooronderzoek
+                from .bhr import GeotechnicalBoreholeResearch
 
-                cl = GeotechnischBooronderzoek
+                cl = GeotechnicalBoreholeResearch
                 ext = ".xml"
             elif pathname == "DINO_GeologischBooronderzoekBoormonsterprofiel":
                 from .dino import GeologischBooronderzoek

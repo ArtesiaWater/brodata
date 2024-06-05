@@ -6,6 +6,8 @@ logger = logging.getLogger(__name__)
 
 
 class GroundwaterUtilisationFacility(bro.XmlFileOrUrl):
+    _rest_url = "https://publiek.broservices.nl/gu/guf/v1"
+
     def _read_contents(self, tree):
         ns = {
             "brocom": "http://www.broservices.nl/xsd/brocommon/3.0",

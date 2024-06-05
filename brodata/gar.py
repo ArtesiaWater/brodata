@@ -6,18 +6,15 @@ logger = logging.getLogger(__name__)
 
 
 class GroundwaterAnalysisReport(bro.XmlFileOrUrl):
-
-    @classmethod
-    def from_bro_id(cls, bro_id):
-        rest_url = "https://publiek.broservices.nl/gm/gar/v1"
-        return cls(f"{rest_url}/objects/{bro_id}")
+    _rest_url = "https://publiek.broservices.nl/gm/gar/v1"
+    _xmlns = "http://www.broservices.nl/xsd/dsgar/1.0"
 
     def _read_contents(self, tree):
         ns = {
             "brocom": "http://www.broservices.nl/xsd/brocommon/3.0",
             "gml": "http://www.opengis.net/gml/3.2",
             "garcommon": "http://www.broservices.nl/xsd/garcommon/1.0",
-            "xmlns": "http://www.broservices.nl/xsd/dsgar/1.0",
+            "xmlns": self._xmlns,
         }
         gars = tree.findall(".//xmlns:GAR_O", ns)
         if len(gars) != 1:

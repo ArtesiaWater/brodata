@@ -16,7 +16,7 @@ def tets_get_well_code():
 
 
 def test_get_gmw():
-    brodata.gmw.get_gmw("GMW000000049567")
+    gmw = brodata.gmw.GroundwaterMonitoringWell.from_bro_id("GMW000000049567")
 
 
 def test_groundwater_monitoring_well():
@@ -37,6 +37,16 @@ def test_pedological_borehole_research():
 def test_groundwater_analysis_report():
     fname = os.path.join("data", "GAR000000019636.xml")
     gar = brodata.gar.GroundwaterAnalysisReport(fname)
+
+
+def test_soil_face_research():
+    fname = os.path.join("data", "SFR000000000243.xml")
+    sfr = brodata.sfr.SoilFaceResearch(fname)
+
+
+def test_groundwater_monitoring_network():
+    fname = os.path.join("data", "GMN000000000163.xml")
+    gmn = brodata.gmn.GroundwaterMonitoringNetwork(fname)
 
 
 def test_get_cpt_characteristics():

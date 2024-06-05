@@ -39,14 +39,14 @@ def get_observations(
         # download the observations as csv
         if tmin is not None or tmax is not None:
             raise (Exception("tmin and tmax only supported when as_csv=False"))
-        url = "https://publiek.broservices.nl/gm/gld/v1/objectsAsCsv/GLD000000012892"
+        url = f"{GroundwaterLevelDossier._rest_url}/objectsAsCsv/{bro_id}"
         if rapportagetype != "compact":
             raise (Exception("Only rapportagetype compact supported for now"))
         params = {
             "observatietype": observatietype,
             "rapportagetype": rapportagetype,
         }
-        req = requests.get(url.format(bro_id), params=params)
+        req = requests.get(url, params=params)
         if req.status_code > 200:
             logger.error(req.json()["errors"][0]["message"])
             return
@@ -57,7 +57,7 @@ def get_observations(
             return df
     else:
         # download the observations as xml
-        url = "https://publiek.broservices.nl/gm/gld/v1/objects/{}"
+        url = f"{GroundwaterLevelDossier._rest_url}/objects/{bro_id}"
         params = {}
         if tmin is not None:
             tmin = pd.to_datetime(tmin)
@@ -65,7 +65,7 @@ def get_observations(
         if tmax is not None:
             tmax = pd.to_datetime(tmax)
             params["observationPeriodEndDate"] = tmax.strftime("%Y-%m-%d")
-        df = GroundwaterLevelDossier(url.format(bro_id), params=params, to_file=fname)
+        df = GroundwaterLevelDossier(url, params=params, to_file=fname)
         return df.to_dict()
 
 
@@ -83,6 +83,8 @@ def read_gld_csv(fname, bro_id, **kwargs):
 
 
 class GroundwaterLevelDossier(bro.XmlFileOrUrl):
+    _rest_url = "https://publiek.broservices.nl/gm/gld/v1"
+
     def _read_contents(self, tree):
         ns = {
             "ns11": "http://www.broservices.nl/xsd/dsgld/1.0",
