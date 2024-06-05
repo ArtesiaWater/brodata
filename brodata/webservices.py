@@ -233,28 +233,53 @@ def get_configuration():
     # BRO
     config["Geologisch booronderzoek (BRO)"] = {
         "mapserver": f"{mapserver_url}/lks_bhr_g_rd/MapServer",
+        "abbr": "bhrg",
+        "rest_url": "https://publiek.broservices.nl/sr/bhrg/v3",
     }
     config["Geotechnisch booronderzoek (BRO)"] = {
         "mapserver": f"{mapserver_url}/lks_bhr_gt_rd/MapServer",
+        "abbr": "bhrgt",
+        "object": "BHR-GT",
+        "rest_url": "https://publiek.broservices.nl/sr/bhrgt/v2",
     }
     config["Bodemkundig booronderzoek (BRO)"] = {
         "mapserver": f"{mapserver_url}/lks_bhr_rd/MapServer",
+        "abbr": "bhrp",
+        "object": "BHR_O",
+        "rest_url": "https://publiek.broservices.nl/sr/bhrp/v2",
     }
     config["Geotechnisch sondeeronderzoek (BRO)"] = {
         "mapserver": f"{mapserver_url}/lks_cpt_rd/MapServer",
+        "abbr": "cpt",
+        "rest_url": "https://publiek.broservices.nl/sr/cpt/v1",
     }
     config["Bodemkundig wandonderzoek (BRO)"] = {
         "mapserver": f"{mapserver_url}/lks_sfr_rd/MapServer",
+        "name_en": "pedological SoilFaceResearch",
+        "abbr": "sfr",
     }
     config["Grondwatermonitoringput"] = {
         "mapserver": f"{mapserver_url}/lks_gmw_rd/MapServer",
+        "rest_url": "https://publiek.broservices.nl/gm/gmw/v1",
     }
     config["Grondwaterstandonderzoek"] = {
-        "reeks": "https://publiek.broservices.nl/gm/gld/v1/seriesAsCsv/GLD000000027343?asISO8601=true",
-        "uitgiftedocument": "https://publiek.broservices.nl/gm/gld/v1/objects",
+        "reeks": "https://publiek.broservices.nl/gm/gld/v1/seriesAsCsv",
+        "rest_url": "https://publiek.broservices.nl/gm/gld/v1",
+        "abbr": "gld",
+    }
+    config["Grondwatersamenstellingsonderzoek"] = {
+        "abbr": "gar",
+        "rest_url": "https://publiek.broservices.nl/gm/gar/v1",
+        "object": "GAR_O",
     }
     config["Grondwatergebruiksystemen"] = {
         "mapserver": f"{mapserver_url}/lks_guf_rd/MapServer",
+        "name_nl": "Grondwatergebruiksystemen",
+        "name_en": "Groundwater utilisation facility",
+        "class": "GroundwaterUtilisationFacility",
+        "abbr": "guf",
+        "object": "GUF_PO",
+        "rest_url": "https://publiek.broservices.nl/gu/guf/v1/",
     }
 
     # DINO

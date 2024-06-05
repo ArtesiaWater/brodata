@@ -144,6 +144,8 @@ class XmlFileOrUrl:
         else:
             tree = xml.etree.ElementTree.parse(url_or_file)
             root = tree.getroot()
+
+        self._check_for_rejection(root)
         self._read_contents(root)
 
     def to_dict(self):
@@ -156,6 +158,17 @@ class XmlFileOrUrl:
                 continue
             d[attrib] = value
         return d
+
+    def _check_for_rejection(self, tree):
+        ns = {"brocom": "http://www.broservices.nl/xsd/brocommon/3.0"}
+        response_type = tree.find("brocom:responseType", ns)
+        if response_type.text == "rejection":
+            criterionError = tree.find("brocom:criterionError", ns)
+            if criterionError is None:
+                msg = tree.find("brocom:rejectionReason", ns).text
+            else:
+                msg = criterionError.find("brocom:specification", ns).text
+            raise (ValueError(msg))
 
     def _read_children_of_children(self, node, d=None):
         if len(node) == 0:

@@ -24,14 +24,19 @@ def test_groundwater_monitoring_well():
     gmw = brodata.gmw.GroundwaterMonitoringWell(fname)
 
 
-def test_geotechnisch_booronderzoek():
+def test_geotechnical_borehole_research():
     fname = os.path.join("data", "BHR000000353924.xml")
-    bhrgt = brodata.bhr.GeotechnischBooronderzoek(fname)
+    bhrgt = brodata.bhr.GeotechnicalBoreholeResearch(fname)
 
 
-def test_bodemkundig_booronderzoek():
+def test_pedological_borehole_research():
     fname = os.path.join("data", "BHR000000175723.xml")
-    bhr = brodata.bhr.BodemkundigBooronderzoek(fname)
+    bhr = brodata.bhr.PedologicalBoreholeResearch(fname)
+
+
+def test_groundwater_analysis_report():
+    fname = os.path.join("data", "GAR000000019636.xml")
+    gar = brodata.gar.GroundwaterAnalysisReport(fname)
 
 
 def test_get_cpt_characteristics():
@@ -39,18 +44,18 @@ def test_get_cpt_characteristics():
     cpts = brodata.cpt.get_characteristics(extent=extent)
 
 
-def test_get_geotechnisch_sondeeronderzoek():
+def test_get_cone_penetration_test():
     fname = os.path.join("data", "CPT000000005925.xml")
-    cpt = brodata.cpt.GeotechnischSondeeronderzoek(fname)
+    cpt = brodata.cpt.ConePenetrationTest(fname)
     # also test the plot
     brodata.plot.cone_penetration_test(cpt)
 
 
-def test_get_geotechnisch_sondeeronderzoek_with_dissipation_test():
+def test_get_cone_penetration_test_with_dissipation_test():
     fname = os.path.join("data", "CPT000000115243.xml")
-    cpt = brodata.cpt.GeotechnischSondeeronderzoek(fname)
+    cpt = brodata.cpt.ConePenetrationTest(fname)
 
 
-def test_grondwatergebruiksysteem():
+def test_groundwater_utilisation_facility():
     fname = os.path.join("data", "GUF000000016723.xml")
-    guf = brodata.guf.Grondwatergebruiksysteem(fname)
+    guf = brodata.guf.GroundwaterUtilisationFacility(fname)

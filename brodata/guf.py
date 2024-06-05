@@ -5,7 +5,7 @@ from . import bro
 logger = logging.getLogger(__name__)
 
 
-class Grondwatergebruiksysteem(bro.XmlFileOrUrl):
+class GroundwaterUtilisationFacility(bro.XmlFileOrUrl):
     def _read_contents(self, tree):
         ns = {
             "brocom": "http://www.broservices.nl/xsd/brocommon/3.0",

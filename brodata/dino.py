@@ -1,3 +1,4 @@
+import os
 import requests
 from tqdm import tqdm
 import pandas as pd
@@ -6,9 +7,21 @@ from .webservices import get_configuration, get_gdf
 from .util import objects_to_gdf
 
 
+def _get_data_from_path(from_path, cl):
+    files = os.listdir(from_path)
+    data = {}
+    for file in files:
+        fname = os.path.join(from_path, file)
+        data[os.path.splitext(file)[0]] = cl(fname)
+    return data
+
+
 def get_verticaal_elektrisch_sondeeronderzoek(
-    extent, config=None, timeout=5, silent=False
+    extent, config=None, timeout=5, silent=False, to_path=None
 ):
+    if isinstance(extent, str):
+        data = _get_data_from_path(extent, VerticaalElektrischSondeeronderzoek)
+        return objects_to_gdf(data, x="X-coordinaat", y="Y-coordinaat")
     kind = "Verticaal elektrisch sondeeronderzoek"
     if config is None:
         config = get_configuration()
@@ -20,17 +33,29 @@ def get_verticaal_elektrisch_sondeeronderzoek(
     )
 
     download_url = config[kind]["download"]
+
+    to_file = None
+    if to_path is not None:
+        os.makedirs(to_path)
+
     data = {}
     for name in tqdm(gdf.index, disable=silent):
         url = f"{download_url}/{name}"
-        data[name] = VerticaalElektrischSondeeronderzoek(url, timeout=timeout)
+        if to_path is not None:
+            to_file = os.path.join(to_path, f"{name}.csv")
+        data[name] = VerticaalElektrischSondeeronderzoek(
+            url, timeout=timeout, to_file=to_file
+        )
 
     df = pd.DataFrame([x.to_dict() for x in data.values()]).set_index("NITG-nr")
     gdf = pd.concat((gdf, df), axis=1)
     return gdf
 
 
-def get_grondwaterstand(extent, config=None, timeout=5, silent=False):
+def get_grondwaterstand(extent, config=None, timeout=5, silent=False, to_path=None):
+    if isinstance(extent, str):
+        data = _get_data_from_path(extent, Grondwaterstand)
+        return objects_to_gdf(data, x="X-coordinaat", y="Y-coordinaat")
     kind = "Grondwaterstand"
     if config is None:
         config = get_configuration()
@@ -43,30 +68,39 @@ def get_grondwaterstand(extent, config=None, timeout=5, silent=False):
     gdf = gdf[gdf["ST_CNT"] > 0]
 
     download_url = config[kind]["download"]
+
+    to_file = None
+    if to_path is not None:
+        os.makedirs(to_path)
     data = {}
     for name in tqdm(gdf.index, disable=silent):
-        if False:
-            url = config[kind]["details"]
-            r = requests.post(url, data='["{name}"]', timeout=timeout)
-            if not r.ok:
-                raise (ValueError(f"Retreiving data from {url} failed"))
-            data = r.json()
-        else:
-            url = "{}/{}/query".format(config[kind]["mapserver"], config[kind]["table"])
-            GDW_DBK = gdf.at[name, "GDW_DBK"]
-            params = {"where": f"GDW_DBK = {GDW_DBK}", "f": "pjson"}
-            r = requests.get(url, params=params)
-            if not r.ok:
-                raise (ValueError(f"Retreiving data from {url} failed"))
-            for feature in r.json()["features"]:
-                piezometer_nr = feature["attributes"]["PIEZOMETER_NR"]
-                url = f"{download_url}/{name}/{piezometer_nr}"
-                data[f"{name}_{piezometer_nr}"] = Grondwaterstand(url, timeout=timeout)
-    gdf = objects_to_gdf(data, x="X-coordinaat", y="Y-coordinaat")
-    return gdf
+        url = "{}/{}/query".format(config[kind]["mapserver"], config[kind]["table"])
+        GDW_DBK = gdf.at[name, "GDW_DBK"]
+        params = {"where": f"GDW_DBK = {GDW_DBK}", "f": "pjson"}
+        r = requests.get(url, params=params)
+        if not r.ok:
+            raise (ValueError(f"Retreiving data from {url} failed"))
+        for feature in r.json()["features"]:
+            piezometer_nr = feature["attributes"]["PIEZOMETER_NR"]
+            url = f"{download_url}/{name}/{piezometer_nr}"
+            if to_path is not None:
+                to_file = os.path.join(to_path, f"{name}_{piezometer_nr}.csv")
+            data[f"{name}_{piezometer_nr}"] = Grondwaterstand(
+                url, timeout=timeout, to_file=to_file
+            )
+    return objects_to_gdf(data, x="X-coordinaat", y="Y-coordinaat")
 
 
-def get_grondwatersamenstelling(extent, config=None, timeout=5, silent=False):
+def get_grondwatersamenstelling(
+    extent,
+    config=None,
+    timeout=5,
+    silent=False,
+    to_path=None,
+):
+    if isinstance(extent, str):
+        data = _get_data_from_path(extent, Grondwatersamenstelling)
+        return objects_to_gdf(data, x="X-coordinaat", y="Y-coordinaat")
     kind = "Grondwatersamenstelling"
     if config is None:
         config = get_configuration()
@@ -78,14 +112,25 @@ def get_grondwatersamenstelling(extent, config=None, timeout=5, silent=False):
     )
     gdf = gdf[gdf["SA_CNT"] > 0]
     download_url = config[kind]["download"]
+
+    to_file = None
+    if to_path is not None:
+        os.makedirs(to_path)
     data = {}
     for name in tqdm(gdf.index, disable=silent):
         url = f"{download_url}/{name}"
-        data[name] = Grondwatersamenstelling(url)
+        if to_path is not None:
+            to_file = os.path.join(to_path, f"{name}.csv")
+        data[name] = Grondwatersamenstelling(url, to_file=to_file)
     return objects_to_gdf(data, x="X-coordinaat", y="Y-coordinaat")
 
 
-def get_geologisch_booronderzoek(extent, config=None, timeout=5, silent=False):
+def get_geologisch_booronderzoek(
+    extent, config=None, timeout=5, silent=False, to_path=None
+):
+    if isinstance(extent, str):
+        data = _get_data_from_path(extent, GeologischBooronderzoek)
+        return objects_to_gdf(data, x="X-coordinaat", y="Y-coordinaat")
     kind = "Geologisch booronderzoek"
     if config is None:
         config = get_configuration()
@@ -96,10 +141,17 @@ def get_geologisch_booronderzoek(extent, config=None, timeout=5, silent=False):
         timeout=timeout,
     )
     download_url = config[kind]["download"]
+
+    to_file = None
+    if to_path is not None:
+        os.makedirs(to_path)
     data = {}
     for name in tqdm(gdf.index, disable=silent):
         url = f"{download_url}/{name}"
-        data[name] = GeologischBooronderzoek(url, timeout=timeout)
+        if to_path is not None:
+            to_file = os.path.join(to_path, f"{name}.csv")
+        data[name] = GeologischBooronderzoek(url, timeout=timeout, to_file=to_file)
+    return objects_to_gdf(data, x="X-coordinaat", y="Y-coordinaat")
 
 
 class CsvFileOrUrl:
@@ -207,6 +259,11 @@ class Grondwatersamenstelling(CsvFileOrUrl):
         if line.startswith('"KWALITEIT gegevens VLOEIBAAR"'):
             line = f.readline()
             self.kwaliteit_gegevens_vloeibaar, line = self._read_csv_part(f)
+            for column in ["Monster datum", "Analyse datum"]:
+                if column in self.kwaliteit_gegevens_vloeibaar.columns:
+                    self.kwaliteit_gegevens_vloeibaar[column] = pd.to_datetime(
+                        self.kwaliteit_gegevens_vloeibaar[column], dayfirst=True
+                    )
 
     def to_dict(self):
         d = {**self.locatie_gegevens}

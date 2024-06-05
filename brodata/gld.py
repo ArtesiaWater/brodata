@@ -107,9 +107,7 @@ class GroundwaterLevelDossier(bro.XmlFileOrUrl):
                 tube_nr = int(well.find("gldcommon:tubeNumber", ns).text)
                 setattr(self, "tubeNumber", tube_nr)
             elif key in ["registrationHistory"]:
-                for grandchild in child:
-                    key = grandchild.tag.split("}", 1)[1]
-                    setattr(self, key, grandchild.text)
+                self._read_children_of_children(child)
             elif key == "groundwaterMonitoringNet":
                 for grandchild in child:
                     key = grandchild.tag.split("}", 1)[1]

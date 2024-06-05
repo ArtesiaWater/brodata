@@ -82,17 +82,7 @@ class GroundwaterMonitoringWell(bro.XmlFileOrUrl):
         if len(gmws) == 0:
             gmws = tree.findall(f".//{ns}GMW_PPO")
         if len(gmws) == 0:
-            ns = {"brocom": "http://www.broservices.nl/xsd/brocommon/3.0"}
-            response_type = tree.find("brocom:responseType", ns)
-            if response_type.text == "rejection":
-                criterionError = tree.find("brocom:criterionError", ns)
-                if criterionError is None:
-                    msg = tree.find("brocom:rejectionReason", ns).text
-                else:
-                    msg = criterionError.find("brocom:specification", ns).text
-                raise (ValueError(msg))
-            else:
-                raise (ValueError("No gmw found"))
+            raise (ValueError("No gmw found"))
         elif len(gmws) > 1:
             raise (Exception("Only one gmw supported"))
         gmw = gmws[0]

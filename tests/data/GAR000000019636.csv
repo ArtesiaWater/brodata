@@ -1,0 +1,18 @@
+"BRO-ID","kwaliteitsregime","in registratie sinds","tijdstip veldonderzoek","pomptype","buis",,,,
+"GAR000000019636","IMBRO/A","2023-01-10T20:05:19+01:00","1982-02-12T12:00:00+01:00","onderwaterpomp","1",,,,
+,,,,,,,,,
+"parameter","sikb-id","aquo-code","analysedatum","analysemeetwaarde","eenheid meerwaarde","rapportagegrens","eenheid rapportagegres","limietsymbool","status kwaliteitscontrole"
+"Geleidendheid","3548","GELDHD","1982-02-12","126.55","mS/m",,,,"onbekend"
+"Zuurgraad","1398","pH","1982-02-12","7.0","1",,,,"onbekend"
+"waterstofcarbonaat","374","HCO3","1982-02-12","345.0","mg/l",,,,"onbekend"
+"ammonium","289","NH4","1982-02-12","0.54","mg/l",,,,"onbekend"
+"calcium","447","Ca","1982-02-12","145.0","mg/l",,,,"onbekend"
+"chloride","508","Cl","1982-02-12","165.0","mg/l",,,,"onbekend"
+"fosfor totaal","4188","Ptot","1982-02-12","0.22","mg/l",,,,"onbekend"
+"kalium","920","K","1982-02-12","2.0","mg/l",,,,"onbekend"
+"koolstof organisch","1318","Corg","1982-02-12","5.0","mg/l",,,,"onbekend"
+"magnesium","1125","Mg","1982-02-12","14.0","mg/l",,,,"onbekend"
+"natrium","1262","Na","1982-02-12","95.0","mg/l",,,,"onbekend"
+"nitraat","1270","NO3","1982-02-12","0.1","mg/l",,,,"onbekend"
+"sulfaat","1508","SO4","1982-02-12","95.0","mg/l",,,,"onbekend"
+,,,,,,,,,

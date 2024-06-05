@@ -13,7 +13,7 @@ def get_characteristics(**kwargs):
     return bro.get_characteristics("cpt", **kwargs)
 
 
-class GeotechnischSondeeronderzoek(bro.XmlFileOrUrl):
+class ConePenetrationTest(bro.XmlFileOrUrl):
     def _read_contents(self, tree):
         ns = {
             "brocom": "http://www.broservices.nl/xsd/brocommon/3.0",
