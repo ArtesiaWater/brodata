@@ -7,10 +7,11 @@ from .webservices import get_configuration, get_gdf
 from .util import objects_to_gdf
 
 
-def _get_data_from_path(from_path, cl):
+def _get_data_from_path(from_path, cl, silent=False, ext=".csv"):
     files = os.listdir(from_path)
+    files = [file for file in files if file.endswith(ext)]
     data = {}
-    for file in files:
+    for file in tqdm(files, disable=silent):
         fname = os.path.join(from_path, file)
         data[os.path.splitext(file)[0]] = cl(fname)
     return data
@@ -20,7 +21,9 @@ def get_verticaal_elektrisch_sondeeronderzoek(
     extent, config=None, timeout=5, silent=False, to_path=None
 ):
     if isinstance(extent, str):
-        data = _get_data_from_path(extent, VerticaalElektrischSondeeronderzoek)
+        data = _get_data_from_path(
+            extent, VerticaalElektrischSondeeronderzoek, silent=silent
+        )
         return objects_to_gdf(data, x="X-coordinaat", y="Y-coordinaat")
     kind = "Verticaal elektrisch sondeeronderzoek"
     if config is None:
@@ -54,7 +57,7 @@ def get_verticaal_elektrisch_sondeeronderzoek(
 
 def get_grondwaterstand(extent, config=None, timeout=5, silent=False, to_path=None):
     if isinstance(extent, str):
-        data = _get_data_from_path(extent, Grondwaterstand)
+        data = _get_data_from_path(extent, Grondwaterstand, silent=silent)
         return objects_to_gdf(data, x="X-coordinaat", y="Y-coordinaat")
     kind = "Grondwaterstand"
     if config is None:
@@ -99,7 +102,7 @@ def get_grondwatersamenstelling(
     to_path=None,
 ):
     if isinstance(extent, str):
-        data = _get_data_from_path(extent, Grondwatersamenstelling)
+        data = _get_data_from_path(extent, Grondwatersamenstelling, silent=silent)
         return objects_to_gdf(data, x="X-coordinaat", y="Y-coordinaat")
     kind = "Grondwatersamenstelling"
     if config is None:
@@ -129,7 +132,7 @@ def get_geologisch_booronderzoek(
     extent, config=None, timeout=5, silent=False, to_path=None
 ):
     if isinstance(extent, str):
-        data = _get_data_from_path(extent, GeologischBooronderzoek)
+        data = _get_data_from_path(extent, GeologischBooronderzoek, silent=silent)
         return objects_to_gdf(data, x="X-coordinaat", y="Y-coordinaat")
     kind = "Geologisch booronderzoek"
     if config is None:
@@ -231,6 +234,9 @@ class Grondwaterstand(CsvFileOrUrl):
             return
         self.meta, line = self._read_csv_part(f)
         self.data, line = self._read_csv_part(f)
+        for column in ["Peildatum"]:
+            if column in self.data.columns:
+                self.data[column] = pd.to_datetime(self.data[column], dayfirst=True)
 
     def to_dict(self):
         d = {**self.props, **self.props2}
