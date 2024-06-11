@@ -242,8 +242,8 @@ class Grondwaterstand(CsvFileOrUrl):
         d = {**self.props, **self.props2}
         if hasattr(self, "meta"):
             d["meta"] = self.meta
-            d["X-coordinaat"] = d["meta"]["X-coordinaat"].iloc[-1]
-            d["Y-coordinaat"] = d["meta"]["Y-coordinaat"].iloc[-1]
+            for column in d["meta"]:
+                d[column] = d["meta"][column].iloc[-1]
         if hasattr(self, "data"):
             d["data"] = self.data
         return d
