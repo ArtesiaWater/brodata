@@ -1,13 +1,9 @@
 import os
 import brodata
 
-config = brodata.webservices.get_configuration()
-
 
 def test_verticaal_elektrisch_sondeeronderzoek_from_url():
-    url = config["Verticaal elektrisch sondeeronderzoek"]["download"]
-    url = f"{url}/W38B0016"
-    brodata.dino.VerticaalElektrischSondeeronderzoek(url)
+    brodata.dino.VerticaalElektrischSondeeronderzoek.from_dino_nr("W38B0016")
 
 
 def test_verticaal_elektrisch_sondeeronderzoek_from_file():
@@ -16,9 +12,7 @@ def test_verticaal_elektrisch_sondeeronderzoek_from_file():
 
 
 def test_grondwaterstand():
-    url = config["Grondwaterstand"]["download"]
-    url = f"{url}/B38B0207/001"
-    brodata.dino.Grondwaterstand(url)
+    brodata.dino.Grondwaterstand.from_dino_nr("B38B0207", 1)
 
 
 def test_grondwaterstand_from_file():
@@ -32,9 +26,7 @@ def test_grondwatersamenstelling_from_file():
 
 
 def test_geologisch_booronderzoek():
-    url = config["Geologisch booronderzoek"]["download"]
-    url = f"{url}/B42E0199"
-    brodata.dino.GeologischBooronderzoek(url)
+    brodata.dino.GeologischBooronderzoek.from_dino_nr("B42E0199")
 
 
 def test_geologisch_booronderzoek_from_file():

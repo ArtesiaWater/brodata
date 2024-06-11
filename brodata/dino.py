@@ -174,6 +174,12 @@ class CsvFileOrUrl:
             with open(url_or_file, "r") as f:
                 self._read_contents(f)
 
+    @classmethod
+    def from_dino_nr(cls, dino_nr, **kwargs):
+        if not hasattr(cls, "_download_url"):
+            raise (NotImplementedError(f"No rest-service defined for {cls.__name__}"))
+        return cls(f"{cls._download_url}/{dino_nr}", **kwargs)
+
     def _read_properties_csv_rows(self, f, merge_columns=False, **kwargs):
         # this is the new format of properties from dinoloket
         df, line = self._read_csv_part(f, header=None, index_col=0, **kwargs)
@@ -225,6 +231,14 @@ class CsvFileOrUrl:
 
 
 class Grondwaterstand(CsvFileOrUrl):
+    _download_url = "https://www.dinoloket.nl/uitgifteloket/api/wo/gwo/full"
+
+    @classmethod
+    def from_dino_nr(cls, dino_nr, filter_nr, **kwargs):
+        if not hasattr(cls, "_download_url"):
+            raise (NotImplementedError(f"No rest-service defined for {cls.__name__}"))
+        return cls(f"{cls._download_url}/{dino_nr}/{filter_nr:03d}", **kwargs)
+
     def _read_contents(self, f):
         self.props, line = self._read_properties_csv_rows(f, merge_columns=True)
         self.props2, line = self._read_properties_csv_rows(f)
@@ -250,6 +264,8 @@ class Grondwaterstand(CsvFileOrUrl):
 
 
 class Grondwatersamenstelling(CsvFileOrUrl):
+    _download_url = "https://www.dinoloket.nl/uitgifteloket/api/wo/gwo/qua/report"
+
     def _read_contents(self, f):
         # read first line and place cursor at start of document again
         start = f.tell()
@@ -279,6 +295,10 @@ class Grondwatersamenstelling(CsvFileOrUrl):
 
 
 class GeologischBooronderzoek(CsvFileOrUrl):
+    _download_url = (
+        "https://www.dinoloket.nl/uitgifteloket/api/brh/sampledescription/csv"
+    )
+
     def _read_contents(self, f):
         # read first line and place cursor at start of document again
         start = f.tell()
@@ -313,6 +333,8 @@ class GeologischBooronderzoek(CsvFileOrUrl):
 
 
 class VerticaalElektrischSondeeronderzoek(CsvFileOrUrl):
+    _download_url = "https://www.dinoloket.nl/uitgifteloket/api/ves/csv"
+
     # Read a VES-file
     def _read_contents(self, f):
         # read first line and place cursor at start of document again
