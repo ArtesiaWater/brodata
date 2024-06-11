@@ -177,7 +177,7 @@ class CsvFileOrUrl:
     @classmethod
     def from_dino_nr(cls, dino_nr, **kwargs):
         if not hasattr(cls, "_download_url"):
-            raise (NotImplementedError(f"No rest-service defined for {cls.__name__}"))
+            raise (NotImplementedError(f"No download-url defined for {cls.__name__}"))
         return cls(f"{cls._download_url}/{dino_nr}", **kwargs)
 
     def _read_properties_csv_rows(self, f, merge_columns=False, **kwargs):
@@ -235,8 +235,6 @@ class Grondwaterstand(CsvFileOrUrl):
 
     @classmethod
     def from_dino_nr(cls, dino_nr, filter_nr, **kwargs):
-        if not hasattr(cls, "_download_url"):
-            raise (NotImplementedError(f"No rest-service defined for {cls.__name__}"))
         return cls(f"{cls._download_url}/{dino_nr}/{filter_nr:03d}", **kwargs)
 
     def _read_contents(self, f):
