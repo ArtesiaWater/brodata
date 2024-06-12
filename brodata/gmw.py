@@ -6,6 +6,9 @@ from tqdm import tqdm
 import geopandas as gpd
 
 from . import bro, gld
+from .gar import GroundwaterAnalysisReport
+from .frd import FormationResistanceDossier
+from .gmn import GroundwaterMonitoringNetwork
 
 logger = logging.getLogger(__name__)
 
@@ -130,7 +133,7 @@ def get_observations(
     bro_ids : str
         The bro_ids of the monitoring wells of which we want the tubes.
     kind : str, optional
-        The type of observations. Possible values are gml, gld, gar and frd.
+        The type of observations. Possible values are gmn, gld, gar and frd.
         See the top of this file for the measing of each abbreviation. The default is
         'gld' (groundwater level dossier).
 
@@ -164,9 +167,19 @@ def get_observations(
                     continue
             ref_key = f"{kind}References"
             for ref in tube[ref_key]:
-                df = gld.get_observations(
-                    ref["broId"], tmin=tmin, tmax=tmax, as_csv=as_csv
-                )
+                if kind == "gld":
+                    df = gld.get_observations(
+                        ref["broId"], tmin=tmin, tmax=tmax, as_csv=as_csv
+                    )
+                elif kind == "gar":
+                    df = GroundwaterAnalysisReport.from_bro_id(ref["broId"]).to_dict()
+                elif kind == "frd":
+                    df = FormationResistanceDossier.from_bro_id(ref["broId"]).to_dict()
+                elif kind == "gmn":
+                    df = GroundwaterMonitoringNetwork.from_bro_id(
+                        ref["broId"]
+                    ).to_dict()
+
                 if as_csv:
                     tube["observation"] = df
                     if drop_references:
@@ -248,11 +261,11 @@ def get_tube_gdf(props, obs_df=None, index=None, qualifier="goedgekeurd"):
 def _add_observation_to_tube(tube, obs_df, name):
     if name in obs_df.index:
         # combine multiple series
-        gld = obs_df.loc[name, "broId"]
-        if isinstance(gld, str):
-            tube["groundwaterLevelDossiers"] = [gld]
+        gld_id = obs_df.loc[name, "broId"]
+        if isinstance(gld_id, str):
+            tube["groundwaterLevelDossiers"] = [gld_id]
         else:
-            tube["groundwaterLevelDossiers"] = list(gld)
+            tube["groundwaterLevelDossiers"] = list(gld_id)
         tube["observation"] = obs_df.loc[name, "observation"]
         if isinstance(tube["observation"], pd.Series):
             # multiple glds need to be combined
@@ -279,7 +292,7 @@ def get_data_in_extent(
     ----------
     extent : TYPE
         DESCRIPTION.
-    kind : TYPE, optional
+    kind : str, optional
         DESCRIPTION. The default is "gld".
     tmin : TYPE, optional
         DESCRIPTION. The default is None.
@@ -304,13 +317,18 @@ def get_data_in_extent(
         return gmw
     logger.info("Downloading tube-properties")
     # get the properties of the monitoringTubes
-    props = [GroundwaterMonitoringWell.from_bro_id(id) for bid in gmw.index.unique()]
-    props = pd.DataFrame(props).set_index("broId")
+    props = [GroundwaterMonitoringWell.from_bro_id(bid) for bid in gmw.index.unique()]
+    props = pd.DataFrame([x.to_dict() for x in props]).set_index("broId")
     logger.info(f"Downloading {kind}-observations")
     obs_df = get_observations(gmw, kind=kind, tmin=tmin, tmax=tmax)
-    obs_df = obs_df.set_index(["GroundwaterMonitoringWell", "tubeNumber"]).sort_index()
-    if combine:
+    if not obs_df.empty:
+        obs_df = obs_df.set_index(
+            ["GroundwaterMonitoringWell", "tubeNumber"]
+        ).sort_index()
+    if combine and kind == "gld":
         logger.info("Combining well-properties, tube-properties and observations")
         gdf = get_tube_gdf(props, obs_df, index=index, qualifier=qualifier)
         return gdf
-    return gmw, props, obs_df
+    else:
+        gdf = get_tube_gdf(props, index=index)
+        return gdf, obs_df

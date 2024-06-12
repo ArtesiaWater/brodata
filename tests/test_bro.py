@@ -11,6 +11,21 @@ def test_get_gmw_characteristics():
     gmws = brodata.gmw.get_characteristics(extent=extent)
 
 
+def test_gmw_get_gld_data_in_extent():
+    extent = [118200, 118400, 439700, 440000]
+    data = brodata.gmw.get_data_in_extent(extent=extent)
+
+
+def test_gmw_get_gar_data_in_extent():
+    extent = [115000, 120000, 438000, 441000]
+    gmw, gar = brodata.gmw.get_data_in_extent(extent=extent, kind="gar")
+
+
+def test_gmw_get_frd_data_in_extent():
+    extent = [115000, 120000, 438000, 441000]
+    gmw, sfr = brodata.gmw.get_data_in_extent(extent=extent, kind="frd")
+
+
 def tets_get_well_code():
     brodata.gmw.get_well_code("GMW000000049567")
 

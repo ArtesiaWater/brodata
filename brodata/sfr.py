@@ -27,3 +27,10 @@ class SoilFaceResearch(bro.XmlFileOrUrl):
                 setattr(self, key, child.text)
             else:
                 logger.warning(f"Unknown key: {key}")
+
+
+def get_characteristics(**kwargs):
+    """
+    Get characteristics of Groundwater Monitoring Wells (see bro.get_characteristics)
+    """
+    return bro.get_characteristics(SoilFaceResearch, **kwargs)
