@@ -105,15 +105,18 @@ class GroundwaterLevelDossier(bro.XmlFileOrUrl):
             elif key == "monitoringPoint":
                 well = child.find("gldcommon:GroundwaterMonitoringTube", ns)
                 gmw_id = well.find("gldcommon:broId", ns).text
-                setattr(self, "GroundwaterMonitoringWell", gmw_id)
+                setattr(self, "groundwaterMonitoringWell", gmw_id)
                 tube_nr = int(well.find("gldcommon:tubeNumber", ns).text)
                 setattr(self, "tubeNumber", tube_nr)
             elif key in ["registrationHistory"]:
                 self._read_children_of_children(child)
             elif key == "groundwaterMonitoringNet":
                 for grandchild in child:
-                    key = grandchild.tag.split("}", 1)[1]
-                    setattr(self, key, grandchild[0].text)
+                    key2 = grandchild.tag.split("}", 1)[1]
+                    if key2 == "GroundwaterMonitoringNet":
+                        setattr(self, key, grandchild[0].text)
+                    else:
+                        logger.warning(f"Unknown key: {key2}")
             elif key == "observation":
                 times = []
                 values = []

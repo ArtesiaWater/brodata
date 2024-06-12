@@ -1,5 +1,6 @@
 import logging
 import pandas as pd
+import requests
 from . import bro
 
 logger = logging.getLogger(__name__)
@@ -30,17 +31,22 @@ class GroundwaterAnalysisReport(bro.XmlFileOrUrl):
                 self._read_children_of_children(child)
             elif key == "groundwaterMonitoringNet":
                 for grandchild in child:
-                    key = grandchild.tag.split("}", 1)[1]
-                    setattr(self, key, grandchild[0].text)
+                    key2 = grandchild.tag.split("}", 1)[1]
+                    if key2 == "GroundwaterMonitoringNet":
+                        setattr(self, key, grandchild[0].text)
+                    else:
+                        logger.warning(f"Unknown key: {key2}")
             elif key == "monitoringPoint":
                 well = child.find("garcommon:GroundwaterMonitoringTube", ns)
                 gmw_id = well.find("garcommon:broId", ns).text
-                setattr(self, "GroundwaterMonitoringWell", gmw_id)
+                setattr(self, "groundwaterMonitoringWell", gmw_id)
                 tube_nr = int(well.find("garcommon:tubeNumber", ns).text)
                 setattr(self, "tubeNumber", tube_nr)
             elif key == "fieldResearch":
                 self._read_children_of_children(child)
             elif key == "laboratoryAnalysis":
+                if hasattr(self, key):
+                    raise (NotImplementedError("Assumed only one laboratoryAnalysis"))
                 setattr(self, key, self._read_laboratory_analysis(child))
             else:
                 logger.warning(f"Unknown key: {key}")
@@ -67,4 +73,26 @@ class GroundwaterAnalysisReport(bro.XmlFileOrUrl):
                             logger.warning(f"Unknown key: {key}")
                     self._read_children_of_children(grandchild, d)
             laboratory_analysis.append(d)
-        return pd.DataFrame(laboratory_analysis)
+        df = pd.DataFrame(laboratory_analysis)
+        if "analysisDate" in df.columns:
+            df = df.set_index("analysisDate")
+        return df
+
+
+def get_parameter_list(url=None, timeout=5, to_file=None, **kwargs):
+    if url is None:
+        url = "https://publiek.broservices.nl/bro/refcodes/v1/attribute_values?domain=urn:bro:gar:ParameterList&version=latest"
+    r = requests.get(url, timeout=timeout, **kwargs)
+    if not r.ok:
+        raise (Exception((f"Retieving data from {url} failed")))
+    if to_file is not None:
+        with open(to_file, "w") as f:
+            f.write(r.text)
+    data = r.json()["refDomainVersions"][0]["refCodes"]
+    for d in data:
+        for prop in d["refAttributeValues"]:
+            d[prop["name"]] = prop["value"]
+        d.pop("refAttributeValues")
+
+    df = pd.json_normalize(data).set_index("code")
+    return df

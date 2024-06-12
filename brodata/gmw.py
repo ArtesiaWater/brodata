@@ -6,6 +6,7 @@ from tqdm import tqdm
 import geopandas as gpd
 
 from . import bro, gld
+from .gld import GroundwaterLevelDossier
 from .gar import GroundwaterAnalysisReport
 from .frd import FormationResistanceDossier
 from .gmn import GroundwaterMonitoringNetwork
@@ -93,6 +94,11 @@ class GroundwaterMonitoringWell(bro.XmlFileOrUrl):
                     key = grandchild.tag.split("}", 1)[1]
                     if key == "wellConstructionDate":
                         setattr(self, key, self._read_date(grandchild))
+                    elif key == "intermediateEvent":
+                        if not hasattr(self, key):
+                            self.intermediateEvent = []
+                        event = self._read_intermediate_event(grandchild)
+                        self.intermediateEvent.append(event)
                     else:
                         logger.warning(f"Unknown key: {key}")
 
@@ -113,6 +119,20 @@ class GroundwaterMonitoringWell(bro.XmlFileOrUrl):
             tubeNumber = self.monitoringTube["tubeNumber"].astype(int)
             self.monitoringTube["tubeNumber"] = tubeNumber
             self.monitoringTube = self.monitoringTube.set_index("tubeNumber")
+        if hasattr(self, "intermediateEvent"):
+            self.intermediateEvent = pd.DataFrame(self.intermediateEvent)
+
+    def _read_intermediate_event(self, node):
+        d = {}
+        for child in node:
+            key = child.tag.split("}", 1)[1]
+            if key == "eventName":
+                d[key] = child.text
+            elif key == "eventDate":
+                d[key] = self._read_date(child)
+            else:
+                logger.warning(f"Unknown key: {key}")
+        return d
 
 
 def get_observations(
@@ -160,17 +180,18 @@ def get_observations(
             logger.error(req.json()["errors"][0]["message"])
             return
         data = req.json()
-        for tube in data["monitoringTubeReferences"]:
-            tube["gmwBroId"] = data["gmwBroId"]
+        for tube_ref in data["monitoringTubeReferences"]:
+            tube_ref["gmwBroId"] = data["gmwBroId"]
             if tube_number is not None:
-                if tube["tubeNumber"] != tube_number:
+                if tube_ref["tubeNumber"] != tube_number:
                     continue
             ref_key = f"{kind}References"
-            for ref in tube[ref_key]:
+            for ref in tube_ref[ref_key]:
                 if kind == "gld":
-                    df = gld.get_observations(
-                        ref["broId"], tmin=tmin, tmax=tmax, as_csv=as_csv
-                    )
+                    # df = gld.get_observations(
+                    #    ref["broId"], tmin=tmin, tmax=tmax, as_csv=as_csv
+                    # )
+                    df = GroundwaterLevelDossier.from_bro_id(ref["broId"]).to_dict()
                 elif kind == "gar":
                     df = GroundwaterAnalysisReport.from_bro_id(ref["broId"]).to_dict()
                 elif kind == "frd":
@@ -181,7 +202,7 @@ def get_observations(
                     ).to_dict()
 
                 if as_csv:
-                    tube["observation"] = df
+                    tube_ref["observation"] = df
                     if drop_references:
                         for key in [
                             "gmnReferences",
@@ -189,8 +210,8 @@ def get_observations(
                             "garReferences",
                             "frdReferences",
                         ]:
-                            tube.pop(key)
-                    tubes.append(tube)
+                            tube_ref.pop(key)
+                    tubes.append(tube_ref)
                 else:
                     tubes.append(df)
 
@@ -206,7 +227,7 @@ def get_tube_observations(gwm_id, tube_number):
         return df["observation"][0]
 
 
-def get_tube_gdf(props, obs_df=None, index=None, qualifier="goedgekeurd"):
+def get_tube_gdf(props, index=None):
     tubes = []
     for bro_id in props.index:
         for tube_number in props.loc[bro_id, "monitoringTube"].index:
@@ -217,29 +238,24 @@ def get_tube_gdf(props, obs_df=None, index=None, qualifier="goedgekeurd"):
                     props.loc[bro_id, "monitoringTube"].loc[tube_number],
                 )
             )
-            tube["GroundwaterMonitoringWell"] = bro_id
+            tube["groundwaterMonitoringWell"] = bro_id
             tube["tubeNumber"] = tube_number
 
-            if obs_df is not None:
-                # add observations
-                tube = _add_observation_to_tube(tube, obs_df, (bro_id, tube_number))
-                if qualifier is not None:
-                    mask = tube["observation"]["qualifier"] == qualifier
-                    n_drop = np.sum(~mask)
-                    if n_drop > 0:
-                        logger.info(
-                            f"Dropping {n_drop} measurements of ({bro_id}, {tube_number}) that do not match qualifier {qualifier}"
-                        )
-                    tube["observation"] = tube["observation"].loc[mask, "value"]
             tubes.append(tube)
 
     tubes = pd.DataFrame(tubes)
     if index is None:
-        index = ["wellCode", "tubeNumber"]
-    tubes = tubes.set_index(index)
+        index = ["groundwaterMonitoringWell", "tubeNumber"]
+    elif isinstance(index, str):
+        index = [index]
+    if np.all([x in tubes.columns for x in index]):
+        tubes = tubes.set_index(index)
 
     # make a geodataframe
-    geometry = gpd.points_from_xy(tubes["x"], tubes["y"], crs=28992)
+    if "x" in tubes.columns and "y" in tubes.columns:
+        geometry = gpd.points_from_xy(tubes["x"], tubes["y"], crs=28992)
+    else:
+        geometry = None
     gdf = gpd.GeoDataFrame(tubes, geometry=geometry)
     gdf = gdf.sort_index()
 
@@ -254,26 +270,9 @@ def get_tube_gdf(props, obs_df=None, index=None, qualifier="goedgekeurd"):
         "screenBottomPosition",
         "plainTubePartLength",
     ]
+    columns = [column for column in columns if column in gdf.columns]
     gdf[columns] = gdf[columns].astype(float)
     return gdf
-
-
-def _add_observation_to_tube(tube, obs_df, name):
-    if name in obs_df.index:
-        # combine multiple series
-        gld_id = obs_df.loc[name, "broId"]
-        if isinstance(gld_id, str):
-            tube["groundwaterLevelDossiers"] = [gld_id]
-        else:
-            tube["groundwaterLevelDossiers"] = list(gld_id)
-        tube["observation"] = obs_df.loc[name, "observation"]
-        if isinstance(tube["observation"], pd.Series):
-            # multiple glds need to be combined
-            tube["observation"] = pd.concat(tube["observation"].values).sort_index()
-    else:
-        tube["groundwaterLevelDossiers"] = []
-        tube["observation"] = gld._get_empty_observation_df()
-    return tube
 
 
 def get_data_in_extent(
@@ -281,7 +280,7 @@ def get_data_in_extent(
     kind="gld",
     tmin=None,
     tmax=None,
-    combine=True,
+    combine=False,
     index=None,
     qualifier="goedgekeurd",
 ):
@@ -311,24 +310,49 @@ def get_data_in_extent(
         DESCRIPTION.
 
     """
+
     logger.info(f"Getting gmw-characteristics in extent: {extent}")
     gmw = get_characteristics(extent=extent)
-    if gmw.empty:
-        return gmw
+
+    logger.info(f"Downloading {kind}-observations")
+    obs_df = get_observations(gmw, kind=kind, tmin=tmin, tmax=tmax)
+
+    # only keep wells with observations
+    if "groundwaterMonitoringWell" in obs_df.columns:
+        gmw = gmw[gmw.index.isin(obs_df["groundwaterMonitoringWell"])]
+
     logger.info("Downloading tube-properties")
     # get the properties of the monitoringTubes
     props = [GroundwaterMonitoringWell.from_bro_id(bid) for bid in gmw.index.unique()]
-    props = pd.DataFrame([x.to_dict() for x in props]).set_index("broId")
-    logger.info(f"Downloading {kind}-observations")
-    obs_df = get_observations(gmw, kind=kind, tmin=tmin, tmax=tmax)
+    props = pd.DataFrame([x.to_dict() for x in props])
+    if "broId" in props.columns:
+        props = props.set_index("broId")
     if not obs_df.empty:
         obs_df = obs_df.set_index(
-            ["GroundwaterMonitoringWell", "tubeNumber"]
+            ["groundwaterMonitoringWell", "tubeNumber"]
         ).sort_index()
-    if combine and kind == "gld":
+
+    gdf = get_tube_gdf(props, index=index)
+    if combine and kind in ["gld", "gar"]:
+        if kind == "gld":
+            datcol = "observation"
+            idcol = "groundwaterLevelDossier"
+        elif kind == "gar":
+            datcol = "laboratoryAnalysis"
+            idcol = "groundwaterAnalysisReport"
+
         logger.info("Combining well-properties, tube-properties and observations")
-        gdf = get_tube_gdf(props, obs_df, index=index, qualifier=qualifier)
+
+        data = {}
+        ids = {}
+        for index in gdf.index:
+            if index not in obs_df.index:
+                continue
+            dfs = obs_df.loc[[index], datcol]
+            data[index] = pd.concat(dfs[~dfs.isna()].values).sort_index()
+            ids[index] = list(obs_df.loc[[index], "broId"])
+        gdf[datcol] = data
+        gdf[idcol] = ids
         return gdf
     else:
-        gdf = get_tube_gdf(props, index=index)
         return gdf, obs_df
