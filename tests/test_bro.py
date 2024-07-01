@@ -42,6 +42,7 @@ def test_groundwater_monitoring_well():
 def test_geotechnical_borehole_research():
     fname = os.path.join("data", "BHR000000353924.xml")
     bhrgt = brodata.bhr.GeotechnicalBoreholeResearch(fname)
+    brodata.plot.bro_lithology(bhrgt.descriptiveBoreholeLog[0]["layer"])
 
 
 def test_pedological_borehole_research():

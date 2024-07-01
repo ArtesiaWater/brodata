@@ -31,7 +31,9 @@ def test_geologisch_booronderzoek():
 
 def test_geologisch_booronderzoek_from_file():
     fname = os.path.join("data", "B38B2152.csv")
-    brodata.dino.GeologischBooronderzoek(fname)
+    gb = brodata.dino.GeologischBooronderzoek(fname)
+    brodata.plot.dino_lithology(gb.lithologie_lagen)
+    brodata.plot.dino_lithology(gb.lithologie_lagen, x=None)
 
 
 def test_get_verticaal_elektrisch_sondeeronderzoek_within_extent():
@@ -47,3 +49,13 @@ def test_grondwaterstanden_within_extent():
 def test_grondwatersamenstelling_within_extent():
     extent = [117700, 118700, 439400, 440400]
     gdf = brodata.dino.get_grondwatersamenstelling(extent)
+
+
+def test_get_geologisch_booronderzoek_within_extent():
+    extent = [118000, 118400, 439560, 440100]
+    gdf = brodata.dino.get_geologisch_booronderzoek(extent)
+
+    # plot the lithology along a line from west to east
+    y_mean = gdf.geometry.y.mean()
+    line = [(gdf.geometry.x.min(), y_mean), (gdf.geometry.x.max(), y_mean)]
+    ax = brodata.plot.lithology_along_line(gdf, line, "dino")

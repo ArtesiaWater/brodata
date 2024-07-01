@@ -154,7 +154,10 @@ def get_geologisch_booronderzoek(
         if to_path is not None:
             to_file = os.path.join(to_path, f"{name}.csv")
         data[name] = GeologischBooronderzoek(url, timeout=timeout, to_file=to_file)
-    return objects_to_gdf(data, x="X-coordinaat", y="Y-coordinaat")
+    gdf = objects_to_gdf(data, x="X-coordinaat", y="Y-coordinaat")
+    if not gdf.empty:
+        gdf = gdf.set_index("NITG-nr")
+    return gdf
 
 
 class CsvFileOrUrl:

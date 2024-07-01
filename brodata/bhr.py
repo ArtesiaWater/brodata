@@ -108,6 +108,7 @@ class _BoreholeResearch(bro.XmlFileOrUrl):
         if not hasattr(self, "descriptiveBoreholeLog"):
             self.descriptiveBoreholeLog = []
         d = {}
+        to_float = ["upperBoundary", "lowerBoundary"]
         for child in node:
             key = child.tag.split("}", 1)[1]
             if len(child) == 0:
@@ -116,7 +117,7 @@ class _BoreholeResearch(bro.XmlFileOrUrl):
                 if key not in d:
                     d[key] = []
                 layer = {}
-                self._read_children_of_children(child, d=layer)
+                self._read_children_of_children(child, d=layer, to_float=to_float)
                 d[key].append(layer)
             else:
                 logger.warning(f"Unknown key: {key}")

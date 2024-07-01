@@ -165,16 +165,22 @@ class XmlFileOrUrl:
                 msg = criterionError.find("brocom:specification", ns).text
             raise (ValueError(msg))
 
-    def _read_children_of_children(self, node, d=None):
+    def _read_children_of_children(self, node, d=None, to_float=None):
+        if to_float is not None and isinstance(to_float, str):
+            to_float = [to_float]
         if len(node) == 0:
             key = node.tag.split("}", 1)[1]
             if d is None:
                 setattr(self, key, node.text)
+                if to_float is not None and key in to_float:
+                    setattr(self, key, getattr(self, key))
             else:
                 d[key] = node.text
+                if to_float is not None and key in to_float:
+                    d[key] = float(d[key])
         else:
             for child in node:
-                self._read_children_of_children(child, d=d)
+                self._read_children_of_children(child, d=d, to_float=to_float)
 
     def _read_delivered_location(self, node):
         for child in node:

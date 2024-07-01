@@ -2,7 +2,6 @@ import os
 import logging
 import numpy as np
 import pandas as pd
-import geopandas as gpd
 from zipfile import ZipFile
 
 logger = logging.getLogger(__name__)
@@ -25,9 +24,23 @@ def objects_to_gdf(objects, x="X-coordinaat", y="Y-coordinaat"):
     -------
     gdf: GeoDataFrame
     """
+    import geopandas as gpd
+
     # convert a list of dino-objects to a geodataframe
     df = pd.DataFrame([objects[key].to_dict() for key in objects])
-    gdf = gpd.GeoDataFrame(df, geometry=gpd.points_from_xy(df[x], df[y]))
+    if df.empty:
+        logger.warning("no data found")
+        geometry = None
+    else:
+        if x not in df:
+            logger.warning(f"{x} not found in data")
+            geometry = None
+        elif y not in df:
+            logger.warning(f"{y} not found in data")
+            geometry = None
+        else:
+            geometry = gpd.points_from_xy(df[x], df[y])
+    gdf = gpd.GeoDataFrame(df, geometry=geometry)
     return gdf
 
 

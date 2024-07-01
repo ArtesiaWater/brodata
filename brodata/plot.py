@@ -1,4 +1,9 @@
 import matplotlib.pyplot as plt
+import logging
+import numpy as np
+import pandas as pd
+
+logger = logging.getLogger(__name__)
 
 
 def cone_penetration_test(
@@ -77,3 +82,203 @@ def cone_penetration_test(
         f.tight_layout(pad=0.0)
 
     return axes
+
+
+def get_lithology_color(hoofdgrondsoort, zandmediaanklasse=None):
+    colors = {
+        "grind": (216, 163, 32),
+        "hout": (157, 78, 64),
+        "klei": (0, 146, 0),
+        "leem": (194, 207, 92),
+        "puin": (200, 200, 200),
+        "stenen": (216, 163, 32),
+        "veen": (157, 78, 64),
+        "zand": (255, 255, 0),
+        "schelpen": (95, 95, 255),
+        "sterkGrindigZand": (231, 195, 22),  # same as zand grove categorie
+        "zwakZandigeKlei": (0, 146, 0),  # same as klei
+        "niet benoemd": (255, 255, 255),
+        "geen monster": (255, 255, 255),
+    }
+
+    label = None
+    if hoofdgrondsoort in colors:
+        if hoofdgrondsoort == "zand":
+            if zandmediaanklasse in ["fijne categorie (O)", "zeer fijn (O)"]:
+                color = colors[hoofdgrondsoort]
+                label = "Zand fijne categorie"
+            elif zandmediaanklasse in [
+                "matig fijn",
+                "matig fijn (O)",
+                "matig grof",
+                "matig grof (O)",
+            ]:
+                label = "Zand midden categorie"
+                color = (243, 225, 6)
+            elif zandmediaanklasse in [
+                "grove  categorie (O)",
+                "zeer grof",
+                "zeer grof (O)",
+                "uiterst grof",
+                "uiterst grof (O)",
+            ]:
+                color = (231, 195, 22)
+                label = "Zand grove categorie"
+            else:
+                if not (
+                    pd.isna(zandmediaanklasse)
+                    or zandmediaanklasse in ["zandmediaan onduidelijk"]
+                ):
+                    logger.warning(f"Unknown zandmediaanklasse: {zandmediaanklasse}")
+                # for zandmediaanklasse is None or something other than mentioned above
+                color = colors[hoofdgrondsoort]
+        else:
+            color = colors[hoofdgrondsoort]
+        color = tuple(x / 255 for x in color)
+    else:
+        logger.warning(f"No color defined for hoofdgrondsoort {hoofdgrondsoort}")
+        color = (1.0, 1.0, 1.0)
+
+    if label is None:
+        label = hoofdgrondsoort.capitalize()
+    return color, label
+
+
+def lithology(
+    df,
+    top,
+    bot,
+    kind,
+    sand_class=None,
+    ax=None,
+    x=0.5,
+    z=0.0,
+    solid_capstyle="butt",
+    linewidth=6,
+    **kwargs,
+):
+    if ax is None:
+        ax = plt.gca()
+    h = []
+    for index in df.index:
+        z_top = z - df.at[index, top]
+        z_bot = z - df.at[index, bot]
+        zandmediaanklasse = None if sand_class is None else df.at[index, sand_class]
+        color, label = get_lithology_color(df.at[index, kind], zandmediaanklasse)
+        if x is not None and np.isfinite(x):
+            h.append(
+                ax.plot(
+                    [x, x],
+                    [z_bot, z_top],
+                    color=color,
+                    label=label,
+                    linewidth=linewidth,
+                    solid_capstyle=solid_capstyle,
+                    **kwargs,
+                )
+            )
+        else:
+            h.append(
+                ax.axhspan(
+                    z_bot,
+                    z_top,
+                    facecolor=color,
+                    label=label,
+                    linewidth=linewidth,
+                    **kwargs,
+                )
+            )
+    return h
+
+
+def lithology_along_line(
+    gdf, line, kind, ax=None, legend=True, max_distance=None, **kwargs
+):
+    from shapely.geometry import LineString
+
+    if ax is None:
+        ax = plt.gca()
+    if not isinstance(line, LineString):
+        line = LineString(line)
+
+    if max_distance is not None:
+        gdf = gdf[gdf.distance(line) < max_distance]
+
+    # calculate length along line
+    s = pd.Series([line.project(point) for point in gdf["geometry"]], gdf.index)
+
+    for index in gdf.index:
+        if kind == "dino":
+            dino_lithology(
+                gdf.at[index, "lithologie_lagen"],
+                z=gdf.at[index, "Maaiveldhoogte (m tov NAP)"],
+                x=s[index],
+                **kwargs,
+            )
+        elif kind == "bro":
+            if len(gdf.at[index, "descriptiveBoreholeLog"]) > 0:
+                msg = (
+                    f"More than 1 descriptiveBoreholeLog for {index}. "
+                    "Only plotting the first one."
+                )
+                logger.warning(msg)
+            df = gdf.at[index, "descriptiveBoreholeLog"][0]["layer"]
+            bro_lithology(df, x=s[index], **kwargs)
+        else:
+            raise (Exception(f"Unknown kind: {kind}"))
+
+    if legend:
+        # add a legend
+        add_lithology_legend(ax)
+
+    return ax
+
+
+def add_lithology_legend(ax, **kwargs):
+    handles, labels = ax.get_legend_handles_labels()
+    labels, index = np.unique(np.array(labels), return_index=True)
+    boven = np.array(
+        [
+            "Veen",
+            "Klei",
+            "Leem",
+            "Zand fijne categorie",
+            "Zand midden categorie",
+            "Zand grove categorie",
+            "Zand",
+            "Grind",
+        ]
+    )
+    for lab in boven:
+        if lab in labels:
+            mask = labels == lab
+            labels = np.hstack((labels[mask], labels[~mask]))
+            index = np.hstack((index[mask], index[~mask]))
+    onder = np.array(["Niet benoemd", "Geen monster"])
+    for lab in onder:
+        if lab in labels:
+            mask = labels == lab
+            labels = np.hstack((labels[~mask], labels[mask]))
+            index = np.hstack((index[~mask], index[mask]))
+    return ax.legend(np.array(handles)[index], labels, **kwargs)
+
+
+def dino_lithology(df, **kwargs):
+    return lithology(
+        df,
+        top="Bovenkant laag (m beneden maaiveld)",
+        bot="Onderkant laag (m beneden maaiveld)",
+        kind="Hoofdgrondsoort",
+        sand_class="Zandmediaanklasse",
+        **kwargs,
+    )
+
+
+def bro_lithology(df, **kwargs):
+    return lithology(
+        df,
+        top="upperBoundary",
+        bot="lowerBoundary",
+        kind="geotechnicalSoilName",
+        **kwargs,
+    )
