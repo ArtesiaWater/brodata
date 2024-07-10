@@ -1,20 +1,22 @@
 import os
 import requests
 from tqdm import tqdm
+import numpy as np
 import pandas as pd
 from io import StringIO, TextIOWrapper
 from zipfile import ZipFile
+from shapely.geometry import LineString
 from .webservices import get_configuration, get_gdf
 from .util import objects_to_gdf
 
 
-def _get_data_from_path(from_path, cl, silent=False, ext=".csv"):
+def _get_data_from_path(from_path, dino_class, silent=False, ext=".csv"):
     files = os.listdir(from_path)
     files = [file for file in files if file.endswith(ext)]
     data = {}
     for file in tqdm(files, disable=silent):
         fname = os.path.join(from_path, file)
-        data[os.path.splitext(file)[0]] = cl(fname)
+        data[os.path.splitext(file)[0]] = dino_class(fname)
     return data
 
 
@@ -28,26 +30,43 @@ def _get_data_from_zip(to_zip, dino_class, silent=False):
 
 
 def _save_data_to_zip(to_zip, files, remove_path_again, to_path):
-    if to_zip is not None:
-        with ZipFile(to_zip, "w") as zf:
-            for file in files:
-                zf.write(file, os.path.split(file)[1])
-        if remove_path_again:
-            # remove individual files again
-            for file in files:
-                os.remove(file)
-            os.removedirs(to_path)
+    with ZipFile(to_zip, "w") as zf:
+        for file in files:
+            zf.write(file, os.path.split(file)[1])
+    if remove_path_again:
+        # remove individual files again
+        for file in files:
+            os.remove(file)
+        os.removedirs(to_path)
 
 
-def get_verticaal_elektrisch_sondeeronderzoek(
-    extent, config=None, timeout=5, silent=False, to_path=None, redownload=False
+def _get_data_within_extent(
+    extent,
+    dino_class,
+    kind,
+    config=None,
+    timeout=5,
+    silent=False,
+    to_path=None,
+    to_zip=None,
+    redownload=False,
+    x="X-coordinaat",
+    y="Y-coordinaat",
+    geometry=None,
+    index="NITG-nr",
 ):
+    if to_zip is not None:
+        if not redownload and os.path.isfile(to_zip):
+            data = _get_data_from_zip(to_zip, dino_class, silent=silent)
+            return objects_to_gdf(data, x, y, geometry, index)
+        if to_path is None:
+            to_path = os.path.splitext(to_zip)[0]
+        remove_path_again = not os.path.isdir(to_path)
+        files = []
+
     if isinstance(extent, str):
-        data = _get_data_from_path(
-            extent, VerticaalElektrischSondeeronderzoek, silent=silent
-        )
-        return objects_to_gdf(data, x="X-coordinaat", y="Y-coordinaat")
-    kind = "Verticaal elektrisch sondeeronderzoek"
+        data = _get_data_from_path(extent, dino_class, silent=silent)
+        return objects_to_gdf(data, x, y, geometry, index)
     if config is None:
         config = get_configuration()
     gdf = get_gdf(
@@ -56,7 +75,6 @@ def get_verticaal_elektrisch_sondeeronderzoek(
         extent=extent,
         timeout=timeout,
     )
-
     download_url = config[kind]["download"]
 
     to_file = None
@@ -67,25 +85,50 @@ def get_verticaal_elektrisch_sondeeronderzoek(
         url = f"{download_url}/{name}"
         if to_path is not None:
             to_file = os.path.join(to_path, f"{name}.csv")
+            if to_zip is not None:
+                files.append(to_file)
             if not redownload and os.path.isfile(to_file):
-                data[name] = Grondwatersamenstelling(to_file)
+                data[name] = dino_class(to_file)
                 continue
-        data[name] = VerticaalElektrischSondeeronderzoek(
-            url, timeout=timeout, to_file=to_file
-        )
+        data[name] = dino_class(url, timeout=timeout, to_file=to_file)
+    if to_zip is not None:
+        _save_data_to_zip(to_zip, files, remove_path_again, to_path)
 
-    df = pd.DataFrame([x.to_dict() for x in data.values()]).set_index("NITG-nr")
-    gdf = pd.concat((gdf, df), axis=1)
-    return gdf
+    return objects_to_gdf(data, x, y, geometry, index)
+
+
+def get_verticaal_elektrisch_sondeeronderzoek(extent, **kwargs):
+    dino_class = VerticaalElektrischSondeeronderzoek
+    kind = "Verticaal elektrisch sondeeronderzoek"
+    return _get_data_within_extent(
+        extent, dino_class, kind, geometry="geometry", **kwargs
+    )
 
 
 def get_grondwaterstand(
-    extent, config=None, timeout=5, silent=False, to_path=None, redownload=False
+    extent,
+    config=None,
+    timeout=5,
+    silent=False,
+    to_path=None,
+    to_zip=None,
+    redownload=False,
 ):
+    dino_class = Grondwaterstand
+    kind = "Grondwaterstand"
+    index = ["Locatie", "Filternummer"]
+    if to_zip is not None:
+        if not redownload and os.path.isfile(to_zip):
+            data = _get_data_from_zip(to_zip, dino_class, silent=silent)
+            return objects_to_gdf(data, index=index)
+        if to_path is None:
+            to_path = os.path.splitext(to_zip)[0]
+        remove_path_again = not os.path.isdir(to_path)
+        files = []
     if isinstance(extent, str):
         data = _get_data_from_path(extent, Grondwaterstand, silent=silent)
-        return objects_to_gdf(data, x="X-coordinaat", y="Y-coordinaat")
-    kind = "Grondwaterstand"
+        return objects_to_gdf(data, index=index)
+
     if config is None:
         config = get_configuration()
     gdf = get_gdf(
@@ -94,7 +137,6 @@ def get_grondwaterstand(
         extent=extent,
         timeout=timeout,
     )
-    gdf = gdf[gdf["ST_CNT"] > 0]
 
     download_url = config[kind]["download"]
 
@@ -103,6 +145,7 @@ def get_grondwaterstand(
         os.makedirs(to_path)
     data = {}
     for name in tqdm(gdf.index, disable=silent):
+        # get the filter-numbers
         url = "{}/{}/query".format(config[kind]["mapserver"], config[kind]["table"])
         GDW_DBK = gdf.at[name, "GDW_DBK"]
         params = {"where": f"GDW_DBK = {GDW_DBK}", "f": "pjson"}
@@ -114,121 +157,29 @@ def get_grondwaterstand(
             url = f"{download_url}/{name}/{piezometer_nr}"
             if to_path is not None:
                 to_file = os.path.join(to_path, f"{name}_{piezometer_nr}.csv")
+                if to_zip is not None:
+                    files.append(to_file)
                 if not redownload and os.path.isfile(to_file):
-                    data[f"{name}_{piezometer_nr}"] = Grondwaterstand(to_file)
+                    data[f"{name}_{piezometer_nr}"] = dino_class(to_file)
                     continue
-            data[f"{name}_{piezometer_nr}"] = Grondwaterstand(
+            data[f"{name}_{piezometer_nr}"] = dino_class(
                 url, timeout=timeout, to_file=to_file
             )
-    return objects_to_gdf(data, x="X-coordinaat", y="Y-coordinaat")
-
-
-def get_grondwatersamenstelling(
-    extent,
-    config=None,
-    timeout=5,
-    silent=False,
-    to_path=None,
-    to_zip=None,
-    redownload=False,
-):
     if to_zip is not None:
-        if not redownload and os.path.isfile(to_zip):
-            data = _get_data_from_zip(to_zip, Grondwatersamenstelling, silent=silent)
-            return objects_to_gdf(data, x="X-coordinaat", y="Y-coordinaat")
-        if to_path is None:
-            to_path = os.path.splitext(to_zip)[0]
-        remove_path_again = not os.path.isdir(to_path)
-        files = []
+        _save_data_to_zip(to_zip, files, remove_path_again, to_path)
+    return objects_to_gdf(data, index=index)
 
-    if isinstance(extent, str):
-        data = _get_data_from_path(extent, Grondwatersamenstelling, silent=silent)
-        return objects_to_gdf(data, x="X-coordinaat", y="Y-coordinaat")
+
+def get_grondwatersamenstelling(extent, **kwargs):
+    dino_class = Grondwatersamenstelling
     kind = "Grondwatersamenstelling"
-    if config is None:
-        config = get_configuration()
-    gdf = get_gdf(
-        kind,
-        config=config,
-        extent=extent,
-        timeout=timeout,
-    )
-    gdf = gdf[gdf["SA_CNT"] > 0]
-    download_url = config[kind]["download"]
-
-    to_file = None
-    if to_path is not None and not os.path.isdir(to_path):
-        os.makedirs(to_path)
-    data = {}
-    for name in tqdm(gdf.index, disable=silent):
-        url = f"{download_url}/{name}"
-        if to_path is not None:
-            to_file = os.path.join(to_path, f"{name}.csv")
-            if to_zip is not None:
-                files.append(to_file)
-            if not redownload and os.path.isfile(to_file):
-                data[name] = Grondwatersamenstelling(to_file)
-                continue
-        data[name] = Grondwatersamenstelling(url, timeout=timeout, to_file=to_file)
-    _save_data_to_zip(to_zip, files, remove_path_again, to_path)
-    return objects_to_gdf(data, x="X-coordinaat", y="Y-coordinaat")
+    return _get_data_within_extent(extent, dino_class, kind, **kwargs)
 
 
-def get_geologisch_booronderzoek(
-    extent,
-    config=None,
-    timeout=5,
-    silent=False,
-    to_path=None,
-    to_zip=None,
-    redownload=False,
-):
-    if to_zip is not None:
-        if not redownload and os.path.isfile(to_zip):
-            data = _get_data_from_zip(to_zip, GeologischBooronderzoek, silent=silent)
-            gdf = objects_to_gdf(data, x="X-coordinaat", y="Y-coordinaat")
-            if not gdf.empty:
-                gdf = gdf.set_index("NITG-nr")
-            return gdf
-        if to_path is None:
-            to_path = os.path.splitext(to_zip)[0]
-        remove_path_again = not os.path.isdir(to_path)
-        files = []
-
-    if isinstance(extent, str):
-        data = _get_data_from_path(extent, GeologischBooronderzoek, silent=silent)
-        return objects_to_gdf(data, x="X-coordinaat", y="Y-coordinaat")
+def get_geologisch_booronderzoek(extent, **kwargs):
+    dino_class = GeologischBooronderzoek
     kind = "Geologisch booronderzoek"
-    if config is None:
-        config = get_configuration()
-    gdf = get_gdf(
-        kind,
-        config=config,
-        extent=extent,
-        timeout=timeout,
-    )
-    download_url = config[kind]["download"]
-
-    to_file = None
-    if to_path is not None and not os.path.isdir(to_path):
-        os.makedirs(to_path)
-    data = {}
-    for name in tqdm(gdf.index, disable=silent):
-        url = f"{download_url}/{name}"
-        if to_path is not None:
-            to_file = os.path.join(to_path, f"{name}.csv")
-            if to_zip is not None:
-                files.append(to_file)
-            if not redownload and os.path.isfile(to_file):
-                data[name] = GeologischBooronderzoek(to_file)
-                continue
-        data[name] = GeologischBooronderzoek(url, timeout=timeout, to_file=to_file)
-    _save_data_to_zip(to_zip, files, remove_path_again, to_path)
-
-    gdf = objects_to_gdf(data, x="X-coordinaat", y="Y-coordinaat")
-    if not gdf.empty:
-        gdf = gdf.set_index("NITG-nr")
-    return gdf
+    return _get_data_within_extent(extent, dino_class, kind, **kwargs)
 
 
 class CsvFileOrUrl:
@@ -453,4 +404,16 @@ class VerticaalElektrischSondeeronderzoek(CsvFileOrUrl):
             d["interpretaties"] = self.interpretaties
         if hasattr(self, "lithologie_sublagen"):
             d["lithologie_sublagen"] = self.lithologie_sublagen
+        if (
+            "Richting" in d
+            and "Maximale elektrode afstand L2" in d
+            and "X-coordinaat" in d
+            and "Y-coordinaat" in d
+        ):
+            angle = (d["Richting"] - 90) * np.pi / 180
+            x = d["X-coordinaat"]
+            y = d["Y-coordinaat"]
+            dx = -np.cos(angle) * d["Maximale elektrode afstand L2"]
+            dy = np.sin(angle) * d["Maximale elektrode afstand L2"]
+            d["geometry"] = LineString([(x + dx, y + dy), (x - dx, y - dy)])
         return d

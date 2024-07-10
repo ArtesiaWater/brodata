@@ -7,7 +7,9 @@ from zipfile import ZipFile
 logger = logging.getLogger(__name__)
 
 
-def objects_to_gdf(objects, x="X-coordinaat", y="Y-coordinaat"):
+def objects_to_gdf(
+    objects, x="X-coordinaat", y="Y-coordinaat", geometry=None, index=None
+):
     """
 
     Parameters
@@ -28,19 +30,29 @@ def objects_to_gdf(objects, x="X-coordinaat", y="Y-coordinaat"):
 
     # convert a list of dino-objects to a geodataframe
     df = pd.DataFrame([objects[key].to_dict() for key in objects])
-    if df.empty:
-        logger.warning("no data found")
-        geometry = None
-    else:
-        if x not in df:
-            logger.warning(f"{x} not found in data")
-            geometry = None
-        elif y not in df:
-            logger.warning(f"{y} not found in data")
-            geometry = None
+    if geometry is not None:
+        if geometry in df.columns:
+            geometry = df[geometry]
         else:
-            geometry = gpd.points_from_xy(df[x], df[y])
+            geometry = None
+    else:
+        if df.empty:
+            logger.warning("no data found")
+        else:
+            if x not in df:
+                logger.warning(f"{x} not found in data")
+            elif y not in df:
+                logger.warning(f"{y} not found in data")
+            else:
+                geometry = gpd.points_from_xy(df[x], df[y])
     gdf = gpd.GeoDataFrame(df, geometry=geometry)
+    if index is not None and not gdf.empty:
+        if isinstance(index, str):
+            if index in gdf.columns:
+                gdf = gdf.set_index(index)
+        elif np.all([x in gdf.columns for x in index]):
+            # we assume index is an iterable (list), to form a MultiIndex
+            gdf = gdf.set_index(index)
     return gdf
 
 

@@ -10,7 +10,7 @@ from tqdm import tqdm
 logger = logging.getLogger(__name__)
 
 
-def get_gdf(kind, extent=None, config=None, **kwargs):
+def get_gdf(kind, extent=None, config=None, index="DINO_NR", **kwargs):
     if config is None:
         config = get_configuration()
     if kind not in config:
@@ -20,8 +20,12 @@ def get_gdf(kind, extent=None, config=None, **kwargs):
     if "layer" in config[kind]:
         layer = config[kind]["layer"]
     gdf = arcrest(url, layer, extent=extent, **kwargs)
-    if not gdf.empty and "DINO_NR" in gdf.columns:
-        gdf = gdf.set_index("DINO_NR")
+    if "greater_than_0" in config[kind]:
+        greater_than_0 = config[kind]["greater_than_0"]
+        if greater_than_0 in gdf.columns:
+            gdf = gdf[gdf[greater_than_0] > 0]
+    if not gdf.empty and index in gdf.columns:
+        gdf = gdf.set_index(index)
     return gdf
 
 
@@ -302,11 +306,13 @@ def get_configuration():
     config["Grondwatersamenstelling"] = {
         "mapserver": config["Put met onderzoekgegevens"]["mapserver"],
         "table": 2,  # Grondwatersamenstelling
+        "greater_than_0": "SA_CNT",
         "download": "https://www.dinoloket.nl/uitgifteloket/api/wo/gwo/qua/report",
     }
     config["Grondwaterstand"] = {
         "mapserver": config["Put met onderzoekgegevens"]["mapserver"],
         "table": 3,  # Grondwaterstand
+        "greater_than_0": "ST_CNT",
         "download": "https://www.dinoloket.nl/uitgifteloket/api/wo/gwo/full",
         "details": "https://www.dinoloket.nl/uitgifteloket/api/wo/gwo/details",
     }
