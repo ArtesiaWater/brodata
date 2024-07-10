@@ -6,9 +6,22 @@ def test_verticaal_elektrisch_sondeeronderzoek_from_url():
     brodata.dino.VerticaalElektrischSondeeronderzoek.from_dino_nr("W38B0016")
 
 
-def test_verticaal_elektrisch_sondeeronderzoek_from_file():
+def test_verticaal_elektrisch_sondeeronderzoek_from_file_no_models():
     fname = os.path.join("data", "W38B0016.csv")
-    brodata.dino.VerticaalElektrischSondeeronderzoek(fname)
+    ves = brodata.dino.VerticaalElektrischSondeeronderzoek(fname)
+    assert len(ves.interpretaties) == 0
+
+
+def test_verticaal_elektrisch_sondeeronderzoek_from_file_one_model():
+    fname = os.path.join("data", "W38B0022.csv")
+    ves = brodata.dino.VerticaalElektrischSondeeronderzoek(fname)
+    assert len(ves.interpretaties) == 1
+
+
+def test_verticaal_elektrisch_sondeeronderzoek_from_file_multiple_models():
+    fname = os.path.join("data", "W38D0010.csv")
+    ves = brodata.dino.VerticaalElektrischSondeeronderzoek(fname)
+    assert len(ves.interpretaties) == 2
 
 
 def test_grondwaterstand():

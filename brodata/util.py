@@ -8,7 +8,12 @@ logger = logging.getLogger(__name__)
 
 
 def objects_to_gdf(
-    objects, x="X-coordinaat", y="Y-coordinaat", geometry=None, index=None
+    objects,
+    x="X-coordinaat",
+    y="Y-coordinaat",
+    geometry=None,
+    index=None,
+    to_gdf=True,
 ):
     """
 
@@ -27,6 +32,9 @@ def objects_to_gdf(
     gdf: GeoDataFrame
     """
     import geopandas as gpd
+
+    if not to_gdf:
+        return objects
 
     # convert a list of dino-objects to a geodataframe
     df = pd.DataFrame([objects[key].to_dict() for key in objects])

@@ -54,11 +54,12 @@ def _get_data_within_extent(
     y="Y-coordinaat",
     geometry=None,
     index="NITG-nr",
+    to_gdf=True,
 ):
     if to_zip is not None:
         if not redownload and os.path.isfile(to_zip):
             data = _get_data_from_zip(to_zip, dino_class, silent=silent)
-            return objects_to_gdf(data, x, y, geometry, index)
+            return objects_to_gdf(data, x, y, geometry, index, to_gdf)
         if to_path is None:
             to_path = os.path.splitext(to_zip)[0]
         remove_path_again = not os.path.isdir(to_path)
@@ -66,7 +67,7 @@ def _get_data_within_extent(
 
     if isinstance(extent, str):
         data = _get_data_from_path(extent, dino_class, silent=silent)
-        return objects_to_gdf(data, x, y, geometry, index)
+        return objects_to_gdf(data, x, y, geometry, index, to_gdf)
     if config is None:
         config = get_configuration()
     gdf = get_gdf(
@@ -94,7 +95,7 @@ def _get_data_within_extent(
     if to_zip is not None:
         _save_data_to_zip(to_zip, files, remove_path_again, to_path)
 
-    return objects_to_gdf(data, x, y, geometry, index)
+    return objects_to_gdf(data, x, y, geometry, index, to_gdf)
 
 
 def get_verticaal_elektrisch_sondeeronderzoek(extent, **kwargs):
@@ -113,6 +114,7 @@ def get_grondwaterstand(
     to_path=None,
     to_zip=None,
     redownload=False,
+    to_gdf=True,
 ):
     dino_class = Grondwaterstand
     kind = "Grondwaterstand"
@@ -120,14 +122,14 @@ def get_grondwaterstand(
     if to_zip is not None:
         if not redownload and os.path.isfile(to_zip):
             data = _get_data_from_zip(to_zip, dino_class, silent=silent)
-            return objects_to_gdf(data, index=index)
+            return objects_to_gdf(data, index=index, to_gdf=to_gdf)
         if to_path is None:
             to_path = os.path.splitext(to_zip)[0]
         remove_path_again = not os.path.isdir(to_path)
         files = []
     if isinstance(extent, str):
         data = _get_data_from_path(extent, Grondwaterstand, silent=silent)
-        return objects_to_gdf(data, index=index)
+        return objects_to_gdf(data, index=index, to_gdf=to_gdf)
 
     if config is None:
         config = get_configuration()
@@ -167,7 +169,7 @@ def get_grondwaterstand(
             )
     if to_zip is not None:
         _save_data_to_zip(to_zip, files, remove_path_again, to_path)
-    return objects_to_gdf(data, index=index)
+    return objects_to_gdf(data, index=index, to_gdf=to_gdf)
 
 
 def get_grondwatersamenstelling(extent, **kwargs):
@@ -382,28 +384,32 @@ class VerticaalElektrischSondeeronderzoek(CsvFileOrUrl):
             line = f.readline()
             self.data, line = self._read_csv_part(f)
 
-        # Interpretatie door: TNO-NITG
-        if line.startswith('"Interpretatie door: TNO-NITG"'):
-            line = f.readline()
-            self.interpretatie_door_tno_nitg, line = self._read_properties_csv_columns(
-                f
-            )
+        self.interpretatie_door_tno_nitg = []
+        self.interpretaties = []
 
-        # Interpretaties
-        if line.startswith('"Interpretaties"'):
+        while line.startswith('"Interpretatie door: TNO-NITG"'):
+            # Interpretatie door: TNO-NITG
             line = f.readline()
-            self.interpretaties, line = self._read_csv_part(f)
+            df, line = self._read_properties_csv_columns(f)
+            self.interpretatie_door_tno_nitg.append(df)
+
+            # Interpretaties
+            if line.startswith('"Interpretaties"'):
+                line = f.readline()
+                df, line = self._read_csv_part(f)
+                self.interpretaties.append(df)
 
     def to_dict(self):
         d = {**self.ves_overzicht, **self.kop}
-        if hasattr(self, "interpretatie_door_tno_nitg"):
-            d.update(self.interpretatie_door_tno_nitg)
         if hasattr(self, "data"):
             d["data"] = self.data
-        if hasattr(self, "interpretaties"):
-            d["interpretaties"] = self.interpretaties
-        if hasattr(self, "lithologie_sublagen"):
-            d["lithologie_sublagen"] = self.lithologie_sublagen
+        d["Aantal interpretaties"] = len(self.interpretaties)
+        if len(self.interpretatie_door_tno_nitg) > 0:
+            # only take the first interpretatie_door_tno_nitg, as the data will not fit in a DataFrame
+            d["interpretatie_door_tno_nitg"] = self.interpretatie_door_tno_nitg[0]
+        if len(self.interpretaties) > 0:
+            # only take the first interpretation, as the data will not fit in a DataFrame
+            d["interpretaties"] = self.interpretaties[0]
         if (
             "Richting" in d
             and "Maximale elektrode afstand L2" in d
