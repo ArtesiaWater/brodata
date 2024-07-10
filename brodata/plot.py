@@ -104,7 +104,11 @@ def get_lithology_color(hoofdgrondsoort, zandmediaanklasse=None):
     label = None
     if hoofdgrondsoort in colors:
         if hoofdgrondsoort == "zand":
-            if zandmediaanklasse in ["fijne categorie (O)", "zeer fijn (O)"]:
+            if zandmediaanklasse in [
+                "fijne categorie (O)",
+                "zeer fijn (O)",
+                "uiterst fijn (O)",
+            ]:
                 color = colors[hoofdgrondsoort]
                 label = "Zand fijne categorie"
             elif zandmediaanklasse in [
