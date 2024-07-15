@@ -33,6 +33,11 @@ def test_grondwaterstand_from_file():
     brodata.dino.Grondwaterstand(fname)
 
 
+def test_oppervlaktewaterstand_from_file():
+    fname = os.path.join("data", "P38G0010_full.csv")
+    brodata.dino.Oppervlaktewaterstand(fname)
+
+
 def test_grondwatersamenstelling_from_file():
     fname = os.path.join("data", "B38B0079_qua.csv")
     qua = brodata.dino.Grondwatersamenstelling(fname)

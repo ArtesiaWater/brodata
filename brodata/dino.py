@@ -257,6 +257,32 @@ class CsvFileOrUrl:
         return df, line
 
 
+class Oppervlaktewaterstand(CsvFileOrUrl):
+    _download_url = "https://www.dinoloket.nl/uitgifteloket/api/wo/owo/full"
+
+    def _read_contents(self, f):
+        self.props, line = self._read_properties_csv_rows(f, merge_columns=True)
+        if line.startswith(
+            '"Van deze put zijn geen standen opgenomen in de DINO-database"'
+        ):
+            return
+        self.meta, line = self._read_csv_part(f)
+        self.data, line = self._read_csv_part(f)
+        for column in ["Peildatum"]:
+            if column in self.data.columns:
+                self.data[column] = pd.to_datetime(self.data[column], dayfirst=True)
+
+    def to_dict(self):
+        d = {**self.propsq}
+        if hasattr(self, "meta"):
+            d["meta"] = self.meta
+            for column in d["meta"]:
+                d[column] = d["meta"][column].iloc[-1]
+        if hasattr(self, "data"):
+            d["data"] = self.data
+        return d
+
+
 class Grondwaterstand(CsvFileOrUrl):
     _download_url = "https://www.dinoloket.nl/uitgifteloket/api/wo/gwo/full"
 
