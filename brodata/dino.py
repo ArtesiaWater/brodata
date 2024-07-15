@@ -273,7 +273,7 @@ class Oppervlaktewaterstand(CsvFileOrUrl):
                 self.data[column] = pd.to_datetime(self.data[column], dayfirst=True)
 
     def to_dict(self):
-        d = {**self.propsq}
+        d = {**self.props}
         if hasattr(self, "meta"):
             d["meta"] = self.meta
             for column in d["meta"]:
