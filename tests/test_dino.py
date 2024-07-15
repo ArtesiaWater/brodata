@@ -81,3 +81,8 @@ def test_get_geologisch_booronderzoek_within_extent():
     y_mean = gdf.geometry.y.mean()
     line = [(gdf.geometry.x.min(), y_mean), (gdf.geometry.x.max(), y_mean)]
     ax = brodata.plot.lithology_along_line(gdf, line, "dino")
+
+
+def test_get_oppervlaktewaterstanden_within_extent():
+    extent = [116000, 121000, 434000, 442000]
+    brodata.dino.get_oppervlaktewaterstand(extent)

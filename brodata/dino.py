@@ -76,7 +76,7 @@ def _get_data_within_extent(
         extent=extent,
         timeout=timeout,
     )
-    download_url = config[kind]["download"]
+    download_url = dino_class._download_url
 
     to_file = None
     if to_path is not None and not os.path.isdir(to_path):
@@ -181,6 +181,12 @@ def get_grondwatersamenstelling(extent, **kwargs):
 def get_geologisch_booronderzoek(extent, **kwargs):
     dino_class = GeologischBooronderzoek
     kind = "Geologisch booronderzoek"
+    return _get_data_within_extent(extent, dino_class, kind, **kwargs)
+
+
+def get_oppervlaktewaterstand(extent, **kwargs):
+    dino_class = Oppervlaktewaterstand
+    kind = "Oppervlaktewateronderzoek"
     return _get_data_within_extent(extent, dino_class, kind, **kwargs)
 
 
