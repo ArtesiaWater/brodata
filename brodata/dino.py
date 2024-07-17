@@ -11,6 +11,8 @@ from .util import objects_to_gdf
 
 
 def _get_data_from_path(from_path, dino_class, silent=False, ext=".csv"):
+    if from_path.endswith(".zip"):
+        return _get_data_from_zip(from_path, dino_class, silent=silent)
     files = os.listdir(from_path)
     files = [file for file in files if file.endswith(ext)]
     data = {}
@@ -56,6 +58,10 @@ def _get_data_within_extent(
     index="NITG-nr",
     to_gdf=True,
 ):
+    if isinstance(extent, str):
+        data = _get_data_from_path(extent, dino_class, silent=silent)
+        return objects_to_gdf(data, x, y, geometry, index, to_gdf)
+
     if to_zip is not None:
         if not redownload and os.path.isfile(to_zip):
             data = _get_data_from_zip(to_zip, dino_class, silent=silent)
@@ -65,9 +71,6 @@ def _get_data_within_extent(
         remove_path_again = not os.path.isdir(to_path)
         files = []
 
-    if isinstance(extent, str):
-        data = _get_data_from_path(extent, dino_class, silent=silent)
-        return objects_to_gdf(data, x, y, geometry, index, to_gdf)
     if config is None:
         config = get_configuration()
     gdf = get_gdf(
@@ -117,8 +120,12 @@ def get_grondwaterstand(
     to_gdf=True,
 ):
     dino_class = Grondwaterstand
-    kind = "Grondwaterstand"
     index = ["Locatie", "Filternummer"]
+
+    if isinstance(extent, str):
+        data = _get_data_from_path(extent, dino_class, silent=silent)
+        return objects_to_gdf(data, index=index, to_gdf=to_gdf)
+
     if to_zip is not None:
         if not redownload and os.path.isfile(to_zip):
             data = _get_data_from_zip(to_zip, dino_class, silent=silent)
@@ -127,10 +134,8 @@ def get_grondwaterstand(
             to_path = os.path.splitext(to_zip)[0]
         remove_path_again = not os.path.isdir(to_path)
         files = []
-    if isinstance(extent, str):
-        data = _get_data_from_path(extent, Grondwaterstand, silent=silent)
-        return objects_to_gdf(data, index=index, to_gdf=to_gdf)
 
+    kind = "Grondwaterstand"
     if config is None:
         config = get_configuration()
     gdf = get_gdf(
@@ -139,7 +144,6 @@ def get_grondwaterstand(
         extent=extent,
         timeout=timeout,
     )
-
     download_url = config[kind]["download"]
 
     to_file = None
