@@ -1,6 +1,7 @@
 import logging
 import requests
 from io import StringIO
+import numpy as np
 import pandas as pd
 from .webservices import get_gdf
 from . import bro
@@ -123,7 +124,11 @@ class GroundwaterLevelDossier(bro.XmlFileOrUrl):
                 qualifiers = []
                 for measurement in child.findall(".//waterml:MeasurementTVP", ns):
                     times.append(measurement.find("waterml:time", ns).text)
-                    values.append(float(measurement.find("waterml:value", ns).text))
+                    value = measurement.find("waterml:value", ns).text
+                    if value is None:
+                        values.append(np.nan)
+                    else:
+                        values.append(float(value))
                     metadata = measurement.find("waterml:metadata", ns)
                     TVPMM = metadata.find("waterml:TVPMeasurementMetadata", ns)
                     qualifier = TVPMM.find("waterml:qualifier", ns)
