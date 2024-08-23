@@ -166,7 +166,7 @@ class XmlFileOrUrl:
         if zipfile is not None:
             root = xml.etree.ElementTree.fromstring(zipfile.read(url_or_file))
         elif url_or_file.startswith("http"):
-            req = requests.get(url_or_file, timeout=timeout, **kwargs)
+            req = requests.get(url_or_file, timeout=timeout)
             if not req.ok:
                 # msg = req.json()["errors"][0]["message"]
                 raise (Exception((f"Retieving data from {url_or_file} failed")))
@@ -179,7 +179,7 @@ class XmlFileOrUrl:
             root = tree.getroot()
 
         XmlFileOrUrl._check_for_rejection(root)
-        self._read_contents(root)
+        self._read_contents(root, **kwargs)
 
     @classmethod
     def from_bro_id(cls, bro_id, **kwargs):

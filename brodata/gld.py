@@ -26,11 +26,58 @@ def get_gld_within_extent(extent, config=None, timeout=5, silent=False):
     return gdf, bhrp_data
 
 
+def get_objects_as_csv(
+    bro_id, rapportagetype="compact", observatietype="regulier_voorlopig", to_file=None
+):
+    url = f"{GroundwaterLevelDossier._rest_url}/objectsAsCsv/{bro_id}"
+    if rapportagetype != "compact":
+        raise (Exception("Only rapportagetype compact supported for now"))
+    params = {
+        "rapportagetype": rapportagetype,
+    }
+    if observatietype is not None:
+        params["observatietype"] = observatietype
+    req = requests.get(url, params=params)
+    if req.status_code > 200:
+        logger.error(req.json()["errors"][0]["message"])
+        return
+    if to_file is not None:
+        with open(to_file, "w") as f:
+            f.write(req.text)
+    if req.text == "":
+        return None
+    else:
+        df = read_gld_csv(StringIO(req.text), bro_id)
+        return df
+
+
+def get_series_as_csv(
+    bro_id, filterOnStatusQualityControl=None, asISO8601=None, to_file=None
+):
+    url = f"{GroundwaterLevelDossier._rest_url}/seriesAsCsv/{bro_id}"
+    print(url)
+    params = {}
+    if asISO8601 is not None:
+        params["asISO8601"] = True
+    req = requests.get(url, params=params)
+    if req.status_code > 200:
+        logger.error(req.json()["errors"][0]["message"])
+        return
+    if to_file is not None:
+        with open(to_file, "w") as f:
+            f.write(req.text)
+    if req.text == "":
+        return None
+    else:
+        df = read_gld_csv(StringIO(req.text), bro_id)
+        return df
+
+
 def get_observations(
     bro_id,
     as_csv=False,
-    observatietype="regulier_voorlopig",
     rapportagetype="compact",
+    observatietype="regulier_voorlopig",
     tmin=None,
     tmax=None,
     fname=None,
@@ -40,22 +87,9 @@ def get_observations(
         # download the observations as csv
         if tmin is not None or tmax is not None:
             raise (Exception("tmin and tmax only supported when as_csv=False"))
-        url = f"{GroundwaterLevelDossier._rest_url}/objectsAsCsv/{bro_id}"
-        if rapportagetype != "compact":
-            raise (Exception("Only rapportagetype compact supported for now"))
-        params = {
-            "observatietype": observatietype,
-            "rapportagetype": rapportagetype,
-        }
-        req = requests.get(url, params=params)
-        if req.status_code > 200:
-            logger.error(req.json()["errors"][0]["message"])
-            return
-        if req.text == "":
-            return None
-        else:
-            df = read_gld_csv(StringIO(req.text), bro_id)
-            return df
+        return get_objects_as_csv(
+            bro_id, rapportagetype=rapportagetype, observatietype=observatietype
+        )
     else:
         # download the observations as xml
         url = f"{GroundwaterLevelDossier._rest_url}/objects/{bro_id}"
@@ -83,7 +117,7 @@ def read_gld_csv(fname, bro_id, **kwargs):
     return df
 
 
-def get_observation_summary(bro_id):
+def get_observations_summary(bro_id):
     url = GroundwaterLevelDossier._rest_url
     url = "{}/objects/{}/observationsSummary".format(url, bro_id)
     req = requests.get(url)
@@ -102,7 +136,7 @@ def get_observation_summary(bro_id):
 class GroundwaterLevelDossier(bro.XmlFileOrUrl):
     _rest_url = "https://publiek.broservices.nl/gm/gld/v1"
 
-    def _read_contents(self, tree):
+    def _read_contents(self, tree, **kwargs):
         ns = {
             "ns11": "http://www.broservices.nl/xsd/dsgld/1.0",
             "gldcommon": "http://www.broservices.nl/xsd/gldcommon/1.0",
@@ -164,7 +198,9 @@ class GroundwaterLevelDossier(bro.XmlFileOrUrl):
                 logger.warning(f"Unknown key: {key}")
         if hasattr(self, "observation"):
             self.observation = pd.concat(self.observation)
-            self.observation = process_observations(self.observation, self.broId)
+            self.observation = process_observations(
+                self.observation, self.broId, **kwargs
+            )
         else:
             self.observation = _get_empty_observation_df()
 
