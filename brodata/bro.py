@@ -178,7 +178,7 @@ class XmlFileOrUrl:
             tree = xml.etree.ElementTree.parse(url_or_file)
             root = tree.getroot()
 
-        self._check_for_rejection(root)
+        XmlFileOrUrl._check_for_rejection(root)
         self._read_contents(root)
 
     @classmethod

@@ -39,6 +39,11 @@ def test_groundwater_monitoring_well():
     gmw = brodata.gmw.GroundwaterMonitoringWell(fname)
 
 
+def test_groundwater_level_dossier():
+    fname = os.path.join("data", "GLD000000012893.xml")
+    gld = brodata.gld.GroundwaterLevelDossier(fname)
+
+
 def test_geotechnical_borehole_research():
     fname = os.path.join("data", "BHR000000353924.xml")
     bhrgt = brodata.bhr.GeotechnicalBoreholeResearch(fname)
