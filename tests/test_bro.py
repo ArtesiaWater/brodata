@@ -44,6 +44,10 @@ def test_groundwater_level_dossier():
     gld = brodata.gld.GroundwaterLevelDossier(fname)
 
 
+def test_observation_summary():
+    brodata.gld.get_observation_summary("GLD000000012893")
+
+
 def test_geotechnical_borehole_research():
     fname = os.path.join("data", "BHR000000353924.xml")
     bhrgt = brodata.bhr.GeotechnicalBoreholeResearch(fname)

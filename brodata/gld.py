@@ -89,7 +89,14 @@ def get_observation_summary(bro_id):
     req = requests.get(url)
     if req.status_code > 200:
         raise (Exception(req.json()["errors"][0]["message"]))
-    return req.json()
+    df = pd.DataFrame(req.json())
+    if "observationId" in df.columns:
+        df = df.set_index("observationId")
+    if "startDate" in df.columns:
+        df["startDate"] = pd.to_datetime(df["startDate"], dayfirst=True)
+    if "endDate" in df.columns:
+        df["endDate"] = pd.to_datetime(df["endDate"], dayfirst=True)
+    return df
 
 
 class GroundwaterLevelDossier(bro.XmlFileOrUrl):
