@@ -52,11 +52,13 @@ def get_objects_as_csv(
 
 
 def get_series_as_csv(
-    bro_id, filterOnStatusQualityControl=None, asISO8601=None, to_file=None
+    bro_id, filter_on_status_quality_qontrol=None, asISO8601=None, to_file=None
 ):
     url = f"{GroundwaterLevelDossier._rest_url}/seriesAsCsv/{bro_id}"
     print(url)
     params = {}
+    if filter_on_status_quality_qontrol is not None:
+        params["filterOnStatusQualityControl"] = filter_on_status_quality_qontrol
     if asISO8601:
         params["asISO8601"] = ""
     req = requests.get(url, params=params)
