@@ -116,8 +116,10 @@ def get_characteristics(
         }
     req = requests.post(url, json=data)
     if req.status_code > 200:
-        logger.error(req.json()["errors"][0]["message"])
-        return
+        root = xml.etree.ElementTree.fromstring(req.text)
+        XmlFileOrUrl._check_for_rejection(root)
+        # if reading of the rejection message failed, raise a more general error
+        raise (Exception((f"Retieving data from {url} failed")))
 
     if to_file is not None:
         with open(to_file, "w") as f:
@@ -196,7 +198,8 @@ class XmlFileOrUrl:
             d[attrib] = value
         return d
 
-    def _check_for_rejection(self, tree):
+    @staticmethod
+    def _check_for_rejection(tree):
         ns = {"brocom": "http://www.broservices.nl/xsd/brocommon/3.0"}
         response_type = tree.find("brocom:responseType", ns)
         if response_type.text == "rejection":
