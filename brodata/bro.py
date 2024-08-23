@@ -11,29 +11,59 @@ logger = logging.getLogger(__name__)
 
 # %%
 def get_characteristics(
-    cl, tmin=None, tmax=None, extent=None, x=None, y=None, radius=1000.0, epsg=28992
+    cl,
+    tmin=None,
+    tmax=None,
+    extent=None,
+    x=None,
+    y=None,
+    radius=1000.0,
+    epsg=28992,
+    to_file=None,
+    use_all_corners_of_extent=True,
 ):
     """
-    Haalt de karakteristieken op van een set van registratie objecten, gegeven een kenmerkenverzameling (kenset).
+    Haalt de karakteristieken op van een set van registratie objecten, gegeven een
+    kenmerkenverzameling (kenset).
 
-    De karakteristieken geven een samenvatting van een object zodat een verdere selectie gemaakt kan worden. Het past in een tweetrapsbenadering, waarbij de eerste stap bestaat uit het ophalen van de karakteristieken en de 2e stap uit het ophalen van de gewenste registratie objecten. Het resultaat van deze operatie is gemaximaliseerd op 2000. Zie hier en hier voor meer info.
+    De karakteristieken geven een samenvatting van een object zodat een verdere selectie
+    gemaakt kan worden. Het past in een tweetrapsbenadering, waarbij de eerste stap
+    bestaat uit het ophalen van de karakteristieken en de 2e stap uit het ophalen van de
+    gewenste registratie objecten. Het resultaat van deze operatie is gemaximaliseerd op
+    2000.
 
     Parameters
     ----------
+    cl : class
+        The brodata class for which characteristics are requested.
     tmin : str or pd.Timestamp, optional
-        DESCRIPTION. The default is None.
+        The minimum registrationPeriod of the requested characteristics. The default is None.
     tmax : str or pd.Timestamp, optional
-        DESCRIPTION. The default is None.
-    extent : TYPE, optional
-        DESCRIPTION. The default is None.
-    x : TYPE, optional
-        DESCRIPTION. The default is None.
-    y : TYPE, optional
-        DESCRIPTION. The default is None.
-    radius : TYPE, optional
-        DESCRIPTION. The default is 1000.0.
-    epsg : TYPE, optional
-        DESCRIPTION. The default is 28992.
+        The maximum registrationPeriod of the requested characteristics. The default is None.
+    extent : list or tuple of 4 floats, optional
+        Download the characteristics within extent ([xmin, xmax, ymin, ymax]). The
+        default is None.
+    x : float, optional
+        The x-coordinate of the center of the circle in which the characteristics are
+        requested. The default is None.
+    y : float, optional
+        The y-coordinate of the center of the circle in which the characteristics are
+        requested. The default is None.
+    radius : float, optional
+        The radius in meters of the center of the circle in which the characteristics are
+        requested. The default is None.. The default is 1000.0.
+    epsg : str, optional
+        The coordinate reference system of the specified extent, x or y. The default is
+        28992, which is the Dutch RD-system.
+    to_file : str, optional
+        When not None, save the characteristics to a file with a name as specified in
+        to_file. The defaults None.
+    use_all_corners_of_extent : bool, optional
+        Because the extent by defaults is given in epsg 28992, some locations along the
+        border of a requested extent will not be returned in the result. To solve this
+        issue, when use_all_corners_of_extent is True, all four corners of the extent
+        are used to calculate the minimum and maximum lan and lon values. The default is
+        True.
 
     Raises
     ------
@@ -42,8 +72,8 @@ def get_characteristics(
 
     Returns
     -------
-    TYPE
-        DESCRIPTION.
+    gpd.GeoDataFrame
+        A GeoDataFrame contraining the characteristics..
 
     """
     url = f"{cl._rest_url}/characteristics/searches?"
@@ -70,16 +100,28 @@ def get_characteristics(
             "radius": radius / 1000,
         }
     if extent is not None:
-        lat1, lon1 = transformer.transform(extent[0], extent[2])
-        lat2, lon2 = transformer.transform(extent[1], extent[3])
+        lat_ll, lon_ll = transformer.transform(extent[0], extent[2])
+        lat_ur, lon_ur = transformer.transform(extent[1], extent[3])
+        if use_all_corners_of_extent:
+            lat_ul, lon_ul = transformer.transform(extent[0], extent[3])
+            lat_lr, lon_lr = transformer.transform(extent[1], extent[2])
+            lat_ll = min(lat_ll, lat_lr)
+            lon_ll = min(lon_ll, lon_ul)
+            lat_ur = max(lat_ul, lat_ur)
+            lon_ur = max(lon_lr, lon_ur)
+
         data["area"]["boundingBox"] = {
-            "lowerCorner": {"lat": lat1, "lon": lon1},
-            "upperCorner": {"lat": lat2, "lon": lon2},
+            "lowerCorner": {"lat": lat_ll, "lon": lon_ll},
+            "upperCorner": {"lat": lat_ur, "lon": lon_ur},
         }
     req = requests.post(url, json=data)
     if req.status_code > 200:
         logger.error(req.json()["errors"][0]["message"])
         return
+
+    if to_file is not None:
+        with open(to_file, "w") as f:
+            f.write(req.text)
 
     # read results
     tree = xml.etree.ElementTree.fromstring(req.text)
@@ -122,14 +164,14 @@ class XmlFileOrUrl:
         if zipfile is not None:
             root = xml.etree.ElementTree.fromstring(zipfile.read(url_or_file))
         elif url_or_file.startswith("http"):
-            r = requests.get(url_or_file, timeout=timeout, **kwargs)
-            if not r.ok:
-                # msg = r.json()["errors"][0]["message"]
+            req = requests.get(url_or_file, timeout=timeout, **kwargs)
+            if not req.ok:
+                # msg = req.json()["errors"][0]["message"]
                 raise (Exception((f"Retieving data from {url_or_file} failed")))
             if to_file is not None:
                 with open(to_file, "w") as f:
-                    f.write(r.text)
-            root = xml.etree.ElementTree.fromstring(r.text)
+                    f.write(req.text)
+            root = xml.etree.ElementTree.fromstring(req.text)
         else:
             tree = xml.etree.ElementTree.parse(url_or_file)
             root = tree.getroot()
