@@ -83,6 +83,15 @@ def read_gld_csv(fname, bro_id, **kwargs):
     return df
 
 
+def get_observation_summary(bro_id):
+    url = GroundwaterLevelDossier._rest_url
+    url = "{}/objects/{}/observationsSummary".format(url, bro_id)
+    req = requests.get(url)
+    if req.status_code > 200:
+        raise (Exception(req.json()["errors"][0]["message"]))
+    return req.json()
+
+
 class GroundwaterLevelDossier(bro.XmlFileOrUrl):
     _rest_url = "https://publiek.broservices.nl/gm/gld/v1"
 

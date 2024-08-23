@@ -282,7 +282,6 @@ def get_data_in_extent(
     tmax=None,
     combine=False,
     index=None,
-    qualifier="goedgekeurd",
 ):
     """
     Get metadata and series within an extent
@@ -301,8 +300,6 @@ def get_data_in_extent(
         DESCRIPTION. The default is True.
     index : TYPE, optional
         DESCRIPTION. The default is None.
-    qualifier : TYPE, optional
-        DESCRIPTION. The default is "goedgekeurd".
 
     Returns
     -------
