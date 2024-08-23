@@ -57,8 +57,8 @@ def get_series_as_csv(
     url = f"{GroundwaterLevelDossier._rest_url}/seriesAsCsv/{bro_id}"
     print(url)
     params = {}
-    if asISO8601 is not None:
-        params["asISO8601"] = True
+    if asISO8601:
+        params["asISO8601"] = ""
     req = requests.get(url, params=params)
     if req.status_code > 200:
         logger.error(req.json()["errors"][0]["message"])
@@ -69,7 +69,13 @@ def get_series_as_csv(
     if req.text == "":
         return None
     else:
-        df = read_gld_csv(StringIO(req.text), bro_id)
+        df = pd.read_csv(StringIO(req.text))
+        if "Tijdstip" in df.columns:
+            if asISO8601:
+                df["Tijdstip"] = pd.to_datetime(df["Tijdstip"])
+            else:
+                df["Tijdstip"] = pd.to_datetime(df["Tijdstip"], unit="ms")
+            df = df.set_index("Tijdstip")
         return df
 
 
