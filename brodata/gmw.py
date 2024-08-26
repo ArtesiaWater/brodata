@@ -190,6 +190,8 @@ def get_observations(
     desc = f"Downloading {kind}-observations"
     if as_csv and kind != "gld":
         raise (Exception("as_csv=True is only supported for kind=='gld'"))
+    if qualifier is not None and kind != "gld":
+        raise (Exception("A qualifier is only supported for kind=='gld'"))
     for bro_id in tqdm(np.unique(bro_ids), disable=silent, desc=desc):
         url = f"https://publiek.broservices.nl/gm/v1/gmw-relations/{bro_id}"
         req = requests.get(url)
