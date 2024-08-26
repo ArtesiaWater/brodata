@@ -27,11 +27,53 @@ def get_gld_within_extent(extent, config=None, timeout=5, silent=False):
 
 
 def get_objects_as_csv(
-    bro_id, rapportagetype="compact", observatietype="regulier_voorlopig", to_file=None
+    bro_id,
+    rapportagetype="compact_met_timestamps",
+    observatietype="regulier_voorlopig",
+    to_file=None,
+    **kwargs,
 ):
+    """
+    Haal een volledig grondwaterstandendossier op op basis van een BRO-ID als CSV (RFC
+    4180) bestand. Er kan op rapportage type en observatie type worden gefilterd.
+
+    Parameters
+    ----------
+    bro_id : string
+        The BRO-ID of the Groundwater Level Dossier.
+    rapportagetype : string, optional
+        Type of report. Possible values are:
+            "volledig" (Zo volledig mogelijk),
+            "compact" (Compact met leesbare tijdstippen)
+            "compact_met_timestamps" (Compact met unix epoch tijdstippen).
+        Right now only "compact" and "compact_met_timestamps" are supported. The default
+        is "compact_met_timestamps".
+    observatietype : string, optional
+        Type of observations. Possible values are:
+            "regulier_beoordeeld" (observatietype = reguliere meting en mate beoordeling
+                = volledig beoordeeld),
+            "regulier_voorlopig" (observatietype = reguliere meting en mate beoordeling
+                = voorlopig),
+            "controle" (observatietype = controle meting)
+            "onbekend" (observatietype = reguliere meting en mate beoordeling =
+                onbekend).
+        When observatietype is None gives all results, seperated by empty lines and a
+        line with an explanation. The default is "regulier_voorlopig".
+    to_file : string, optional
+        DESCRIPTION. The default is None.
+
+    Raises
+    ------
+
+        DESCRIPTION.
+
+    Returns
+    -------
+    df : pd.DataFrame
+        DESCRIPTION.
+
+    """
     url = f"{GroundwaterLevelDossier._rest_url}/objectsAsCsv/{bro_id}"
-    if rapportagetype != "compact":
-        raise (Exception("Only rapportagetype compact supported for now"))
     params = {
         "rapportagetype": rapportagetype,
     }
@@ -44,21 +86,55 @@ def get_objects_as_csv(
     if to_file is not None:
         with open(to_file, "w") as f:
             f.write(req.text)
+    if rapportagetype not in ["compact", "compact_met_timestamps"]:
+        raise (Exception(f"rapportagetype {rapportagetype} is not supported for now"))
+    if observatietype is None:
+        raise (Exception("observatietype is None is not supported."))
     if req.text == "":
         return None
     else:
-        df = read_gld_csv(StringIO(req.text), bro_id)
+        df = read_gld_csv(
+            StringIO(req.text), bro_id, rapportagetype=rapportagetype, **kwargs
+        )
         return df
 
 
 def get_series_as_csv(
-    bro_id, filter_on_status_quality_qontrol=None, asISO8601=None, to_file=None
+    bro_id, filter_on_status_quality_control=None, asISO8601=False, to_file=None
 ):
+    """
+    Geeft een tabel met als eerste kolom doorlopende tijdstippen (unix epoch) en als
+    kolommen de daaraan gekoppeld de meetwaarden en opmerkingen van de verschilllende
+    observatie typen (regulier_voorlopig, regulier_beoordeeld, controle en onbekend).
+    Bedoeld voor bijvoorbeeld het grafisch weergeven van standen.
+
+    Parameters
+    ----------
+    bro_id : string
+        The BRO-ID of the Groundwater Level Dossier.
+    filter_on_status_quality_control : string or list of strings, optional
+        One or more quality control statusses that the measurements are categorized in.
+        Possible values are onbeslist, goedgekeurd (and afgekeurd?). The default is None.
+    asISO8601 : bool, optional
+        If True, dan worden de tijdstippen in ISO8601 formaat weergegeven. Anders in de
+        Unix Epoch. The default is False.
+    to_file : string, optional
+        DESCRIPTION. The default is None.
+
+    Returns
+    -------
+    df : pd.DataFrame
+        DESCRIPTION.
+
+    """
     url = f"{GroundwaterLevelDossier._rest_url}/seriesAsCsv/{bro_id}"
-    print(url)
     params = {}
-    if filter_on_status_quality_qontrol is not None:
-        params["filterOnStatusQualityControl"] = filter_on_status_quality_qontrol
+    if filter_on_status_quality_control is not None:
+        if not isinstance(filter_on_status_quality_control, str):
+            filter_on_status_quality_control = ",".join(
+                filter_on_status_quality_control
+            )
+        params["filterOnStatusQualityControl"] = filter_on_status_quality_control
     if asISO8601:
         params["asISO8601"] = ""
     req = requests.get(url, params=params)
@@ -84,7 +160,7 @@ def get_series_as_csv(
 def get_observations(
     bro_id,
     as_csv=False,
-    rapportagetype="compact",
+    rapportagetype="compact_met_timestamps",
     observatietype="regulier_voorlopig",
     tmin=None,
     tmax=None,
@@ -94,7 +170,7 @@ def get_observations(
     if as_csv:
         # download the observations as csv
         if tmin is not None or tmax is not None:
-            raise (Exception("tmin and tmax only supported when as_csv=False"))
+            raise (Exception("tmin and tmax not supported when as_csv=True"))
         return get_objects_as_csv(
             bro_id, rapportagetype=rapportagetype, observatietype=observatietype
         )
@@ -112,20 +188,52 @@ def get_observations(
         return df.to_dict()
 
 
-def read_gld_csv(fname, bro_id, **kwargs):
-    names = ["time", "value", "qualifier"]
+def read_gld_csv(fname, bro_id, rapportagetype, **kwargs):
+    names = [
+        "time",
+        "value",
+        "qualifier",
+        "censored_reason",
+        "censoring_limitvalue",
+        "interpolation_type",
+    ]
+    if rapportagetype == "compact":
+        parse_dates = ["time"]
+    else:
+        parse_dates = None
     df = pd.read_csv(
         fname,
         names=names,
         index_col="time",
-        parse_dates=["time"],
+        parse_dates=parse_dates,
         usecols=[0, 1, 2],
     )
+    if rapportagetype == "compact_met_timestamps":
+        df.index = pd.to_datetime(df.index, unit="ms")
     df = process_observations(df, bro_id, **kwargs)
     return df
 
 
 def get_observations_summary(bro_id):
+    """
+    Operatie die een samenvatting van een GLD ophaalt in JSON op basis van een BRO-ID
+
+    Parameters
+    ----------
+    bro_id : string
+        The BRO-ID of the Groundwater Level Dossier.
+
+    Raises
+    ------
+
+        DESCRIPTION.
+
+    Returns
+    -------
+    df : pd.DataFrame
+        DESCRIPTION.
+
+    """
     url = GroundwaterLevelDossier._rest_url
     url = "{}/objects/{}/observationsSummary".format(url, bro_id)
     req = requests.get(url)
@@ -214,12 +322,23 @@ class GroundwaterLevelDossier(bro.XmlFileOrUrl):
 
 
 def process_observations(
-    df, bro_id, to_wintertime=True, drop_duplicates=True, sort=True
+    df,
+    bro_id,
+    to_wintertime=True,
+    drop_duplicates=True,
+    sort=True,
+    qualifier=None,
 ):
     if to_wintertime:
         # remove time zone information by transforming to dutch winter time
         one_hour = pd.Timedelta(1, unit="h")
         df.index = pd.to_datetime(df.index, utc=True).tz_localize(None) + one_hour
+
+    if qualifier is not None:
+        if isinstance(qualifier, str):
+            df = df[df["qualifier"] == qualifier]
+        else:
+            df = df[df["qualifier"].isin(qualifier)]
 
     if df.index.has_duplicates and drop_duplicates:
         duplicates = df.index.duplicated(keep="first")

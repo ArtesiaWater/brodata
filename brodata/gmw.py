@@ -144,6 +144,7 @@ def get_observations(
     tmax=None,
     as_csv=False,
     tube_number=None,
+    qualifier=None,
 ):
     """
     Get observations
@@ -156,11 +157,25 @@ def get_observations(
         The type of observations. Possible values are gmn, gld, gar and frd.
         See the top of this file for the measing of each abbreviation. The default is
         'gld' (groundwater level dossier).
-
+    drop_references : TYPE, optional
+        DESCRIPTION. The default is True.
+    silent : TYPE, optional
+        DESCRIPTION. The default is False.
+    tmin : TYPE, optional
+        DESCRIPTION. The default is None.
+    tmax : TYPE, optional
+        DESCRIPTION. The default is None.
+    as_csv : TYPE, optional
+        DESCRIPTION. The default is False.
+    tube_number : int, optional
+        DESCRIPTION. The default is None.
+    qualifier : string or list of strings, optional
+        DESCRIPTION. The default is None.
 
     Returns
     -------
-    None.
+    TYPE
+        DESCRIPTION.
 
     """
     tubes = []
@@ -173,6 +188,8 @@ def get_observations(
         bro_ids = bro_ids.index
 
     desc = f"Downloading {kind}-observations"
+    if as_csv and kind != "gld":
+        raise (Exception("as_csv=True is only supported for kind=='gld'"))
     for bro_id in tqdm(np.unique(bro_ids), disable=silent, desc=desc):
         url = f"https://publiek.broservices.nl/gm/v1/gmw-relations/{bro_id}"
         req = requests.get(url)
@@ -181,7 +198,7 @@ def get_observations(
             return
         data = req.json()
         for tube_ref in data["monitoringTubeReferences"]:
-            tube_ref["gmwBroId"] = data["gmwBroId"]
+            tube_ref["groundwaterMonitoringWell"] = data["gmwBroId"]
             if tube_number is not None:
                 if tube_ref["tubeNumber"] != tube_number:
                     continue
@@ -191,7 +208,12 @@ def get_observations(
                     # df = gld.get_observations(
                     #    ref["broId"], tmin=tmin, tmax=tmax, as_csv=as_csv
                     # )
-                    df = GroundwaterLevelDossier.from_bro_id(ref["broId"]).to_dict()
+                    if as_csv:
+                        df = gld.get_objects_as_csv(ref["broId"], qualifier=qualifier)
+                    else:
+                        df = GroundwaterLevelDossier.from_bro_id(
+                            ref["broId"], qualifier=qualifier
+                        ).to_dict()
                 elif kind == "gar":
                     df = GroundwaterAnalysisReport.from_bro_id(ref["broId"]).to_dict()
                 elif kind == "frd":
@@ -211,6 +233,7 @@ def get_observations(
                             "frdReferences",
                         ]:
                             tube_ref.pop(key)
+                    tube_ref["broId"] = ref["broId"]
                     tubes.append(tube_ref)
                 else:
                     tubes.append(df)
@@ -218,8 +241,26 @@ def get_observations(
     return pd.DataFrame(tubes)
 
 
-def get_tube_observations(gwm_id, tube_number):
-    df = get_observations(gwm_id, tube_number=tube_number, as_csv=False)
+def get_tube_observations(gwm_id, tube_number, **kwargs):
+    """
+    Get the observations of a single groundwater monitoring tube.
+
+    Parameters
+    ----------
+    gwm_id : TYPE
+        The bro_id of the groundwater monitoring well.
+    tube_number : int
+        The tube number.
+    **kwargs : dict
+        Kwargs are passed onto get_observations.
+
+    Returns
+    -------
+    pd.DataFrame
+        A DataFrame containing the observations.
+
+    """
+    df = get_observations(gwm_id, tube_number=tube_number, **kwargs)
     if df.empty:
         return gld._get_empty_observation_df()
     else:
@@ -282,6 +323,8 @@ def get_data_in_extent(
     tmax=None,
     combine=False,
     index=None,
+    as_csv=False,
+    qualifier=None,
 ):
     """
     Get metadata and series within an extent
@@ -300,6 +343,10 @@ def get_data_in_extent(
         DESCRIPTION. The default is True.
     index : TYPE, optional
         DESCRIPTION. The default is None.
+    as_csv : bool, optional
+        If True, Download the measurement-data as a csv (only supported for kind ==
+        "gld"). Otherwise download the data as xml-files, which is slower. The default
+        is False.
 
     Returns
     -------
@@ -312,7 +359,9 @@ def get_data_in_extent(
     gmw = get_characteristics(extent=extent)
 
     logger.info(f"Downloading {kind}-observations")
-    obs_df = get_observations(gmw, kind=kind, tmin=tmin, tmax=tmax)
+    obs_df = get_observations(
+        gmw, kind=kind, tmin=tmin, tmax=tmax, as_csv=as_csv, qualifier=qualifier
+    )
 
     # only keep wells with observations
     if "groundwaterMonitoringWell" in obs_df.columns:
