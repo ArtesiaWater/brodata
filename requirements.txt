@@ -1,5 +1,0 @@
-geopandas
-requests
-xml
-pyproj
-tqdm
