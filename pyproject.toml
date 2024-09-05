@@ -19,7 +19,7 @@ dependencies = [
   "geopandas",
   "owslib",
   "requests",
-  "xml",
+  "lxml",
   "pyproj",
   "tqdm",
 ]
