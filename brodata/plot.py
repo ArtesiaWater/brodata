@@ -94,6 +94,7 @@ def get_lithology_color(hoofdgrondsoort, zandmediaanklasse=None):
         "stenen": (216, 163, 32),
         "veen": (157, 78, 64),
         "zand": (255, 255, 0),
+        "slib": (144, 144, 144),
         "schelpen": (95, 95, 255),
         "sterkGrindigZand": (231, 195, 22),  # same as zand grove categorie
         "zwakZandigeKlei": (0, 146, 0),  # same as klei
@@ -108,6 +109,8 @@ def get_lithology_color(hoofdgrondsoort, zandmediaanklasse=None):
                 "fijne categorie (O)",
                 "zeer fijn (O)",
                 "uiterst fijn (O)",
+                "zeer fijn",
+                "uiterst fijn",
             ]:
                 color = colors[hoofdgrondsoort]
                 label = "Zand fijne categorie"
