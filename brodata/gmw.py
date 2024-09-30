@@ -157,9 +157,9 @@ def get_observations(
         The type of observations. Possible values are gmn, gld, gar and frd.
         See the top of this file for the measing of each abbreviation. The default is
         'gld' (groundwater level dossier).
-    drop_references : TYPE, optional
+    drop_references : bool or list of string, optional
         DESCRIPTION. The default is True.
-    silent : TYPE, optional
+    silent : bool, optional
         DESCRIPTION. The default is False.
     tmin : TYPE, optional
         DESCRIPTION. The default is None.
@@ -186,6 +186,17 @@ def get_observations(
 
     if isinstance(bro_ids, pd.DataFrame):
         bro_ids = bro_ids.index
+
+    if isinstance(drop_references, bool):
+        if drop_references:
+            drop_references = [
+                "gmnReferences",
+                "gldReferences",
+                "garReferences",
+                # "frdReferences",
+            ]
+        else:
+            drop_references = []
 
     desc = f"Downloading {kind}-observations"
     if as_csv and kind != "gld":
@@ -227,14 +238,18 @@ def get_observations(
 
                 if as_csv:
                     tube_ref["observation"] = df
-                    if drop_references:
-                        for key in [
-                            "gmnReferences",
-                            "gldReferences",
-                            "garReferences",
-                            "frdReferences",
-                        ]:
+                    for key in drop_references:
+                        if key in tube_ref:
                             tube_ref.pop(key)
+                        else:
+                            logger.warning(
+                                "{} not defined for {}, filter {}".format(
+                                    key,
+                                    tube_ref["groundwaterMonitoringWell"],
+                                    tube_ref["tubeNumber"],
+                                )
+                            )
+
                     tube_ref["broId"] = ref["broId"]
                     tubes.append(tube_ref)
                 else:

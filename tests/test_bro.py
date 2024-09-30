@@ -13,7 +13,12 @@ def test_get_gmw_characteristics():
 
 def test_gmw_get_gld_data_in_extent():
     extent = [118200, 118400, 439700, 440000]
-    data = brodata.gmw.get_data_in_extent(extent=extent, combine=True)
+    data = brodata.gmw.get_data_in_extent(extent=extent, combine=True, as_csv=False)
+
+
+def test_gmw_get_gld_data_in_extent_as_csv():
+    extent = [118200, 118400, 439700, 440000]
+    data = brodata.gmw.get_data_in_extent(extent=extent, combine=True, as_csv=True)
 
 
 def test_gmw_get_gar_data_in_extent():
