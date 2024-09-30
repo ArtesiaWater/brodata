@@ -53,13 +53,13 @@ def get_characteristics(
         The radius in meters of the center of the circle in which the characteristics are
         requested. The default is None.. The default is 1000.0.
     epsg : str, optional
-        The coordinate reference system of the specified extent, x or y. The default is
-        28992, which is the Dutch RD-system.
+        The coordinate reference system of the specified extent, x or y, and of the
+        resulting GeoDataFrame. The default is 28992, which is the Dutch RD-system.
     to_file : str, optional
         When not None, save the characteristics to a file with a name as specified in
         to_file. The defaults None.
     use_all_corners_of_extent : bool, optional
-        Because the extent by defaults is given in epsg 28992, some locations along the
+        Because the extent by default is given in epsg 28992, some locations along the
         border of a requested extent will not be returned in the result. To solve this
         issue, when use_all_corners_of_extent is True, all four corners of the extent
         are used to calculate the minimum and maximum lan and lon values. The default is
@@ -151,14 +151,23 @@ def get_characteristics(
                 logger.warning(f"Unknown key: {key}")
         data.append(d)
     df = pd.DataFrame(data)
-    if "x" not in df or "y" not in df:
-        return df
-    geometry = gpd.points_from_xy(df["x"], df["y"], crs=28992)
-    gdf = gpd.GeoDataFrame(df, geometry=geometry)
-    if "broId" in gdf.columns:
-        gdf = gdf.set_index("broId")
-        gdf = gdf.sort_index()
-    return gdf
+    if "broId" in df.columns:
+        df = df.set_index("broId")
+        df = df.sort_index()
+
+    if "x" in df and "y" in df:
+        geometry = gpd.points_from_xy(df["x"], df["y"], crs=28992)
+        gdf = gpd.GeoDataFrame(df, geometry=geometry)
+        if epsg != 28992:
+            gdf = gdf.to_crs(epsg)
+        return gdf
+    elif "lat" in df and "lon" in df:
+        geometry = gpd.points_from_xy(df["lon"], df["lat"], crs=4326)
+        gdf = gpd.GeoDataFrame(df, geometry=geometry)
+        if epsg != 4326:
+            gdf = gdf.to_crs(epsg)
+        return gdf
+    return df
 
 
 class XmlFileOrUrl:
