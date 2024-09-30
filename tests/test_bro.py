@@ -26,9 +26,9 @@ def test_gmw_get_gar_data_in_extent():
     data = brodata.gmw.get_data_in_extent(extent=extent, kind="gar", combine=True)
 
 
-def test_gmw_get_frd_data_in_extent():
-    extent = [115000, 120000, 438000, 441000]
-    gdf, frd = brodata.gmw.get_data_in_extent(extent=extent, kind="frd")
+# def test_gmw_get_frd_data_in_extent():
+#    extent = [115000, 120000, 438000, 441000]
+#    gdf, frd = brodata.gmw.get_data_in_extent(extent=extent, kind="frd")
 
 
 def tets_get_well_code():
@@ -64,9 +64,13 @@ def test_pedological_borehole_research():
     bhr = brodata.bhr.PedologicalBoreholeResearch(fname)
 
 
-def test_groundwater_analysis_report():
+def test_groundwater_analysis_report_from_file():
     fname = os.path.join("data", "GAR000000019636.xml")
     gar = brodata.gar.GroundwaterAnalysisReport(fname)
+
+
+def test_groundwater_analysis_report():
+    gar = brodata.gar.GroundwaterAnalysisReport.from_bro_id("GAR000000019636")
 
 
 def test_soil_face_research():

@@ -45,11 +45,13 @@ class GroundwaterAnalysisReport(bro.XmlFileOrUrl):
             elif key == "fieldResearch":
                 self._read_children_of_children(child)
             elif key == "laboratoryAnalysis":
-                if hasattr(self, key):
-                    raise (NotImplementedError("Assumed only one laboratoryAnalysis"))
-                setattr(self, key, self._read_laboratory_analysis(child))
+                if not hasattr(self, key):
+                    self.laboratoryAnalysis = []
+                self.laboratoryAnalysis.append(self._read_laboratory_analysis(child))
             else:
                 logger.warning(f"Unknown key: {key}")
+        if hasattr(self, "laboratoryAnalysis"):
+            self.laboratoryAnalysis = pd.concat(self.laboratoryAnalysis)
 
     def _read_laboratory_analysis(self, node):
         laboratory_analysis = []
@@ -64,7 +66,7 @@ class GroundwaterAnalysisReport(bro.XmlFileOrUrl):
                 elif key == "analysis":
                     for greatgrandchild in grandchild:
                         key = greatgrandchild.tag.split("}", 1)[1]
-                        if key in ["parameter", "qualityControlStatus"]:
+                        if key in ["parameter", "qualityControlStatus", "limitSymbol"]:
                             d[key] = greatgrandchild.text
                         elif key == "analysisMeasurementValue":
                             d[key] = float(greatgrandchild.text)
