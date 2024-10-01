@@ -84,7 +84,7 @@ def cone_penetration_test(
     return axes
 
 
-def get_lithology_color(hoofdgrondsoort, zandmediaanklasse=None):
+def get_lithology_color(hoofdgrondsoort, zandmediaanklasse=None, drilling=None):
     colors = {
         "grind": (216, 163, 32),
         "hout": (157, 78, 64),
@@ -97,7 +97,9 @@ def get_lithology_color(hoofdgrondsoort, zandmediaanklasse=None):
         "slib": (144, 144, 144),
         "schelpen": (95, 95, 255),
         "sterkGrindigZand": (231, 195, 22),  # same as zand grove categorie
+        "wegverhardingsmateriaal": (200, 200, 200),  # same as puin, check at B25D3298
         "zwakZandigeKlei": (0, 146, 0),  # same as klei
+        "gyttja": (157, 78, 64),  # same as hout, check at B02G0307
         "niet benoemd": (255, 255, 255),
         "geen monster": (255, 255, 255),
     }
@@ -136,14 +138,20 @@ def get_lithology_color(hoofdgrondsoort, zandmediaanklasse=None):
                     pd.isna(zandmediaanklasse)
                     or zandmediaanklasse in ["zandmediaan onduidelijk"]
                 ):
-                    logger.warning(f"Unknown zandmediaanklasse: {zandmediaanklasse}")
+                    msg = f"Unknown zandmediaanklasse: {zandmediaanklasse}"
+                    if drilling is not None:
+                        msg = f"{msg} in drilling {drilling}"
+                    logger.warning(msg)
                 # for zandmediaanklasse is None or something other than mentioned above
                 color = colors[hoofdgrondsoort]
         else:
             color = colors[hoofdgrondsoort]
         color = tuple(x / 255 for x in color)
     else:
-        logger.warning(f"No color defined for hoofdgrondsoort {hoofdgrondsoort}")
+        msg = f"No color defined for hoofdgrondsoort {hoofdgrondsoort}"
+        if drilling is not None:
+            msg = f"{msg} in drilling {drilling}"
+        logger.warning(msg)
         color = (1.0, 1.0, 1.0)
 
     if label is None:
@@ -162,16 +170,21 @@ def lithology(
     z=0.0,
     solid_capstyle="butt",
     linewidth=6,
+    drilling=None,
     **kwargs,
 ):
+    h = []
+    if not isinstance(df, pd.DataFrame):
+        return h
     if ax is None:
         ax = plt.gca()
-    h = []
     for index in df.index:
         z_top = z - df.at[index, top]
         z_bot = z - df.at[index, bot]
         zandmediaanklasse = None if sand_class is None else df.at[index, sand_class]
-        color, label = get_lithology_color(df.at[index, kind], zandmediaanklasse)
+        color, label = get_lithology_color(
+            df.at[index, kind], zandmediaanklasse, drilling=drilling
+        )
         if x is not None and np.isfinite(x):
             h.append(
                 ax.plot(
@@ -220,6 +233,7 @@ def lithology_along_line(
                 gdf.at[index, "lithologie_lagen"],
                 z=gdf.at[index, "Maaiveldhoogte (m tov NAP)"],
                 x=s[index],
+                drilling=index,
                 **kwargs,
             )
         elif kind == "bro":
@@ -230,7 +244,7 @@ def lithology_along_line(
                 )
                 logger.warning(msg)
             df = gdf.at[index, "descriptiveBoreholeLog"][0]["layer"]
-            bro_lithology(df, x=s[index], **kwargs)
+            bro_lithology(df, x=s[index], drilling=index, **kwargs)
         else:
             raise (Exception(f"Unknown kind: {kind}"))
 
