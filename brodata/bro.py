@@ -284,6 +284,8 @@ class XmlFileOrUrl:
             return float(node.text)
         if to_int is not None and key in to_int:
             return int(node.text)
+        return node.text
+
 
     def _read_delivered_location(self, node):
         for child in node:
