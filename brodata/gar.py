@@ -6,9 +6,26 @@ from . import bro
 logger = logging.getLogger(__name__)
 
 
-class GroundwaterAnalysisReport(bro.XmlFileOrUrl):
+class GroundwaterAnalysisReport(bro.FileOrUrl):
     _rest_url = "https://publiek.broservices.nl/gm/gar/v1"
     _xmlns = "http://www.broservices.nl/xsd/dsgar/1.0"
+
+    def _read_csv(self, csvfile, **kwargs):
+        df = pd.read_csv(csvfile, **kwargs)
+        na_rows = df.index[df.isna().all(axis=1)]
+        idata = df.iloc[: na_rows[0]].dropna(how="all", axis=1).squeeze().to_dict()
+        for i in range(len(na_rows) - 1):
+            idf = df.iloc[na_rows[i] + 2 : na_rows[i + 1]]
+            idf.columns = df.iloc[na_rows[i] + 1]
+            idf.columns.name = None
+            idf = idf.dropna(how="all", axis=1)
+            if "analysedatum" in idf.columns:
+                key = "laboratoryAnalysis"
+            else:
+                key = "fieldResearch"
+            idata[key] = idf
+        for k, v in idata.items():
+            setattr(self, k, v)
 
     def _read_contents(self, tree):
         ns = {
