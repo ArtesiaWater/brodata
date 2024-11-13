@@ -3,27 +3,9 @@ import requests
 from io import StringIO
 import numpy as np
 import pandas as pd
-from .webservices import get_gdf
 from . import bro
 
 logger = logging.getLogger(__name__)
-
-
-def get_gld_within_extent(extent, config=None, timeout=5, silent=False):
-    kind = "Grondwaterstandonderzoek"
-    gdf = get_gdf(
-        kind,
-        config=config,
-        extent=extent,
-        timeout=timeout,
-        f="json",
-    )
-
-    gdf = gdf[gdf["NUMBER_OF_GLD"] > 0]
-
-    bhrp_data = {}
-    logger.warning(f"Reading of {kind} not supported yet")
-    return gdf, bhrp_data
 
 
 def get_objects_as_csv(
@@ -34,44 +16,56 @@ def get_objects_as_csv(
     **kwargs,
 ):
     """
-    Haal een volledig grondwaterstandendossier op op basis van een BRO-ID als CSV (RFC
-    4180) bestand. Er kan op rapportage type en observatie type worden gefilterd.
+    Fetch a complete Groundwater Level Dossier (GLD) as a CSV (RFC 4180) file
+    based on the provided BRO-ID. The data can be filtered by report type and
+    observation type.
 
     Parameters
     ----------
-    bro_id : string
-        The BRO-ID of the Groundwater Level Dossier.
-    rapportagetype : string, optional
-        Type of report. Possible values are:
-            "volledig" (Zo volledig mogelijk),
-            "compact" (Compact met leesbare tijdstippen)
-            "compact_met_timestamps" (Compact met unix epoch tijdstippen).
-        Right now only "compact" and "compact_met_timestamps" are supported. The default
-        is "compact_met_timestamps".
-    observatietype : string, optional
-        Type of observations. Possible values are:
-            "regulier_beoordeeld" (observatietype = reguliere meting en mate beoordeling
-                = volledig beoordeeld),
-            "regulier_voorlopig" (observatietype = reguliere meting en mate beoordeling
-                = voorlopig),
-            "controle" (observatietype = controle meting)
-            "onbekend" (observatietype = reguliere meting en mate beoordeling =
-                onbekend).
-        When observatietype is None gives all results, seperated by empty lines and a
-        line with an explanation. The default is "regulier_voorlopig".
-    to_file : string, optional
-        DESCRIPTION. The default is None.
+    bro_id : str
+        The BRO-ID of the Groundwater Level Dossier to fetch.
+    rapportagetype : str, optional
+        Type of report. The valid values are:
+        - "volledig" : Full report
+        - "compact" : Compact report with readable timestamps
+        - "compact_met_timestamps" : Compact report with Unix epoch timestamps
+        Default is "compact_met_timestamps". Only "compact" and "compact_met_timestamps"
+        are supported.
+    observatietype : str, optional
+        Type of observations. The valid values are:
+        - "regulier_beoordeeld" : Regular measurement with full evaluation
+        (observatietype = reguliere meting en mate beoordeling = volledig beoordeeld)
+        - "regulier_voorlopig" : Regular measurement with preliminary evaluation
+        (observatietype = reguliere meting en mate beoordeling = voorlopig)
+        - "controle" : Control measurement
+        (observatietype = controle meting)
+        - "onbekend" : Unknown evaluation
+        (observatietype = reguliere meting en mate beoordeling = onbekend)
+        If None, all observation types will be included, separated by empty lines and with an explanation.
+        Default is "regulier_voorlopig".
+    to_file : str, optional
+        If provided, the CSV data will be written to the specified file.
+        If None, the function returns the CSV data as a DataFrame. Default is None.
+    **kwargs : additional keyword arguments
+        Additional arguments passed to `read_gld_csv`.
 
     Raises
     ------
-
-        DESCRIPTION.
+    Exception
+        If the `rapportagetype` is not supported, or if `observatietype` is None.
 
     Returns
     -------
-    df : pd.DataFrame
-        DESCRIPTION.
+    pd.DataFrame or None
+        If successful, returns a DataFrame containing the parsed CSV data.
+        If `to_file` is provided, returns None after saving the CSV to the specified file.
+        If the request fails or returns empty data, returns None.
 
+    Notes
+    -----
+    The function sends a GET request to the Groundwater Level Dossier API
+    and fetches the data in CSV format. The `rapportagetype` and `observatietype`
+    parameters can be used to filter the data.
     """
     url = f"{GroundwaterLevelDossier._rest_url}/objectsAsCsv/{bro_id}"
     params = {
@@ -103,29 +97,32 @@ def get_series_as_csv(
     bro_id, filter_on_status_quality_control=None, asISO8601=False, to_file=None
 ):
     """
-    Geeft een tabel met als eerste kolom doorlopende tijdstippen (unix epoch) en als
-    kolommen de daaraan gekoppeld de meetwaarden en opmerkingen van de verschilllende
-    observatie typen (regulier_voorlopig, regulier_beoordeeld, controle en onbekend).
-    Bedoeld voor bijvoorbeeld het grafisch weergeven van standen.
+    Get groundwater level series as a CSV, with timestamps and corresponding measurements.
+
+    This function retrieves a table with timestamps (Unix epoch or ISO8601 format)
+    as the first column and corresponding measurements for different observation
+    types (regulier_voorlopig, regulier_beoordeeld, controle en onbekend) as columns.
 
     Parameters
     ----------
-    bro_id : string
+    bro_id : str
         The BRO-ID of the Groundwater Level Dossier.
-    filter_on_status_quality_control : string or list of strings, optional
-        One or more quality control statusses that the measurements are categorized in.
-        Possible values are onbeslist, goedgekeurd (and afgekeurd?). The default is None.
+    filter_on_status_quality_control : str or list of str, optional
+        One or more quality control statuses to filter the measurements by.
+        Possible values are 'onbeslist', 'goedgekeurd', and 'afgekeurd'.
+        The default is None.
     asISO8601 : bool, optional
-        If True, dan worden de tijdstippen in ISO8601 formaat weergegeven. Anders in de
-        Unix Epoch. The default is False.
-    to_file : string, optional
-        DESCRIPTION. The default is None.
+        If True, timestamps are returned in ISO8601 format; otherwise, in Unix
+        epoch format. The default is False.
+    to_file : str, optional
+        If provided, the CSV data will be written to this file path. The default
+        is None.
 
     Returns
     -------
-    df : pd.DataFrame
-        DESCRIPTION.
-
+    pd.DataFrame or None
+        A DataFrame containing the time series of measurements, with timestamps
+        as the index. Returns None if no data is available.
     """
     url = f"{GroundwaterLevelDossier._rest_url}/seriesAsCsv/{bro_id}"
     params = {}
@@ -167,6 +164,45 @@ def get_observations(
     fname=None,
     **kwargs,
 ):
+    """
+    Get groundwater level observations for a specific BRO-ID.
+
+    This function retrieves groundwater level observations as either CSV or XML,
+    depending on the `as_csv` flag. If `as_csv` is True, it fetches the observations
+    in CSV format with the specified report type and observation type. If `as_csv`
+    is False, it fetches the observations as XML and converts them into a dictionary.
+
+    Parameters
+    ----------
+    bro_id : str
+        The BRO-ID of the Groundwater Level Dossier to fetch observations for.
+    as_csv : bool, optional
+        If True, fetches the observations as CSV. Defaults to False (XML format).
+    rapportagetype : str, optional
+        The report type to fetch. Default is "compact_met_timestamps".
+    observatietype : str, optional
+        The type of observation to retrieve. Default is "regulier_voorlopig".
+    tmin : str or datetime, optional
+        The minimum date for observations to fetch. Only used if `as_csv` is False.
+    tmax : str or datetime, optional
+        The maximum date for observations to fetch. Only used if `as_csv` is False.
+    fname : str, optional
+        If provided, saves the observations to the specified file. Default is None.
+    **kwargs : additional keyword arguments
+        Additional arguments passed to the underlying request (not used directly).
+
+    Returns
+    -------
+    pd.DataFrame or dict
+        If `as_csv` is True, returns a DataFrame containing the observations.
+        If `as_csv` is False, returns a dictionary representation of the
+        groundwater level dossier.
+
+    Raises
+    ------
+    Exception
+        If `tmin` or `tmax` are provided when `as_csv` is True.
+    """
     if as_csv:
         # download the observations as csv
         if tmin is not None or tmax is not None:
@@ -189,6 +225,46 @@ def get_observations(
 
 
 def read_gld_csv(fname, bro_id, rapportagetype, **kwargs):
+    """
+    Read and process a Groundwater Level Dossier (GLD) CSV file.
+
+    This function reads a CSV file containing groundwater level observations,
+    processes the data according to the specified report type (`rapportagetype`),
+    and returns a DataFrame of the observations. The file is assumed to contain
+    at least three columns: time, value, and qualifier. The 'time' column is parsed
+    as datetime, and additional processing is applied to the data.
+
+    Parameters
+    ----------
+    fname : str
+        The path to the CSV file containing the groundwater level observations.
+    bro_id : str
+        The BRO-ID of the Groundwater Level Dossier being processed.
+    rapportagetype : str
+        The report type. Can be one of:
+        - 'volledig': as complete as possible (not supported yet)
+        - 'compact': simple format with time and value.
+        - 'compact_met_timestamps': format with timestamps for each observation.
+    **kwargs : additional keyword arguments
+        Additional arguments passed to the `process_observations` function.
+
+    Returns
+    -------
+    pd.DataFrame
+        A DataFrame containing the processed observations with the following columns:
+        - time: The observation time.
+        - value: The observed groundwater level.
+        - qualifier: The quality code of the observation.
+        - censored_reason: Reason for censoring, if applicable.
+        - censoring_limitvalue: Limit value for censoring, if applicable.
+        - interpolation_type: The interpolation method used, if applicable.
+
+    Notes
+    -----
+    The time column is parsed as a datetime index. If the report type is
+    'compact_met_timestamps', the time values are converted from Unix epoch time
+    (milliseconds) to a datetime format.
+    """
     names = [
         "time",
         "value",
@@ -216,23 +292,34 @@ def read_gld_csv(fname, bro_id, rapportagetype, **kwargs):
 
 def get_observations_summary(bro_id):
     """
-    Operatie die een samenvatting van een GLD ophaalt in JSON op basis van een BRO-ID
+    Fetch a summary of a Groundwater Level Dossier (GLD) in JSON format based on
+    the provided BRO-ID. The summary includes details about the groundwater level
+    observations, such as observation ID, start and end dates.
 
     Parameters
     ----------
-    bro_id : string
-        The BRO-ID of the Groundwater Level Dossier.
+    bro_id : str
+        The BRO-ID of the Groundwater Level Dossier to fetch the summary for.
 
     Raises
     ------
-
-        DESCRIPTION.
+    Exception
+        If the request to the API fails or the status code is greater than 200,
+        an exception will be raised with the error message returned by the API.
 
     Returns
     -------
-    df : pd.DataFrame
-        DESCRIPTION.
+    pd.DataFrame
+        A DataFrame containing the summary of the groundwater level observations.
+        The DataFrame will be indexed by the `observationId` and include
+        `startDate` and `endDate` columns, converted to `datetime` format.
 
+    Notes
+    -----
+    The function sends a GET request to the REST API and processes the returned
+    JSON data into a DataFrame. If the response contains valid `startDate` or
+    `endDate` fields, they will be converted to `datetime` format using the
+    `pd.to_datetime` function.
     """
     url = GroundwaterLevelDossier._rest_url
     url = "{}/objects/{}/observationsSummary".format(url, bro_id)
@@ -250,9 +337,67 @@ def get_observations_summary(bro_id):
 
 
 class GroundwaterLevelDossier(bro.XmlFileOrUrl):
+    """
+    Represents a Groundwater Level Dossier (GLD) containing groundwater monitoring
+    information and observation data.
+
+    Attributes
+    ----------
+    _rest_url : str
+        The REST URL used to fetch data for this class.
+
+    observation : pd.DataFrame
+        DataFrame containing groundwater level observations with time and value
+        columns. The data is processed and filtered based on the provided arguments.
+
+    tubeNumber : int
+        The tube number associated with the observation.
+
+    groundwaterMonitoringWell : str
+        The BRO-ID of the groundwater monitoring well.
+
+    Methods
+    -------
+    _read_contents(tree, **kwargs)
+        Reads the XML content from the given tree and populates the attributes of
+        the instance with the parsed data.
+    """
+
     _rest_url = "https://publiek.broservices.nl/gm/gld/v1"
 
     def _read_contents(self, tree, **kwargs):
+        """
+        Parse and extract data from the XML tree to populate the Groundwater Level
+        Dossier attributes.
+
+        This method reads and processes the XML contents, extracting relevant
+        groundwater monitoring information such as the groundwater monitoring well,
+        tube number, and observations. It also processes the observations into a
+        DataFrame, which is filtered and transformed based on the provided arguments.
+
+        Parameters
+        ----------
+        tree : xml.etree.ElementTree
+            The XML tree to parse and extract data from.
+
+        **kwargs : keyword arguments
+            Additional parameters passed to the `process_observations` function to
+            filter and transform the observations.
+
+        Raises
+        ------
+        Exception
+            If more than one or no GLD element is found in the XML tree.
+
+        Notes
+        -----
+        The method expects the XML structure to adhere to the specified namespaces
+        and element tags. It processes observation values, timestamps, and qualifiers
+        into a pandas DataFrame.
+
+        The observation data is stored in the `observation` attribute and can be
+        accessed as a DataFrame.
+        """
         ns = {
             "ns11": "http://www.broservices.nl/xsd/dsgld/1.0",
             "gldcommon": "http://www.broservices.nl/xsd/gldcommon/1.0",
@@ -329,6 +474,47 @@ def process_observations(
     sort=True,
     qualifier=None,
 ):
+    """
+    Process groundwater level observations.
+
+    This function processes a DataFrame containing groundwater level observations,
+    applying the following operations based on the provided parameters:
+    - Conversion to Dutch winter time (optional).
+    - Filtering observations based on the qualifier.
+    - Dropping duplicate observations (optional).
+    - Sorting the observations by time (optional).
+
+    Parameters
+    ----------
+    df : pd.DataFrame
+        DataFrame containing the groundwater level observations, with a time
+        index and columns such as "value", "qualifier", etc.
+    bro_id : str
+        The BRO-ID of the Groundwater Level Dossier being processed.
+    to_wintertime : bool, optional
+        If True, the observation times are converted to Dutch winter time by
+        removing any time zone information and adding one hour. Default is True.
+    drop_duplicates : bool, optional
+        If True, any duplicate observation times will be dropped, keeping only
+        the first occurrence. Default is True.
+    sort : bool, optional
+        If True, the DataFrame will be sorted by the time index. Default is True.
+    qualifier : str or list of str, optional
+        If provided, the observations are filtered based on their "qualifier"
+        column. Only rows with the specified qualifier(s) will be kept.
+
+    Returns
+    -------
+    pd.DataFrame
+        A DataFrame containing the processed observations, with duplicate rows
+        (if any) removed, the time index sorted, and filtered by qualifier if
+        applicable.
+
+    Notes
+    -----
+    The function assumes the 'time' index is in UTC if `to_wintertime=True` and
+    will convert it to Dutch winter time (CET/CEST).
+    """
     if to_wintertime:
         # remove time zone information by transforming to dutch winter time
         one_hour = pd.Timedelta(1, unit="h")

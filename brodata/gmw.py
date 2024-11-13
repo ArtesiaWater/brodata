@@ -15,7 +15,24 @@ logger = logging.getLogger(__name__)
 
 
 def get_bro_ids_of_bronhouder(bronhouder):
-    """get bro-id's from bronhouder"""
+    """
+    Retrieve the list of BRO (Basisregistratie Ondergrond) IDs for a given bronhouder.
+
+    This function sends a GET request to the REST API to fetch the BRO IDs associated
+    with the specified bronhouder. If the request is unsuccessful, it logs an error
+    message.
+
+    Parameters
+    ----------
+    bronhouder : str
+        The identifier for the bronhouder to retrieve the associated BRO IDs.
+
+    Returns
+    -------
+    list or None
+        A list of BRO IDs if the request is successful. Returns `None` if the request
+        fails.
+    """
     url = f"{GroundwaterMonitoringWell._rest_url}/bro-ids?"
     params = dict(bronhouder=bronhouder)
     req = requests.get(url, params=params)
@@ -28,26 +45,46 @@ def get_bro_ids_of_bronhouder(bronhouder):
 
 def get_characteristics(**kwargs):
     """
-    Get characteristics of Groundwater Monitoring Wells (see bro.get_characteristics)
+    Get characteristics of Groundwater Monitoring Wells.
+
+    This function fetches the characteristics of groundwater monitoring wells
+    using the `bro.get_characteristics` function, specifically for the
+    `GroundwaterMonitoringWell` class. It passes the provided keyword arguments
+    to the underlying function.
+
+    Parameters
+    ----------
+    **kwargs
+        Additional keyword arguments passed to the `bro.get_characteristics` function.
+
+    Returns
+    -------
+    gpd.GeoDataFrame
+        A GeoDataFrame contraining the characteristics of the groundwater monitoring
+        wells.
     """
     return bro.get_characteristics(GroundwaterMonitoringWell, **kwargs)
 
 
 def get_well_code(bro_id):
     """
-    Haalt een putcode op, op basis van een BRO-ID. Retourneert de putcode als 'plain text'
+    Retrieve the well code based on a given BRO-ID and return it as plain text.
+
+    This function sends a GET request to fetch the well code associated with the
+    specified BRO-ID. If the request fails, it logs an error message and returns `None`.
 
     Parameters
     ----------
     bro_id : str
-        DESCRIPTION.
+        The BRO-ID for which to retrieve the associated well code.
 
     Returns
     -------
-    well_code : str
-        DESCRIPTION.
-
+    well_code : str or None
+        The well code as plain text if the request is successful. Returns `None` if
+        the request fails.
     """
+
     url = f"{GroundwaterMonitoringWell._rest_url}/well-code/{bro_id}"
     req = requests.get(url)
     if req.status_code > 200:
@@ -58,6 +95,38 @@ def get_well_code(bro_id):
 
 
 class GroundwaterMonitoringWell(bro.XmlFileOrUrl):
+    """
+    Represents a groundwater monitoring well (GMW) with associated properties.
+
+    This class parses XML data related to a groundwater monitoring well (GMW).
+    It extracts details such as location, monitoring tube data, and well history
+    and stores these in attributes.
+
+    Attributes
+    ----------
+    _rest_url : str
+        The base URL for the groundwater monitoring well REST API.
+
+    _xmlns : str
+        The XML namespace used for parsing the GMW XML data.
+
+    _char : str
+        A string used to identify the type of groundwater monitoring well.
+
+    Methods
+    -------
+    _read_contents(tree)
+        Parses the XML tree to extract and store GMW attributes and child elements.
+
+    _read_intermediate_event(node)
+        Parses an intermediate event node to extract event details.
+
+    Notes
+    -----
+    This class extends `bro.XmlFileOrUrl` and is designed to work with GMW XML
+    data, either from a file or URL. The XML structure must follow the GMW schema.
+    """
+
     _rest_url = "https://publiek.broservices.nl/gm/gmw/v1"
     _xmlns = "http://www.broservices.nl/xsd/dsgmw/1.1"
     _char = "GMW_C"
@@ -147,36 +216,49 @@ def get_observations(
     qualifier=None,
 ):
     """
-    Get observations
+    Retrieve groundwater observations for the specified monitoring wells (bro_ids).
+
+    This function fetches groundwater data for monitoring wells based on the provided
+    parameters. It supports different types of observations, allows filtering by tube
+    number, and can request the data in CSV format for groundwater level observations.
 
     Parameters
     ----------
-    bro_ids : str
-        The bro_ids of the monitoring wells of which we want the tubes.
+    bro_ids : str or list or pd.DataFrame
+        The BRO IDs of the monitoring wells for which to retrieve the data. If a
+        DataFrame is provided, its index is used as the list of BRO IDs.
     kind : str, optional
-        The type of observations. Possible values are gmn, gld, gar and frd.
-        See the top of this file for the measing of each abbreviation. The default is
-        'gld' (groundwater level dossier).
-    drop_references : bool or list of string, optional
-        DESCRIPTION. The default is True.
+        The type of observations to retrieve. Can be one of {'gmn', 'gld', 'gar', 'frd'}.
+        Defaults to 'gld' (groundwater level dossier).
+    drop_references : bool or list of str, optional
+        Specifies whether to drop reference fields in the returned data. Defaults to True,
+        in which case 'gmnReferences', 'gldReferences', and 'garReferences' are removed.
     silent : bool, optional
-        DESCRIPTION. The default is False.
-    tmin : TYPE, optional
-        DESCRIPTION. The default is None.
-    tmax : TYPE, optional
-        DESCRIPTION. The default is None.
-    as_csv : TYPE, optional
-        DESCRIPTION. The default is False.
+        If True, suppresses progress logging. Defaults to False.
+    tmin : str or datetime, optional
+        The minimum time filter for the observations. Defaults to None.
+    tmax : str or datetime, optional
+        The maximum time filter for the observations. Defaults to None.
+    as_csv : bool, optional
+        If True, requests the observations as CSV files instead of XML-files. Only valid
+        if `kind` is 'gld'. Defaults to False.
     tube_number : int, optional
-        DESCRIPTION. The default is None.
-    qualifier : string or list of strings, optional
-        DESCRIPTION. The default is None.
+        Filters observations to a specific tube number. Defaults to None.
+    qualifier : str or list of str, optional
+        A qualifier string for additional filtering. Only valid if `kind` is 'gld'.
+        Defaults to None.
 
     Returns
     -------
-    TYPE
-        DESCRIPTION.
+    pd.DataFrame
+        A DataFrame containing the observations for the specified monitoring wells,
+        where each row corresponds to an individual observation.
 
+    Raises
+    ------
+    Exception
+        If `as_csv=True` and `kind` is not 'gld', or if `qualifier` is provided for
+        a kind other than 'gld'.
     """
     tubes = []
 
@@ -286,6 +368,36 @@ def get_tube_observations(gwm_id, tube_number, **kwargs):
 
 
 def get_tube_gdf(props, index=None):
+    """
+    Create a GeoDataFrame of tube properties combined with well metadata.
+
+    This function processes a DataFrame of well properties, extracts the relevant
+    tube information, and combines them into a GeoDataFrame. The resulting GeoDataFrame
+    contains metadata for each monitoring well and its associated tubes, with optional
+    spatial information (coordinates) and relevant physical properties.
+
+    Parameters
+    ----------
+    props : pd.DataFrame
+        A DataFrame containing well and tube properties.
+
+    index : str or list of str, optional
+        The column or columns to use for indexing the resulting GeoDataFrame. Defaults
+        to ['groundwaterMonitoringWell', 'tubeNumber'] if not provided.
+
+    Returns
+    -------
+    gdf : gpd.GeoDataFrame
+        A GeoDataFrame containing the combined well and tube properties, with the
+        specified index and optional geometry (spatial data) if 'x' and 'y' columns are
+        present.
+
+    Notes
+    -----
+    If 'x' and 'y' columns are present, the function creates a GeoDataFrame with point
+    geometries based on these coordinates, assuming the EPSG:28992 (Dutch National
+    Coordinate System) CRS.
+    """
     tubes = []
     for bro_id in props.index:
         for tube_number in props.loc[bro_id, "monitoringTube"].index:
@@ -344,32 +456,49 @@ def get_data_in_extent(
     qualifier=None,
 ):
     """
-    Get metadata and series within an extent
+    Retrieve metadata and observations within a specified spatial extent.
+
+    This function fetches monitoring well characteristics, groundwater observations,
+    and tube properties within the given spatial extent. It can combine the data
+    for specific observation types and return either individual dataframes or a
+    combined dataframe.
 
     Parameters
     ----------
-    extent : TYPE
-        DESCRIPTION.
+    extent : object
+        The spatial extent ([xmin, xmax, ymin, ymax]) to filter the data.
     kind : str, optional
-        DESCRIPTION. The default is "gld".
-    tmin : TYPE, optional
-        DESCRIPTION. The default is None.
-    tmax : TYPE, optional
-        DESCRIPTION. The default is None.
-    combine : TYPE, optional
-        DESCRIPTION. The default is True.
-    index : TYPE, optional
-        DESCRIPTION. The default is None.
+        The type of observations to retrieve. Valid values are {'gld', 'gar'} for
+        groundwater level dossier or groundwater analysis report. Defaults to 'gld'.
+    tmin : str or datetime, optional
+        The minimum time for filtering observations. Defaults to None.
+    tmax : str or datetime, optional
+        The maximum time for filtering observations. Defaults to None.
+    combine : bool, optional
+        If True, combines the metadata, tube properties, and observations into a single
+        dataframe. Defaults to False.
+    index : str, optional
+        The column to use for indexing in the resulting dataframe. Defaults to None.
     as_csv : bool, optional
-        If True, Download the measurement-data as a csv (only supported for kind ==
-        "gld"). Otherwise download the data as xml-files, which is slower. The default
-        is False.
+        If True, the measurement data is requested as CSV files instead of XML files
+         (only supported for 'gld'). Defaults to False.
+    qualifier : str or list of str, optional
+        A string or list of strings used to filter the observations. Only valid if
+        `kind` is 'gld'. Defaults to None.
 
     Returns
     -------
-    TYPE
-        DESCRIPTION.
+    gdf : pd.DataFrame
+        A dataframe containing tube properties and metadata within the specified extent.
 
+    obs_df : pd.DataFrame, optional
+        A dataframe containing the observations for the specified wells. Returned only if
+        `combine` is False.
+
+    Raises
+    ------
+    Exception
+        If `as_csv=True` and `kind` is not 'gld', or if other parameters are invalid.
     """
 
     logger.info(f"Getting gmw-characteristics in extent: {extent}")

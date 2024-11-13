@@ -73,7 +73,7 @@ def get_characteristics(
     Returns
     -------
     gpd.GeoDataFrame
-        A GeoDataFrame contraining the characteristics..
+        A GeoDataFrame contraining the characteristics.
 
     """
     url = f"{cl._rest_url}/characteristics/searches?"
@@ -171,6 +171,46 @@ def get_characteristics(
 
 
 class XmlFileOrUrl:
+    """
+    A class for parsing and handling XML data from files, URLs, or zipped files.
+
+    Supports fetching XML data from local files or remote URLs. It also handles
+    rejection checks and extracts data into object attributes. Data is parsed
+    recursively and can be converted to a dictionary.
+
+    Attributes:
+        Instance variables are dynamically set based on the XML content.
+
+    Methods:
+        __init__(url_or_file, zipfile=None, timeout=5, to_file=None, **kwargs):
+            Parses XML from a URL, file, or zipped file, and initializes the object.
+
+        from_bro_id(bro_id, **kwargs):
+            Fetches XML data from a REST service based on a given 'bro_id'.
+
+        to_dict():
+            Converts instance attributes to a dictionary, excluding methods and
+            private attributes.
+
+        _check_for_rejection(tree):
+            Checks XML for rejection responses and raises an error if found.
+
+        _read_children_of_children(node, d=None, to_float=None):
+            Recursively reads child elements, converting specified ones to float.
+
+        _read_delivered_location(node):
+            Extracts geographic location and date information from the XML node.
+
+        _read_pos(node):
+            Extracts coordinates (x, y) from a GML-compliant position element.
+
+        _read_date(node):
+            Extracts date information from the XML, handling multiple formats.
+
+        _read_time_instant(node):
+            Extracts time instant information from a GML-compliant time element.
+    """
+
     def __init__(self, url_or_file, zipfile=None, timeout=5, to_file=None, **kwargs):
         if zipfile is not None:
             root = xml.etree.ElementTree.fromstring(zipfile.read(url_or_file))
