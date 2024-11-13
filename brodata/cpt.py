@@ -13,7 +13,7 @@ def get_characteristics(**kwargs):
     return bro.get_characteristics(ConePenetrationTest, **kwargs)
 
 
-class ConePenetrationTest(bro.XmlFileOrUrl):
+class ConePenetrationTest(bro.FileOrUrl):
     _rest_url = "https://publiek.broservices.nl/sr/cpt/v1"
     _xmlns = "http://www.broservices.nl/xsd/dscpt/1.1"
     _char = "CPT_C"

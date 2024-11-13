@@ -141,6 +141,7 @@ def read_zipfile(fname, pathnames=None):
             else:
                 logger.warning(f"Folder {pathname} not supported yet")
                 cl = None
+                ext = None
 
             if cl is not None or ext == ".tif":
                 mask = (dirnames == pathname) & (extensions == ext)

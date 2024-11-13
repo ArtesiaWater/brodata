@@ -94,7 +94,7 @@ def get_well_code(bro_id):
     return well_code
 
 
-class GroundwaterMonitoringWell(bro.XmlFileOrUrl):
+class GroundwaterMonitoringWell(bro.FileOrUrl):
     """
     Represents a groundwater monitoring well (GMW) with associated properties.
 

@@ -21,7 +21,7 @@ def get_bhrp_within_extent(extent, config=None, timeout=5, silent=False):
     return gdf, bhrp_data
 
 
-class _BoreholeResearch(bro.XmlFileOrUrl):
+class _BoreholeResearch(bro.FileOrUrl):
     def _read_contents(self, tree):
         ns = {
             "brocom": "http://www.broservices.nl/xsd/brocommon/3.0",

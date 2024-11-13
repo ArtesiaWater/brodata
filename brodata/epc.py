@@ -4,7 +4,7 @@ from . import bro
 logger = logging.getLogger(__name__)
 
 
-class ExplorationProductionConstruction(bro.XmlFileOrUrl):
+class ExplorationProductionConstruction(bro.FileOrUrl):
     _rest_url = "https://publiek.broservices.nl/ep/epc/v1/"
 
     def _read_contents(self, tree):

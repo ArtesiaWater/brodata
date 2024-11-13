@@ -336,7 +336,7 @@ def get_observations_summary(bro_id):
     return df
 
 
-class GroundwaterLevelDossier(bro.XmlFileOrUrl):
+class GroundwaterLevelDossier(bro.FileOrUrl):
     """
     Represents a Groundwater Level Dossier (GLD) containing groundwater monitoring
     information and observation data.
