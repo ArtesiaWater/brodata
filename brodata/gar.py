@@ -64,17 +64,18 @@ class GroundwaterAnalysisReport(bro.XmlFileOrUrl):
                 elif key in ["analyticalTechnique", "valuationMethod"]:
                     d[key] = grandchild.text
                 elif key == "analysis":
+                    d2 = d.copy()
                     for greatgrandchild in grandchild:
-                        key = greatgrandchild.tag.split("}", 1)[1]
-                        if key in ["parameter", "qualityControlStatus", "limitSymbol"]:
-                            d[key] = greatgrandchild.text
-                        elif key == "analysisMeasurementValue":
-                            d[key] = float(greatgrandchild.text)
-                            d["uom"] = greatgrandchild.attrib["uom"]
+                        key2 = greatgrandchild.tag.split("}", 1)[1]
+                        if key2 in ["parameter", "qualityControlStatus", "limitSymbol"]:
+                            d2[key2] = greatgrandchild.text
+                        elif key2 in ["analysisMeasurementValue", "reportingLimit"]:
+                            d2[key2] = float(greatgrandchild.text)
+                            d2["uom"] = greatgrandchild.attrib["uom"]
                         else:
-                            logger.warning(f"Unknown key: {key}")
-                    self._read_children_of_children(grandchild, d)
-            laboratory_analysis.append(d)
+                            logger.warning(f"Unknown key: {key2}")
+                    laboratory_analysis.append(d2)
+            # laboratory_analysis.append(d)
         df = pd.DataFrame(laboratory_analysis)
         if "analysisDate" in df.columns:
             df = df.set_index("analysisDate")
