@@ -40,12 +40,12 @@ def test_get_gmw():
 
 
 def test_groundwater_monitoring_well():
-    fname = os.path.join("data", "GMW000000036287.xml")
+    fname = os.path.join("tests", "data", "GMW000000036287.xml")
     brodata.gmw.GroundwaterMonitoringWell(fname)
 
 
 def test_groundwater_level_dossier():
-    fname = os.path.join("data", "GLD000000012893.xml")
+    fname = os.path.join("tests", "data", "GLD000000012893.xml")
     brodata.gld.GroundwaterLevelDossier(fname)
 
 
@@ -62,28 +62,28 @@ def test_gld_get_series_as_csv():
 
 
 def test_geotechnical_borehole_research():
-    fname = os.path.join("data", "BHR000000353924.xml")
+    fname = os.path.join("tests", "data", "BHR000000353924.xml")
     bhrgt = brodata.bhr.GeotechnicalBoreholeResearch(fname)
     brodata.plot.bro_lithology(bhrgt.descriptiveBoreholeLog[0]["layer"])
 
 
 def test_pedological_borehole_research():
-    fname = os.path.join("data", "BHR000000175723.xml")
+    fname = os.path.join("tests", "data", "BHR000000175723.xml")
     brodata.bhr.PedologicalBoreholeResearch(fname)
 
 
 def test_gar_report_from_xml_file_multiple_analysis_processes():
-    fname = os.path.join("data", "GAR000000019636.xml")
+    fname = os.path.join("tests", "data", "GAR000000019636.xml")
     brodata.gar.GroundwaterAnalysisReport(fname)
 
 
 def test_gar_report_from_xml_file_single_analysis_process():
-    fname = os.path.join("data", "GAR000000042563.xml")
+    fname = os.path.join("tests", "data", "GAR000000042563.xml")
     brodata.gar.GroundwaterAnalysisReport(fname)
 
 
 def test_gar_report_from_csv_file():
-    fname = os.path.join("data", "GAR000000042563.csv")
+    fname = os.path.join("tests", "data", "GAR000000042563.csv")
     brodata.gar.GroundwaterAnalysisReport(fname)
 
 
@@ -92,12 +92,12 @@ def test_gar_report():
 
 
 def test_soil_face_research():
-    fname = os.path.join("data", "SFR000000000243.xml")
+    fname = os.path.join("tests", "data", "SFR000000000243.xml")
     brodata.sfr.SoilFaceResearch(fname)
 
 
 def test_groundwater_monitoring_network():
-    fname = os.path.join("data", "GMN000000000163.xml")
+    fname = os.path.join("tests", "data", "GMN000000000163.xml")
     brodata.gmn.GroundwaterMonitoringNetwork(fname)
 
 
@@ -107,17 +107,17 @@ def test_get_cpt_characteristics():
 
 
 def test_get_cpt():
-    fname = os.path.join("data", "CPT000000005925.xml")
+    fname = os.path.join("tests", "data", "CPT000000005925.xml")
     cpt = brodata.cpt.ConePenetrationTest(fname)
     # also test the plot
     brodata.plot.cone_penetration_test(cpt)
 
 
 def test_get_cpt_test_with_dissipation_test():
-    fname = os.path.join("data", "CPT000000115243.xml")
+    fname = os.path.join("tests", "data", "CPT000000115243.xml")
     brodata.cpt.ConePenetrationTest(fname)
 
 
 def test_groundwater_utilisation_facility():
-    fname = os.path.join("data", "GUF000000016723.xml")
+    fname = os.path.join("tests", "data", "GUF000000016723.xml")
     brodata.guf.GroundwaterUtilisationFacility(fname)
