@@ -71,7 +71,10 @@ class _BoreholeResearch(bro.XmlFileOrUrl):
                         "boringProcedure",
                         "boredTrajectory",
                     ]:
-                        self._read_children_of_children(grandchild)
+                        to_float = None
+                        if key == "boredTrajectory":
+                            to_float = ["beginDepth", "endDepth"]
+                        self._read_children_of_children(grandchild, to_float=to_float)
                     elif key == "sampledInterval":
                         self._read_sampled_interval(grandchild)
                     elif key == "boringTool":
@@ -85,6 +88,8 @@ class _BoreholeResearch(bro.XmlFileOrUrl):
                         self._read_descriptive_borehole_log(grandchild)
                     elif key == "descriptionReportDate":
                         setattr(self, key, self._read_date(grandchild))
+                    elif key == "result":
+                        self._read_borehole_sample_description_result(grandchild)
                     else:
                         setattr(self, key, grandchild.text)
             else:
@@ -101,7 +106,8 @@ class _BoreholeResearch(bro.XmlFileOrUrl):
 
     def _read_boring_tool(self, node):
         d = {}
-        self._read_children_of_children(node, d)
+        to_float = ["boringToolDiameter", "beginDepth", "endDepth"]
+        self._read_children_of_children(node, d, to_float=to_float)
         self.boringTool = d
 
     def _read_descriptive_borehole_log(self, node):
@@ -125,6 +131,30 @@ class _BoreholeResearch(bro.XmlFileOrUrl):
             d["layer"] = pd.DataFrame(d["layer"])
 
         self.descriptiveBoreholeLog.append(d)
+
+    def _read_borehole_sample_description_result(self, node):
+        boreholeSampleDescription = []
+        for child in node:
+            key = child.tag.split("}", 1)[1]
+            if len(child) == 0:
+                setattr(self, key, child.text)
+            elif key == "soilLayer":
+                d = {}
+                to_float = [
+                    "upperBoundary",
+                    "lowerBoundary",
+                    "organicMatterContent",
+                    "clayContent",
+                ]
+                to_int = ["numberOfLayerComponents"]
+                self._read_children_of_children(
+                    child, d=d, to_float=to_float, to_int=to_int
+                )
+                boreholeSampleDescription.append(d)
+            else:
+                logger.warning(f"Unknown key: {key}")
+        df = pd.DataFrame(boreholeSampleDescription)
+        setattr(self, "boreholeSampleDescription", df)
 
 
 class GeotechnicalBoreholeResearch(_BoreholeResearch):
