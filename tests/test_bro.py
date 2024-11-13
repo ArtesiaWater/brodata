@@ -49,8 +49,16 @@ def test_groundwater_level_dossier():
     gld = brodata.gld.GroundwaterLevelDossier(fname)
 
 
-def test_observations_summary():
+def test_gld_observations_summary():
     brodata.gld.get_observations_summary("GLD000000012893")
+
+
+def test_gld_get_objects_as_csv():
+    df = brodata.gld.get_objects_as_csv("GLD000000012893")
+
+
+def test_gld_get_series_as_csv():
+    s = brodata.gld.get_series_as_csv("GLD000000012893")
 
 
 def test_geotechnical_borehole_research():
