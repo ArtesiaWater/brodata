@@ -2,28 +2,28 @@ import os
 import brodata
 
 
-def test_get_gwm_of_bronhouder():
+def test_get_gmw_of_bronhouder():
     brodata.gmw.get_bro_ids_of_bronhouder(30277172)
 
 
 def test_get_gmw_characteristics():
     extent = [117700, 118700, 439400, 440400]
-    gmws = brodata.gmw.get_characteristics(extent=extent)
+    brodata.gmw.get_characteristics(extent=extent)
 
 
 def test_gmw_get_gld_data_in_extent():
     extent = [118200, 118400, 439700, 440000]
-    data = brodata.gmw.get_data_in_extent(extent=extent, combine=True, as_csv=False)
+    brodata.gmw.get_data_in_extent(extent=extent, combine=True, as_csv=False)
 
 
 def test_gmw_get_gld_data_in_extent_as_csv():
     extent = [118200, 118400, 439700, 440000]
-    data = brodata.gmw.get_data_in_extent(extent=extent, combine=True, as_csv=True)
+    brodata.gmw.get_data_in_extent(extent=extent, combine=True, as_csv=True)
 
 
 def test_gmw_get_gar_data_in_extent():
     extent = [115000, 120000, 438000, 441000]
-    data = brodata.gmw.get_data_in_extent(extent=extent, kind="gar", combine=True)
+    brodata.gmw.get_data_in_extent(extent=extent, kind="gar", combine=True)
 
 
 # def test_gmw_get_frd_data_in_extent():
@@ -36,17 +36,17 @@ def tets_get_well_code():
 
 
 def test_get_gmw():
-    gmw = brodata.gmw.GroundwaterMonitoringWell.from_bro_id("GMW000000049567")
+    brodata.gmw.GroundwaterMonitoringWell.from_bro_id("GMW000000049567")
 
 
 def test_groundwater_monitoring_well():
     fname = os.path.join("data", "GMW000000036287.xml")
-    gmw = brodata.gmw.GroundwaterMonitoringWell(fname)
+    brodata.gmw.GroundwaterMonitoringWell(fname)
 
 
 def test_groundwater_level_dossier():
     fname = os.path.join("data", "GLD000000012893.xml")
-    gld = brodata.gld.GroundwaterLevelDossier(fname)
+    brodata.gld.GroundwaterLevelDossier(fname)
 
 
 def test_gld_observations_summary():
@@ -54,11 +54,11 @@ def test_gld_observations_summary():
 
 
 def test_gld_get_objects_as_csv():
-    df = brodata.gld.get_objects_as_csv("GLD000000012893")
+    brodata.gld.get_objects_as_csv("GLD000000012893")
 
 
 def test_gld_get_series_as_csv():
-    s = brodata.gld.get_series_as_csv("GLD000000012893")
+    brodata.gld.get_series_as_csv("GLD000000012893")
 
 
 def test_geotechnical_borehole_research():
@@ -69,45 +69,55 @@ def test_geotechnical_borehole_research():
 
 def test_pedological_borehole_research():
     fname = os.path.join("data", "BHR000000175723.xml")
-    bhr = brodata.bhr.PedologicalBoreholeResearch(fname)
+    brodata.bhr.PedologicalBoreholeResearch(fname)
 
 
-def test_groundwater_analysis_report_from_file():
+def test_gar_report_from_xml_file_multiple_analysis_processes():
     fname = os.path.join("data", "GAR000000019636.xml")
-    gar = brodata.gar.GroundwaterAnalysisReport(fname)
+    brodata.gar.GroundwaterAnalysisReport(fname)
 
 
-def test_groundwater_analysis_report():
-    gar = brodata.gar.GroundwaterAnalysisReport.from_bro_id("GAR000000019636")
+def test_gar_report_from_xml_file_single_analysis_process():
+    fname = os.path.join("data", "GAR000000042563.xml")
+    brodata.gar.GroundwaterAnalysisReport(fname)
+
+
+def test_gar_report_from_csv_file():
+    fname = os.path.join("data", "GAR000000042563.csv")
+    brodata.gar.GroundwaterAnalysisReport(fname)
+
+
+def test_gar_report():
+    brodata.gar.GroundwaterAnalysisReport.from_bro_id("GAR000000019636")
 
 
 def test_soil_face_research():
     fname = os.path.join("data", "SFR000000000243.xml")
-    sfr = brodata.sfr.SoilFaceResearch(fname)
+    brodata.sfr.SoilFaceResearch(fname)
 
 
 def test_groundwater_monitoring_network():
     fname = os.path.join("data", "GMN000000000163.xml")
-    gmn = brodata.gmn.GroundwaterMonitoringNetwork(fname)
+    brodata.gmn.GroundwaterMonitoringNetwork(fname)
 
 
 def test_get_cpt_characteristics():
     extent = [117700, 118700, 439400, 440400]
-    cpts = brodata.cpt.get_characteristics(extent=extent)
+    brodata.cpt.get_characteristics(extent=extent)
 
 
-def test_get_cone_penetration_test():
+def test_get_cpt():
     fname = os.path.join("data", "CPT000000005925.xml")
     cpt = brodata.cpt.ConePenetrationTest(fname)
     # also test the plot
     brodata.plot.cone_penetration_test(cpt)
 
 
-def test_get_cone_penetration_test_with_dissipation_test():
+def test_get_cpt_test_with_dissipation_test():
     fname = os.path.join("data", "CPT000000115243.xml")
-    cpt = brodata.cpt.ConePenetrationTest(fname)
+    brodata.cpt.ConePenetrationTest(fname)
 
 
 def test_groundwater_utilisation_facility():
     fname = os.path.join("data", "GUF000000016723.xml")
-    guf = brodata.guf.GroundwaterUtilisationFacility(fname)
+    brodata.guf.GroundwaterUtilisationFacility(fname)

@@ -1,0 +1,382 @@
+<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<dispatchDataResponse xmlns:xlink="http://www.w3.org/1999/xlink"
+    xmlns="http://www.broservices.nl/xsd/dsgar/1.0"
+    xmlns:brocom="http://www.broservices.nl/xsd/brocommon/3.0"
+    xmlns:gml="http://www.opengis.net/gml/3.2"
+    xmlns:garcommon="http://www.broservices.nl/xsd/garcommon/1.0">
+    <brocom:responseType>dispatch</brocom:responseType>
+    <brocom:requestReference>-</brocom:requestReference>
+    <brocom:dispatchTime>2024-11-13T15:32:42+01:00</brocom:dispatchTime>
+    <dispatchDocument>
+        <GAR_O gml:id="BRO_0002">
+            <brocom:broId>GAR000000042563</brocom:broId>
+            <brocom:deliveryAccountableParty>17278718</brocom:deliveryAccountableParty>
+            <brocom:qualityRegime>IMBRO/A</brocom:qualityRegime>
+            <registrationHistory>
+                <brocom:objectRegistrationTime>2024-01-24T13:05:11+01:00</brocom:objectRegistrationTime>
+                <brocom:registrationStatus codeSpace="urn:bro:RegistrationStatus">voltooid</brocom:registrationStatus>
+                <brocom:registrationCompletionTime>2024-01-24T13:05:11+01:00</brocom:registrationCompletionTime>
+                <brocom:corrected>nee</brocom:corrected>
+                <brocom:underReview>nee</brocom:underReview>
+                <brocom:deregistered>nee</brocom:deregistered>
+                <brocom:reregistered>nee</brocom:reregistered>
+            </registrationHistory>
+            <qualityControlMethod codeSpace="urn:bro:gar:QualityControlMethod">handboekProvinciesRIVMv2017</qualityControlMethod>
+            <monitoringPoint>
+                <garcommon:GroundwaterMonitoringTube gml:id="BRO_0001">
+                    <garcommon:broId>GMW000000006933</garcommon:broId>
+                    <garcommon:tubeNumber>1</garcommon:tubeNumber>
+                </garcommon:GroundwaterMonitoringTube>
+            </monitoringPoint>
+            <fieldResearch>
+                <garcommon:samplingDateTime>2021-08-26T12:00:00+02:00</garcommon:samplingDateTime>
+                <garcommon:samplingStandard codeSpace="urn:bro:gar:SamplingStandard">onbekend</garcommon:samplingStandard>
+                <garcommon:samplingDevice>
+                    <garcommon:pumpType codeSpace="urn:bro:gar:PumpType">onbekend</garcommon:pumpType>
+                </garcommon:samplingDevice>
+                <garcommon:fieldObservation>
+                    <garcommon:primaryColour codeSpace="urn:bro:gar:Colour">wit</garcommon:primaryColour>
+                    <garcommon:secondaryColour codeSpace="urn:bro:gar:Colour">grijs</garcommon:secondaryColour>
+                    <garcommon:colourStrength codeSpace="urn:bro:gar:ColourStrength">licht</garcommon:colourStrength>
+                    <garcommon:abnormalityInCooling>ja</garcommon:abnormalityInCooling>
+                    <garcommon:abnormalityInDevice>nee</garcommon:abnormalityInDevice>
+                    <garcommon:pollutedByEngine>onbekend</garcommon:pollutedByEngine>
+                    <garcommon:filterAerated>ja</garcommon:filterAerated>
+                    <garcommon:groundWaterLevelDroppedTooMuch>nee</garcommon:groundWaterLevelDroppedTooMuch>
+                    <garcommon:abnormalFilter>onbekend</garcommon:abnormalFilter>
+                    <garcommon:sampleAerated>ja</garcommon:sampleAerated>
+                    <garcommon:hoseReused>nee</garcommon:hoseReused>
+                    <garcommon:temperatureDifficultToMeasure>onbekend</garcommon:temperatureDifficultToMeasure>
+                </garcommon:fieldObservation>
+                <garcommon:fieldMeasurement>
+                    <garcommon:parameter>3548</garcommon:parameter>
+                    <garcommon:fieldMeasurementValue uom="mS/m">0.34</garcommon:fieldMeasurementValue>
+                    <garcommon:qualityControlStatus codeSpace="urn:bro:gar:QualityControlStatus">goedgekeurd</garcommon:qualityControlStatus>
+                </garcommon:fieldMeasurement>
+                <garcommon:fieldMeasurement>
+                    <garcommon:parameter>1398</garcommon:parameter>
+                    <garcommon:fieldMeasurementValue uom="1">6.04</garcommon:fieldMeasurementValue>
+                    <garcommon:qualityControlStatus codeSpace="urn:bro:gar:QualityControlStatus">goedgekeurd</garcommon:qualityControlStatus>
+                </garcommon:fieldMeasurement>
+                <garcommon:fieldMeasurement>
+                    <garcommon:parameter>1522</garcommon:parameter>
+                    <garcommon:fieldMeasurementValue uom="Cel">15.2</garcommon:fieldMeasurementValue>
+                    <garcommon:qualityControlStatus codeSpace="urn:bro:gar:QualityControlStatus">goedgekeurd</garcommon:qualityControlStatus>
+                </garcommon:fieldMeasurement>
+            </fieldResearch>
+            <laboratoryAnalysis>
+                <garcommon:analysisProcess>
+                    <garcommon:analysisDate>
+                        <brocom:date>2021-08-26</brocom:date>
+                    </garcommon:analysisDate>
+                    <garcommon:analyticalTechnique codeSpace="urn:bro:gar:AnalyticalTechnique">AAS</garcommon:analyticalTechnique>
+                    <garcommon:valuationMethod codeSpace="urn:bro:gar:ValuationMethod">CIW</garcommon:valuationMethod>
+                    <garcommon:analysis>
+                        <garcommon:parameter>3548</garcommon:parameter>
+                        <garcommon:analysisMeasurementValue uom="mS/m">0.33</garcommon:analysisMeasurementValue>
+                        <garcommon:reportingLimit uom="mS/m">0.33</garcommon:reportingLimit>
+                        <garcommon:qualityControlStatus codeSpace="urn:bro:gar:QualityControlStatus">goedgekeurd</garcommon:qualityControlStatus>
+                    </garcommon:analysis>
+                    <garcommon:analysis>
+                        <garcommon:parameter>1398</garcommon:parameter>
+                        <garcommon:analysisMeasurementValue uom="1">6.32</garcommon:analysisMeasurementValue>
+                        <garcommon:reportingLimit uom="1">6.32</garcommon:reportingLimit>
+                        <garcommon:qualityControlStatus codeSpace="urn:bro:gar:QualityControlStatus">goedgekeurd</garcommon:qualityControlStatus>
+                    </garcommon:analysis>
+                    <garcommon:analysis>
+                        <garcommon:parameter>1522</garcommon:parameter>
+                        <garcommon:analysisMeasurementValue uom="Cel">16.7</garcommon:analysisMeasurementValue>
+                        <garcommon:reportingLimit uom="Cel">16.7</garcommon:reportingLimit>
+                        <garcommon:qualityControlStatus codeSpace="urn:bro:gar:QualityControlStatus">goedgekeurd</garcommon:qualityControlStatus>
+                    </garcommon:analysis>
+                    <garcommon:analysis>
+                        <garcommon:parameter>1318</garcommon:parameter>
+                        <garcommon:analysisMeasurementValue uom="mg/l">59.2</garcommon:analysisMeasurementValue>
+                        <garcommon:reportingLimit uom="mg/l">59.2</garcommon:reportingLimit>
+                        <garcommon:qualityControlStatus codeSpace="urn:bro:gar:QualityControlStatus">goedgekeurd</garcommon:qualityControlStatus>
+                    </garcommon:analysis>
+                    <garcommon:analysis>
+                        <garcommon:parameter>1262</garcommon:parameter>
+                        <garcommon:analysisMeasurementValue uom="mg/l">10.3</garcommon:analysisMeasurementValue>
+                        <garcommon:reportingLimit uom="mg/l">10.3</garcommon:reportingLimit>
+                        <garcommon:qualityControlStatus codeSpace="urn:bro:gar:QualityControlStatus">goedgekeurd</garcommon:qualityControlStatus>
+                    </garcommon:analysis>
+                    <garcommon:analysis>
+                        <garcommon:parameter>920</garcommon:parameter>
+                        <garcommon:analysisMeasurementValue uom="mg/l">0.5</garcommon:analysisMeasurementValue>
+                        <garcommon:limitSymbol codeSpace="urn:bro:gar:LimitSymbol">LT</garcommon:limitSymbol>
+                        <garcommon:reportingLimit uom="mg/l">0.5</garcommon:reportingLimit>
+                        <garcommon:qualityControlStatus codeSpace="urn:bro:gar:QualityControlStatus">goedgekeurd</garcommon:qualityControlStatus>
+                    </garcommon:analysis>
+                    <garcommon:analysis>
+                        <garcommon:parameter>289</garcommon:parameter>
+                        <garcommon:analysisMeasurementValue uom="mg/l">0.06</garcommon:analysisMeasurementValue>
+                        <garcommon:reportingLimit uom="mg/l">0.06</garcommon:reportingLimit>
+                        <garcommon:qualityControlStatus codeSpace="urn:bro:gar:QualityControlStatus">goedgekeurd</garcommon:qualityControlStatus>
+                    </garcommon:analysis>
+                    <garcommon:analysis>
+                        <garcommon:parameter>1520</garcommon:parameter>
+                        <garcommon:analysisMeasurementValue uom="ug/l">2</garcommon:analysisMeasurementValue>
+                        <garcommon:limitSymbol codeSpace="urn:bro:gar:LimitSymbol">LT</garcommon:limitSymbol>
+                        <garcommon:reportingLimit uom="ug/l">2</garcommon:reportingLimit>
+                        <garcommon:qualityControlStatus codeSpace="urn:bro:gar:QualityControlStatus">goedgekeurd</garcommon:qualityControlStatus>
+                    </garcommon:analysis>
+                    <garcommon:analysis>
+                        <garcommon:parameter>1097</garcommon:parameter>
+                        <garcommon:analysisMeasurementValue uom="ug/l">0.03</garcommon:analysisMeasurementValue>
+                        <garcommon:limitSymbol codeSpace="urn:bro:gar:LimitSymbol">LT</garcommon:limitSymbol>
+                        <garcommon:reportingLimit uom="ug/l">0.03</garcommon:reportingLimit>
+                        <garcommon:qualityControlStatus codeSpace="urn:bro:gar:QualityControlStatus">goedgekeurd</garcommon:qualityControlStatus>
+                    </garcommon:analysis>
+                    <garcommon:analysis>
+                        <garcommon:parameter>1115</garcommon:parameter>
+                        <garcommon:analysisMeasurementValue uom="ug/l">3</garcommon:analysisMeasurementValue>
+                        <garcommon:limitSymbol codeSpace="urn:bro:gar:LimitSymbol">LT</garcommon:limitSymbol>
+                        <garcommon:reportingLimit uom="ug/l">3</garcommon:reportingLimit>
+                        <garcommon:qualityControlStatus codeSpace="urn:bro:gar:QualityControlStatus">goedgekeurd</garcommon:qualityControlStatus>
+                    </garcommon:analysis>
+                    <garcommon:analysis>
+                        <garcommon:parameter>1243</garcommon:parameter>
+                        <garcommon:analysisMeasurementValue uom="ug/l">0.2</garcommon:analysisMeasurementValue>
+                        <garcommon:limitSymbol codeSpace="urn:bro:gar:LimitSymbol">LT</garcommon:limitSymbol>
+                        <garcommon:reportingLimit uom="ug/l">0.2</garcommon:reportingLimit>
+                        <garcommon:qualityControlStatus codeSpace="urn:bro:gar:QualityControlStatus">goedgekeurd</garcommon:qualityControlStatus>
+                    </garcommon:analysis>
+                    <garcommon:analysis>
+                        <garcommon:parameter>1267</garcommon:parameter>
+                        <garcommon:analysisMeasurementValue uom="ug/l">1.25</garcommon:analysisMeasurementValue>
+                        <garcommon:reportingLimit uom="ug/l">1.25</garcommon:reportingLimit>
+                        <garcommon:qualityControlStatus codeSpace="urn:bro:gar:QualityControlStatus">goedgekeurd</garcommon:qualityControlStatus>
+                    </garcommon:analysis>
+                    <garcommon:analysis>
+                        <garcommon:parameter>1116</garcommon:parameter>
+                        <garcommon:analysisMeasurementValue uom="ug/l">0.12</garcommon:analysisMeasurementValue>
+                        <garcommon:limitSymbol codeSpace="urn:bro:gar:LimitSymbol">LT</garcommon:limitSymbol>
+                        <garcommon:reportingLimit uom="ug/l">0.12</garcommon:reportingLimit>
+                        <garcommon:qualityControlStatus codeSpace="urn:bro:gar:QualityControlStatus">goedgekeurd</garcommon:qualityControlStatus>
+                    </garcommon:analysis>
+                    <garcommon:analysis>
+                        <garcommon:parameter>301</garcommon:parameter>
+                        <garcommon:analysisMeasurementValue uom="ug/l">1.4</garcommon:analysisMeasurementValue>
+                        <garcommon:reportingLimit uom="ug/l">1.4</garcommon:reportingLimit>
+                        <garcommon:qualityControlStatus codeSpace="urn:bro:gar:QualityControlStatus">goedgekeurd</garcommon:qualityControlStatus>
+                    </garcommon:analysis>
+                    <garcommon:analysis>
+                        <garcommon:parameter>1476</garcommon:parameter>
+                        <garcommon:analysisMeasurementValue uom="ug/l">24</garcommon:analysisMeasurementValue>
+                        <garcommon:reportingLimit uom="ug/l">24</garcommon:reportingLimit>
+                        <garcommon:qualityControlStatus codeSpace="urn:bro:gar:QualityControlStatus">goedgekeurd</garcommon:qualityControlStatus>
+                    </garcommon:analysis>
+                    <garcommon:analysis>
+                        <garcommon:parameter>447</garcommon:parameter>
+                        <garcommon:analysisMeasurementValue uom="mg/l">52.8</garcommon:analysisMeasurementValue>
+                        <garcommon:reportingLimit uom="mg/l">52.8</garcommon:reportingLimit>
+                        <garcommon:qualityControlStatus codeSpace="urn:bro:gar:QualityControlStatus">onbeslist</garcommon:qualityControlStatus>
+                    </garcommon:analysis>
+                    <garcommon:analysis>
+                        <garcommon:parameter>1501</garcommon:parameter>
+                        <garcommon:analysisMeasurementValue uom="ug/l">167</garcommon:analysisMeasurementValue>
+                        <garcommon:reportingLimit uom="ug/l">167</garcommon:reportingLimit>
+                        <garcommon:qualityControlStatus codeSpace="urn:bro:gar:QualityControlStatus">goedgekeurd</garcommon:qualityControlStatus>
+                    </garcommon:analysis>
+                    <garcommon:analysis>
+                        <garcommon:parameter>527</garcommon:parameter>
+                        <garcommon:analysisMeasurementValue uom="ug/l">2</garcommon:analysisMeasurementValue>
+                        <garcommon:limitSymbol codeSpace="urn:bro:gar:LimitSymbol">LT</garcommon:limitSymbol>
+                        <garcommon:reportingLimit uom="ug/l">2</garcommon:reportingLimit>
+                        <garcommon:qualityControlStatus codeSpace="urn:bro:gar:QualityControlStatus">goedgekeurd</garcommon:qualityControlStatus>
+                    </garcommon:analysis>
+                    <garcommon:analysis>
+                        <garcommon:parameter>1565</garcommon:parameter>
+                        <garcommon:analysisMeasurementValue uom="ug/l">11</garcommon:analysisMeasurementValue>
+                        <garcommon:reportingLimit uom="ug/l">11</garcommon:reportingLimit>
+                        <garcommon:qualityControlStatus codeSpace="urn:bro:gar:QualityControlStatus">goedgekeurd</garcommon:qualityControlStatus>
+                    </garcommon:analysis>
+                    <garcommon:analysis>
+                        <garcommon:parameter>1553</garcommon:parameter>
+                        <garcommon:analysisMeasurementValue uom="ug/l">5</garcommon:analysisMeasurementValue>
+                        <garcommon:limitSymbol codeSpace="urn:bro:gar:LimitSymbol">LT</garcommon:limitSymbol>
+                        <garcommon:reportingLimit uom="ug/l">5</garcommon:reportingLimit>
+                        <garcommon:qualityControlStatus codeSpace="urn:bro:gar:QualityControlStatus">goedgekeurd</garcommon:qualityControlStatus>
+                    </garcommon:analysis>
+                    <garcommon:analysis>
+                        <garcommon:parameter>1637</garcommon:parameter>
+                        <garcommon:analysisMeasurementValue uom="ug/l">1</garcommon:analysisMeasurementValue>
+                        <garcommon:limitSymbol codeSpace="urn:bro:gar:LimitSymbol">LT</garcommon:limitSymbol>
+                        <garcommon:reportingLimit uom="ug/l">1</garcommon:reportingLimit>
+                        <garcommon:qualityControlStatus codeSpace="urn:bro:gar:QualityControlStatus">goedgekeurd</garcommon:qualityControlStatus>
+                    </garcommon:analysis>
+                    <garcommon:analysis>
+                        <garcommon:parameter>1642</garcommon:parameter>
+                        <garcommon:analysisMeasurementValue uom="ug/l">6.1</garcommon:analysisMeasurementValue>
+                        <garcommon:reportingLimit uom="ug/l">6.1</garcommon:reportingLimit>
+                        <garcommon:qualityControlStatus codeSpace="urn:bro:gar:QualityControlStatus">goedgekeurd</garcommon:qualityControlStatus>
+                    </garcommon:analysis>
+                    <garcommon:analysis>
+                        <garcommon:parameter>1685</garcommon:parameter>
+                        <garcommon:analysisMeasurementValue uom="ug/l">1</garcommon:analysisMeasurementValue>
+                        <garcommon:limitSymbol codeSpace="urn:bro:gar:LimitSymbol">LT</garcommon:limitSymbol>
+                        <garcommon:reportingLimit uom="ug/l">1</garcommon:reportingLimit>
+                        <garcommon:qualityControlStatus codeSpace="urn:bro:gar:QualityControlStatus">goedgekeurd</garcommon:qualityControlStatus>
+                    </garcommon:analysis>
+                    <garcommon:analysis>
+                        <garcommon:parameter>1693</garcommon:parameter>
+                        <garcommon:analysisMeasurementValue uom="ug/l">2</garcommon:analysisMeasurementValue>
+                        <garcommon:limitSymbol codeSpace="urn:bro:gar:LimitSymbol">LT</garcommon:limitSymbol>
+                        <garcommon:reportingLimit uom="ug/l">2</garcommon:reportingLimit>
+                        <garcommon:qualityControlStatus codeSpace="urn:bro:gar:QualityControlStatus">goedgekeurd</garcommon:qualityControlStatus>
+                    </garcommon:analysis>
+                    <garcommon:analysis>
+                        <garcommon:parameter>1564</garcommon:parameter>
+                        <garcommon:analysisMeasurementValue uom="ug/l">10</garcommon:analysisMeasurementValue>
+                        <garcommon:limitSymbol codeSpace="urn:bro:gar:LimitSymbol">LT</garcommon:limitSymbol>
+                        <garcommon:reportingLimit uom="ug/l">10</garcommon:reportingLimit>
+                        <garcommon:qualityControlStatus codeSpace="urn:bro:gar:QualityControlStatus">goedgekeurd</garcommon:qualityControlStatus>
+                    </garcommon:analysis>
+                    <garcommon:analysis>
+                        <garcommon:parameter>4188</garcommon:parameter>
+                        <garcommon:analysisMeasurementValue uom="mg/l">0.1</garcommon:analysisMeasurementValue>
+                        <garcommon:reportingLimit uom="mg/l">0.1</garcommon:reportingLimit>
+                        <garcommon:qualityControlStatus codeSpace="urn:bro:gar:QualityControlStatus">goedgekeurd</garcommon:qualityControlStatus>
+                    </garcommon:analysis>
+                    <garcommon:analysis>
+                        <garcommon:parameter>1692</garcommon:parameter>
+                        <garcommon:analysisMeasurementValue uom="ug/l">5</garcommon:analysisMeasurementValue>
+                        <garcommon:limitSymbol codeSpace="urn:bro:gar:LimitSymbol">LT</garcommon:limitSymbol>
+                        <garcommon:reportingLimit uom="ug/l">5</garcommon:reportingLimit>
+                        <garcommon:qualityControlStatus codeSpace="urn:bro:gar:QualityControlStatus">goedgekeurd</garcommon:qualityControlStatus>
+                    </garcommon:analysis>
+                    <garcommon:analysis>
+                        <garcommon:parameter>284</garcommon:parameter>
+                        <garcommon:analysisMeasurementValue uom="ug/l">397</garcommon:analysisMeasurementValue>
+                        <garcommon:reportingLimit uom="ug/l">397</garcommon:reportingLimit>
+                        <garcommon:qualityControlStatus codeSpace="urn:bro:gar:QualityControlStatus">goedgekeurd</garcommon:qualityControlStatus>
+                    </garcommon:analysis>
+                    <garcommon:analysis>
+                        <garcommon:parameter>879</garcommon:parameter>
+                        <garcommon:analysisMeasurementValue uom="ug/l">3.67</garcommon:analysisMeasurementValue>
+                        <garcommon:reportingLimit uom="ug/l">3.67</garcommon:reportingLimit>
+                        <garcommon:qualityControlStatus codeSpace="urn:bro:gar:QualityControlStatus">onbeslist</garcommon:qualityControlStatus>
+                    </garcommon:analysis>
+                    <garcommon:analysis>
+                        <garcommon:parameter>1128</garcommon:parameter>
+                        <garcommon:analysisMeasurementValue uom="ug/l">1687</garcommon:analysisMeasurementValue>
+                        <garcommon:reportingLimit uom="ug/l">1687</garcommon:reportingLimit>
+                        <garcommon:qualityControlStatus codeSpace="urn:bro:gar:QualityControlStatus">goedgekeurd</garcommon:qualityControlStatus>
+                    </garcommon:analysis>
+                    <garcommon:analysis>
+                        <garcommon:parameter>508</garcommon:parameter>
+                        <garcommon:analysisMeasurementValue uom="mg/l">9.7</garcommon:analysisMeasurementValue>
+                        <garcommon:reportingLimit uom="mg/l">9.7</garcommon:reportingLimit>
+                        <garcommon:qualityControlStatus codeSpace="urn:bro:gar:QualityControlStatus">goedgekeurd</garcommon:qualityControlStatus>
+                    </garcommon:analysis>
+                    <garcommon:analysis>
+                        <garcommon:parameter>374</garcommon:parameter>
+                        <garcommon:analysisMeasurementValue uom="mg/l">200</garcommon:analysisMeasurementValue>
+                        <garcommon:reportingLimit uom="mg/l">200</garcommon:reportingLimit>
+                        <garcommon:qualityControlStatus codeSpace="urn:bro:gar:QualityControlStatus">goedgekeurd</garcommon:qualityControlStatus>
+                    </garcommon:analysis>
+                    <garcommon:analysis>
+                        <garcommon:parameter>1273</garcommon:parameter>
+                        <garcommon:analysisMeasurementValue uom="mg/l">0.01</garcommon:analysisMeasurementValue>
+                        <garcommon:limitSymbol codeSpace="urn:bro:gar:LimitSymbol">LT</garcommon:limitSymbol>
+                        <garcommon:reportingLimit uom="mg/l">0.01</garcommon:reportingLimit>
+                        <garcommon:qualityControlStatus codeSpace="urn:bro:gar:QualityControlStatus">goedgekeurd</garcommon:qualityControlStatus>
+                    </garcommon:analysis>
+                    <garcommon:analysis>
+                        <garcommon:parameter>1270</garcommon:parameter>
+                        <garcommon:analysisMeasurementValue uom="mg/l">0.05</garcommon:analysisMeasurementValue>
+                        <garcommon:limitSymbol codeSpace="urn:bro:gar:LimitSymbol">LT</garcommon:limitSymbol>
+                        <garcommon:reportingLimit uom="mg/l">0.05</garcommon:reportingLimit>
+                        <garcommon:qualityControlStatus codeSpace="urn:bro:gar:QualityControlStatus">goedgekeurd</garcommon:qualityControlStatus>
+                    </garcommon:analysis>
+                    <garcommon:analysis>
+                        <garcommon:parameter>971</garcommon:parameter>
+                        <garcommon:analysisMeasurementValue uom="ug/l">2</garcommon:analysisMeasurementValue>
+                        <garcommon:limitSymbol codeSpace="urn:bro:gar:LimitSymbol">LT</garcommon:limitSymbol>
+                        <garcommon:reportingLimit uom="ug/l">2</garcommon:reportingLimit>
+                        <garcommon:qualityControlStatus codeSpace="urn:bro:gar:QualityControlStatus">goedgekeurd</garcommon:qualityControlStatus>
+                    </garcommon:analysis>
+                    <garcommon:analysis>
+                        <garcommon:parameter>1334</garcommon:parameter>
+                        <garcommon:analysisMeasurementValue uom="mg/l">0.01</garcommon:analysisMeasurementValue>
+                        <garcommon:reportingLimit uom="mg/l">0.01</garcommon:reportingLimit>
+                        <garcommon:qualityControlStatus codeSpace="urn:bro:gar:QualityControlStatus">goedgekeurd</garcommon:qualityControlStatus>
+                    </garcommon:analysis>
+                    <garcommon:analysis>
+                        <garcommon:parameter>517</garcommon:parameter>
+                        <garcommon:analysisMeasurementValue uom="ug/l">2.8</garcommon:analysisMeasurementValue>
+                        <garcommon:reportingLimit uom="ug/l">2.8</garcommon:reportingLimit>
+                        <garcommon:qualityControlStatus codeSpace="urn:bro:gar:QualityControlStatus">goedgekeurd</garcommon:qualityControlStatus>
+                    </garcommon:analysis>
+                    <garcommon:analysis>
+                        <garcommon:parameter>1853</garcommon:parameter>
+                        <garcommon:analysisMeasurementValue uom="mg/l">0.02</garcommon:analysisMeasurementValue>
+                        <garcommon:limitSymbol codeSpace="urn:bro:gar:LimitSymbol">LT</garcommon:limitSymbol>
+                        <garcommon:reportingLimit uom="mg/l">0.02</garcommon:reportingLimit>
+                        <garcommon:qualityControlStatus codeSpace="urn:bro:gar:QualityControlStatus">goedgekeurd</garcommon:qualityControlStatus>
+                    </garcommon:analysis>
+                    <garcommon:analysis>
+                        <garcommon:parameter>1695</garcommon:parameter>
+                        <garcommon:analysisMeasurementValue uom="ug/l">12</garcommon:analysisMeasurementValue>
+                        <garcommon:limitSymbol codeSpace="urn:bro:gar:LimitSymbol">LT</garcommon:limitSymbol>
+                        <garcommon:reportingLimit uom="ug/l">12</garcommon:reportingLimit>
+                        <garcommon:qualityControlStatus codeSpace="urn:bro:gar:QualityControlStatus">goedgekeurd</garcommon:qualityControlStatus>
+                    </garcommon:analysis>
+                    <garcommon:analysis>
+                        <garcommon:parameter>310</garcommon:parameter>
+                        <garcommon:analysisMeasurementValue uom="ug/l">1.62</garcommon:analysisMeasurementValue>
+                        <garcommon:reportingLimit uom="ug/l">1.62</garcommon:reportingLimit>
+                        <garcommon:qualityControlStatus codeSpace="urn:bro:gar:QualityControlStatus">goedgekeurd</garcommon:qualityControlStatus>
+                    </garcommon:analysis>
+                    <garcommon:analysis>
+                        <garcommon:parameter>333</garcommon:parameter>
+                        <garcommon:analysisMeasurementValue uom="ug/l">9.5</garcommon:analysisMeasurementValue>
+                        <garcommon:reportingLimit uom="ug/l">9.5</garcommon:reportingLimit>
+                        <garcommon:qualityControlStatus codeSpace="urn:bro:gar:QualityControlStatus">goedgekeurd</garcommon:qualityControlStatus>
+                    </garcommon:analysis>
+                    <garcommon:analysis>
+                        <garcommon:parameter>362</garcommon:parameter>
+                        <garcommon:analysisMeasurementValue uom="ug/l">2</garcommon:analysisMeasurementValue>
+                        <garcommon:limitSymbol codeSpace="urn:bro:gar:LimitSymbol">LT</garcommon:limitSymbol>
+                        <garcommon:reportingLimit uom="ug/l">2</garcommon:reportingLimit>
+                        <garcommon:qualityControlStatus codeSpace="urn:bro:gar:QualityControlStatus">goedgekeurd</garcommon:qualityControlStatus>
+                    </garcommon:analysis>
+                    <garcommon:analysis>
+                        <garcommon:parameter>391</garcommon:parameter>
+                        <garcommon:analysisMeasurementValue uom="mg/l">73</garcommon:analysisMeasurementValue>
+                        <garcommon:reportingLimit uom="mg/l">73</garcommon:reportingLimit>
+                        <garcommon:qualityControlStatus codeSpace="urn:bro:gar:QualityControlStatus">goedgekeurd</garcommon:qualityControlStatus>
+                    </garcommon:analysis>
+                    <garcommon:analysis>
+                        <garcommon:parameter>441</garcommon:parameter>
+                        <garcommon:analysisMeasurementValue uom="ug/l">0.1</garcommon:analysisMeasurementValue>
+                        <garcommon:limitSymbol codeSpace="urn:bro:gar:LimitSymbol">LT</garcommon:limitSymbol>
+                        <garcommon:reportingLimit uom="ug/l">0.1</garcommon:reportingLimit>
+                        <garcommon:qualityControlStatus codeSpace="urn:bro:gar:QualityControlStatus">goedgekeurd</garcommon:qualityControlStatus>
+                    </garcommon:analysis>
+                    <garcommon:analysis>
+                        <garcommon:parameter>1125</garcommon:parameter>
+                        <garcommon:analysisMeasurementValue uom="mg/l">6.52</garcommon:analysisMeasurementValue>
+                        <garcommon:reportingLimit uom="mg/l">6.52</garcommon:reportingLimit>
+                        <garcommon:qualityControlStatus codeSpace="urn:bro:gar:QualityControlStatus">onbeslist</garcommon:qualityControlStatus>
+                    </garcommon:analysis>
+                    <garcommon:analysis>
+                        <garcommon:parameter>1508</garcommon:parameter>
+                        <garcommon:analysisMeasurementValue uom="mg/l">10</garcommon:analysisMeasurementValue>
+                        <garcommon:limitSymbol codeSpace="urn:bro:gar:LimitSymbol">LT</garcommon:limitSymbol>
+                        <garcommon:reportingLimit uom="mg/l">10</garcommon:reportingLimit>
+                        <garcommon:qualityControlStatus codeSpace="urn:bro:gar:QualityControlStatus">goedgekeurd</garcommon:qualityControlStatus>
+                    </garcommon:analysis>
+                    <garcommon:analysis>
+                        <garcommon:parameter>386</garcommon:parameter>
+                        <garcommon:analysisMeasurementValue uom="ug/l">50</garcommon:analysisMeasurementValue>
+                        <garcommon:limitSymbol codeSpace="urn:bro:gar:LimitSymbol">LT</garcommon:limitSymbol>
+                        <garcommon:reportingLimit uom="ug/l">50</garcommon:reportingLimit>
+                        <garcommon:qualityControlStatus codeSpace="urn:bro:gar:QualityControlStatus">onbeslist</garcommon:qualityControlStatus>
+                    </garcommon:analysis>
+                </garcommon:analysisProcess>
+            </laboratoryAnalysis>
+        </GAR_O>
+    </dispatchDocument>
+</dispatchDataResponse>
