@@ -43,15 +43,51 @@ class GroundwaterAnalysisReport(bro.XmlFileOrUrl):
                 tube_nr = int(well.find("garcommon:tubeNumber", ns).text)
                 setattr(self, "tubeNumber", tube_nr)
             elif key == "fieldResearch":
-                self._read_children_of_children(child)
+                if not hasattr(self, key):
+                    self.fieldResearch = []
+                self.fieldResearch.append(self._read_field_research(child))
             elif key == "laboratoryAnalysis":
                 if not hasattr(self, key):
                     self.laboratoryAnalysis = []
                 self.laboratoryAnalysis.append(self._read_laboratory_analysis(child))
             else:
                 logger.warning(f"Unknown key: {key}")
+        if hasattr(self, "fieldResearch"):
+            self.fieldResearch = pd.concat(self.fieldResearch)
         if hasattr(self, "laboratoryAnalysis"):
             self.laboratoryAnalysis = pd.concat(self.laboratoryAnalysis)
+
+    def _read_field_research(self, node):
+        field_research = []
+
+        d = {}
+        for child in node:
+            key = child.tag.split("}", 1)[1]
+            if key == "samplingDateTime":
+                d[key] = pd.to_datetime(child.text)
+            elif key in ["samplingStandard", "valuationMethod"]:
+                d[key] = child.text
+            elif key in ["samplingDevice"]:
+                d[key] = f"{child[0].tag.split('}', 1)[1]}: {child[0].text}"
+            elif key in ["fieldObservation"]:
+                d2 = {}
+                self._read_children_of_children(child, d2)
+                setattr(self, key, d2)
+            elif key in ["fieldMeasurement"]:
+                d2 = d.copy()
+                for greatgrandchild in child:
+                    key2 = greatgrandchild.tag.split("}", 1)[1]
+                    if key2 in ["parameter", "qualityControlStatus"]:
+                        d2[key2] = greatgrandchild.text
+                    elif key2 in ["fieldMeasurementValue"]:
+                        d2[key2] = float(greatgrandchild.text)
+                        d2["uom"] = greatgrandchild.attrib["uom"]
+                    else:
+                        self._read_children_of_children(node, d2)
+                field_research.append(d2)
+            # field_research.append(d)
+        df = pd.DataFrame(field_research)
+        return df
 
     def _read_laboratory_analysis(self, node):
         laboratory_analysis = []
