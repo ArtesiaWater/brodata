@@ -44,7 +44,7 @@ def test_oppervlaktewaterstand_from_file():
 
 def test_grondwatersamenstelling_from_file():
     fname = os.path.join("data", "B38B0079_qua.csv")
-    qua = brodata.dino.Grondwatersamenstelling(fname)
+    brodata.dino.Grondwatersamenstelling(fname)
 
 
 def test_geologisch_booronderzoek():
@@ -70,7 +70,7 @@ def test_grondwaterstanden_within_extent():
 
 def test_grondwatersamenstelling_within_extent():
     extent = [117700, 118700, 439400, 440400]
-    gdf = brodata.dino.get_grondwatersamenstelling(extent)
+    brodata.dino.get_grondwatersamenstelling(extent)
 
 
 def test_get_geologisch_booronderzoek_within_extent():
@@ -80,7 +80,7 @@ def test_get_geologisch_booronderzoek_within_extent():
     # plot the lithology along a line from west to east
     y_mean = gdf.geometry.y.mean()
     line = [(gdf.geometry.x.min(), y_mean), (gdf.geometry.x.max(), y_mean)]
-    ax = brodata.plot.lithology_along_line(gdf, line, "dino")
+    brodata.plot.lithology_along_line(gdf, line, "dino")
 
 
 def test_get_oppervlaktewaterstanden_within_extent():
