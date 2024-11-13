@@ -212,23 +212,36 @@ class XmlFileOrUrl:
     """
 
     def __init__(self, url_or_file, zipfile=None, timeout=5, to_file=None, **kwargs):
-        if zipfile is not None:
-            root = xml.etree.ElementTree.fromstring(zipfile.read(url_or_file))
-        elif url_or_file.startswith("http"):
-            req = requests.get(url_or_file, timeout=timeout)
-            if not req.ok:
-                # msg = req.json()["errors"][0]["message"]
-                raise (Exception((f"Retieving data from {url_or_file} failed")))
-            if to_file is not None:
-                with open(to_file, "w") as f:
-                    f.write(req.text)
-            root = xml.etree.ElementTree.fromstring(req.text)
+        # CSV
+        if url_or_file.endswith(".csv"):
+            if zipfile is not None:
+                self._read_csv(StringIO(zipfile.read(url_or_file)), **kwargs)
+            else:
+                self._read_csv(url_or_file, **kwargs)
+        # XML or URL
         else:
-            tree = xml.etree.ElementTree.parse(url_or_file)
-            root = tree.getroot()
+            if zipfile is not None:
+                root = xml.etree.ElementTree.fromstring(zipfile.read(url_or_file))
+            elif url_or_file.startswith("http"):
+                req = requests.get(url_or_file, timeout=timeout)
+                if not req.ok:
+                    # msg = req.json()["errors"][0]["message"]
+                    raise Exception(f"Retrieving data from {url_or_file} failed")
+                if to_file is not None:
+                    with open(to_file, "w") as f:
+                        f.write(req.text)
+                root = xml.etree.ElementTree.fromstring(req.text)
+                FileOrUrl._check_for_rejection(root)
+            else:
+                tree = xml.etree.ElementTree.parse(url_or_file)
+                root = tree.getroot()
 
-        XmlFileOrUrl._check_for_rejection(root)
-        self._read_contents(root, **kwargs)
+            self._read_contents(root, **kwargs)
+
+    def _read_csv(self, *args, **kwargs):
+        raise NotImplementedError(
+            f"Class {self.__class__.__name__} does not support reading from CSV files."
+        )
 
     @classmethod
     def from_bro_id(cls, bro_id, **kwargs):
