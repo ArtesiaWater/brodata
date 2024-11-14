@@ -367,7 +367,7 @@ def get_tube_observations(gwm_id, tube_number, **kwargs):
         return df["observation"][0]
 
 
-def get_tube_gdf(props, index=None):
+def get_tube_gdf(gmws, index=None):
     """
     Create a GeoDataFrame of tube properties combined with well metadata.
 
@@ -378,7 +378,7 @@ def get_tube_gdf(props, index=None):
 
     Parameters
     ----------
-    props : pd.DataFrame
+    gmws : pd.DataFrame
         A DataFrame containing well and tube properties.
 
     index : str or list of str, optional
@@ -398,14 +398,22 @@ def get_tube_gdf(props, index=None):
     geometries based on these coordinates, assuming the EPSG:28992 (Dutch National
     Coordinate System) CRS.
     """
+    if isinstance(gmws, list):
+        gmws = pd.DataFrame([x.to_dict() for x in gmws])
+        if "broId" in gmws.columns:
+            gmws = gmws.set_index("broId")
+    elif isinstance(gmws, dict):
+        gmws = pd.DataFrame([gmws[x].to_dict() for x in gmws])
+        if "broId" in gmws.columns:
+            gmws = gmws.set_index("broId")
     tubes = []
-    for bro_id in props.index:
-        for tube_number in props.loc[bro_id, "monitoringTube"].index:
+    for bro_id in gmws.index:
+        for tube_number in gmws.loc[bro_id, "monitoringTube"].index:
             # combine properties of well and tube
             tube = pd.concat(
                 (
-                    props.loc[bro_id].drop("monitoringTube"),
-                    props.loc[bro_id, "monitoringTube"].loc[tube_number],
+                    gmws.loc[bro_id].drop("monitoringTube"),
+                    gmws.loc[bro_id, "monitoringTube"].loc[tube_number],
                 )
             )
             tube["groundwaterMonitoringWell"] = bro_id
@@ -514,17 +522,15 @@ def get_data_in_extent(
         gmw = gmw[gmw.index.isin(obs_df["groundwaterMonitoringWell"])]
 
     logger.info("Downloading tube-properties")
+
     # get the properties of the monitoringTubes
-    props = [GroundwaterMonitoringWell.from_bro_id(bid) for bid in gmw.index.unique()]
-    props = pd.DataFrame([x.to_dict() for x in props])
-    if "broId" in props.columns:
-        props = props.set_index("broId")
+    gdf = get_tube_gdf_from_characteristics(gmw, index=index)
+
     if not obs_df.empty:
         obs_df = obs_df.set_index(
             ["groundwaterMonitoringWell", "tubeNumber"]
         ).sort_index()
 
-    gdf = get_tube_gdf(props, index=index)
     if combine and kind in ["gld", "gar"]:
         if kind == "gld":
             datcol = "observation"
@@ -548,3 +554,10 @@ def get_data_in_extent(
         return gdf
     else:
         return gdf, obs_df
+
+
+def get_tube_gdf_from_characteristics(characteristics_gdf, index=None):
+    bids = characteristics_gdf.index.unique()
+    gmws = [GroundwaterMonitoringWell.from_bro_id(bid) for bid in bids]
+    gdf = get_tube_gdf(gmws, index=index)
+    return gdf
