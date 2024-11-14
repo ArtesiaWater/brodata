@@ -286,7 +286,8 @@ def get_configuration():
 
     # DINO
     config["Geologisch booronderzoek"] = {
-        "mapserver": f"{mapserver_url}/lks_gbo_rd/MapServer",
+        # "mapserver": f"{mapserver_url}/lks_gbo_rd/MapServer",
+        "mapserver": "https://www.broloket.nl/standalone/rest/services/uitgifteloket_gdn/lks_gbo_rd_v1/MapServer",
         "download": "https://www.dinoloket.nl/uitgifteloket/api/brh/sampledescription/csv",
     }
     config["Geologisch waterbodemonderzoek"] = {
