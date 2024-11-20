@@ -4,7 +4,7 @@ from . import bro
 logger = logging.getLogger(__name__)
 
 
-class GroundwaterMonitoringNetwork(bro.XmlFileOrUrl):
+class GroundwaterMonitoringNetwork(bro.FileOrUrl):
     _rest_url = "https://publiek.broservices.nl/gm/gmn/v1"
     _xmlns = "http://www.broservices.nl/xsd/dsgmn/1.0"
 

@@ -188,9 +188,6 @@ def _get_data(url, params, timeout=5, **kwargs):
     return data
 
 
-mapserver_url = "https://www.dinoloket.nl/arcgis/rest/services/dinoloket"
-
-
 services = {
     "lks_abo_rd": "Archeologisch booronderzoek",
     # "lks_aeo_rd": "",
@@ -229,39 +226,42 @@ services = {
 }
 
 
-def get_configuration():
+def get_configuration(mapserver_url=None):
     config = {}
+    if mapserver_url is None:
+        mapserver_url = "https://www.broloket.nl/standalone/rest/services"
 
     # BRO
+    bro_mapserver_url = f"{mapserver_url}/uitgifteloket_bro"
     config["Geologisch booronderzoek (BRO)"] = {
-        "mapserver": f"{mapserver_url}/lks_bhr_g_rd/MapServer",
+        "mapserver": f"{bro_mapserver_url}/lks_bhr_g_rd_v1/MapServer",
         "abbr": "bhrg",
         "rest_url": "https://publiek.broservices.nl/sr/bhrg/v3",
     }
     config["Geotechnisch booronderzoek (BRO)"] = {
-        "mapserver": f"{mapserver_url}/lks_bhr_gt_rd/MapServer",
+        "mapserver": f"{bro_mapserver_url}/lks_bhr_gt_rd_v1/MapServer",
         "abbr": "bhrgt",
         "object": "BHR-GT",
         "rest_url": "https://publiek.broservices.nl/sr/bhrgt/v2",
     }
     config["Bodemkundig booronderzoek (BRO)"] = {
-        "mapserver": f"{mapserver_url}/lks_bhr_rd/MapServer",
+        "mapserver": f"{bro_mapserver_url}/lks_bhr_rd_v1/MapServer",
         "abbr": "bhrp",
         "object": "BHR_O",
         "rest_url": "https://publiek.broservices.nl/sr/bhrp/v2",
     }
     config["Geotechnisch sondeeronderzoek (BRO)"] = {
-        "mapserver": f"{mapserver_url}/lks_cpt_rd/MapServer",
+        "mapserver": f"{bro_mapserver_url}/lks_cpt_rd_v1/MapServer",
         "abbr": "cpt",
         "rest_url": "https://publiek.broservices.nl/sr/cpt/v1",
     }
     config["Bodemkundig wandonderzoek (BRO)"] = {
-        "mapserver": f"{mapserver_url}/lks_sfr_rd/MapServer",
+        "mapserver": f"{bro_mapserver_url}/lks_sfr_rd_v1/MapServer",
         "name_en": "pedological SoilFaceResearch",
         "abbr": "sfr",
     }
     config["Grondwatermonitoringput"] = {
-        "mapserver": f"{mapserver_url}/lks_gmw_rd/MapServer",
+        "mapserver": f"{bro_mapserver_url}/lks_gmw_rd_v1/MapServer",
         "rest_url": "https://publiek.broservices.nl/gm/gmw/v1",
     }
     config["Grondwaterstandonderzoek"] = {
@@ -275,7 +275,7 @@ def get_configuration():
         "object": "GAR_O",
     }
     config["Grondwatergebruiksystemen"] = {
-        "mapserver": f"{mapserver_url}/lks_guf_rd/MapServer",
+        "mapserver": f"{bro_mapserver_url}/lks_guf_rd_v1/MapServer",
         "name_nl": "Grondwatergebruiksystemen",
         "name_en": "Groundwater utilisation facility",
         "class": "GroundwaterUtilisationFacility",
@@ -285,23 +285,24 @@ def get_configuration():
     }
 
     # DINO
+    gdn_mapserver_url = f"{mapserver_url}/uitgifteloket_gdn"
     config["Geologisch booronderzoek"] = {
-        "mapserver": f"{mapserver_url}/lks_gbo_rd/MapServer",
+        "mapserver": f"{gdn_mapserver_url}/lks_gbo_rd_v1/MapServer",
         "download": "https://www.dinoloket.nl/uitgifteloket/api/brh/sampledescription/csv",
     }
     config["Geologisch waterbodemonderzoek"] = {
-        "mapserver": f"{mapserver_url}/lks_wbo_rd/MapServer",
+        "mapserver": f"{gdn_mapserver_url}/lks_wbo_rd_v1/MapServer",
         "download": config["Geologisch booronderzoek"]["download"],
     }
     config["Archeologisch booronderzoek"] = {
-        "mapserver": f"{mapserver_url}/lks_abo_rd/MapServer",
+        "mapserver": f"{gdn_mapserver_url}/lks_abo_rd_v1/MapServer",
         "download": config["Geologisch booronderzoek"]["download"],
     }
     config["Geotechnisch sondeeronderzoek (GDN)"] = {
-        "mapserver": f"{mapserver_url}/lks_gso_rd/MapServer",
+        "mapserver": f"{gdn_mapserver_url}/lks_gso_rd_v1/MapServer",
     }
     config["Put met onderzoekgegevens"] = {
-        "mapserver": f"{mapserver_url}/lks_gwo_rd/MapServer",
+        "mapserver": f"{gdn_mapserver_url}/lks_gwo_rd_v1/MapServer",
     }
     config["Grondwatersamenstelling"] = {
         "mapserver": config["Put met onderzoekgegevens"]["mapserver"],
@@ -317,10 +318,10 @@ def get_configuration():
         "details": "https://www.dinoloket.nl/uitgifteloket/api/wo/gwo/details",
     }
     config["Oppervlaktewateronderzoek"] = {
-        "mapserver": f"{mapserver_url}/lks_owo_rd/MapServer",
+        "mapserver": f"{gdn_mapserver_url}/lks_owo_rd_v1/MapServer"
     }
     config["Verticaal elektrisch sondeeronderzoek"] = {
-        "mapserver": f"{mapserver_url}/lks_vso_rd/MapServer",
+        "mapserver": f"{gdn_mapserver_url}/lks_vso_rd_v1/MapServer",
         "download": "https://www.dinoloket.nl/uitgifteloket/api/ves/csv",
     }
 

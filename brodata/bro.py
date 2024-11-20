@@ -1,3 +1,4 @@
+from abc import ABC, abstractmethod
 import logging
 import requests
 import xml
@@ -5,6 +6,7 @@ import types
 import pandas as pd
 from pyproj import Transformer
 import geopandas as gpd
+from io import StringIO
 
 logger = logging.getLogger(__name__)
 
@@ -117,7 +119,7 @@ def get_characteristics(
     req = requests.post(url, json=data)
     if req.status_code > 200:
         root = xml.etree.ElementTree.fromstring(req.text)
-        XmlFileOrUrl._check_for_rejection(root)
+        FileOrUrl._check_for_rejection(root)
         # if reading of the rejection message failed, raise a more general error
         raise (Exception((f"Retieving data from {url} failed")))
 
@@ -138,9 +140,9 @@ def get_characteristics(
             if len(child) == 0:
                 d[key] = child.text
             elif key == "standardizedLocation":
-                d["lat"], d["lon"] = XmlFileOrUrl._read_pos(child)
+                d["lat"], d["lon"] = FileOrUrl._read_pos(child)
             elif key == "deliveredLocation":
-                d["x"], d["y"] = XmlFileOrUrl._read_pos(child)
+                d["x"], d["y"] = FileOrUrl._read_pos(child)
             elif key.endswith("Date") or key.endswith("Overview"):
                 d[key] = child[0].text
             elif key in ["diameterRange", "screenPositionRange"]:
@@ -170,7 +172,7 @@ def get_characteristics(
     return df
 
 
-class XmlFileOrUrl:
+class FileOrUrl(ABC):
     """
     A class for parsing and handling XML data from files, URLs, or zipped files.
 
@@ -212,23 +214,40 @@ class XmlFileOrUrl:
     """
 
     def __init__(self, url_or_file, zipfile=None, timeout=5, to_file=None, **kwargs):
-        if zipfile is not None:
-            root = xml.etree.ElementTree.fromstring(zipfile.read(url_or_file))
-        elif url_or_file.startswith("http"):
-            req = requests.get(url_or_file, timeout=timeout)
-            if not req.ok:
-                # msg = req.json()["errors"][0]["message"]
-                raise (Exception((f"Retieving data from {url_or_file} failed")))
-            if to_file is not None:
-                with open(to_file, "w") as f:
-                    f.write(req.text)
-            root = xml.etree.ElementTree.fromstring(req.text)
+        # CSV
+        if url_or_file.endswith(".csv"):
+            if zipfile is not None:
+                self._read_csv(StringIO(zipfile.read(url_or_file)), **kwargs)
+            else:
+                self._read_csv(url_or_file, **kwargs)
+        # XML or URL
         else:
-            tree = xml.etree.ElementTree.parse(url_or_file)
-            root = tree.getroot()
+            if zipfile is not None:
+                root = xml.etree.ElementTree.fromstring(zipfile.read(url_or_file))
+            elif url_or_file.startswith("http"):
+                req = requests.get(url_or_file, timeout=timeout)
+                if not req.ok:
+                    # msg = req.json()["errors"][0]["message"]
+                    raise Exception(f"Retrieving data from {url_or_file} failed")
+                if to_file is not None:
+                    with open(to_file, "w") as f:
+                        f.write(req.text)
+                root = xml.etree.ElementTree.fromstring(req.text)
+                FileOrUrl._check_for_rejection(root)
+            else:
+                tree = xml.etree.ElementTree.parse(url_or_file)
+                root = tree.getroot()
 
-        XmlFileOrUrl._check_for_rejection(root)
-        self._read_contents(root, **kwargs)
+            self._read_contents(root, **kwargs)
+
+    @abstractmethod
+    def _read_contents(self, tree, **kwargs):
+        """Each subclass must overload _read_contents to parse XML result."""
+
+    def _read_csv(self, *args, **kwargs):
+        raise NotImplementedError(
+            f"Class {self.__class__.__name__} does not support reading from CSV files."
+        )
 
     @classmethod
     def from_bro_id(cls, bro_id, **kwargs):
@@ -267,11 +286,9 @@ class XmlFileOrUrl:
         if len(node) == 0:
             key = node.tag.split("}", 1)[1]
             if d is None:
-                setattr(
-                    self, key, XmlFileOrUrl._parse_text(node, key, to_float, to_int)
-                )
+                setattr(self, key, FileOrUrl._parse_text(node, key, to_float, to_int))
             else:
-                d[key] = XmlFileOrUrl._parse_text(node, key, to_float, to_int)
+                d[key] = FileOrUrl._parse_text(node, key, to_float, to_int)
         else:
             for child in node:
                 self._read_children_of_children(
@@ -284,6 +301,8 @@ class XmlFileOrUrl:
             return float(node.text)
         if to_int is not None and key in to_int:
             return int(node.text)
+        return node.text
+
 
     def _read_delivered_location(self, node):
         for child in node:
@@ -306,7 +325,7 @@ class XmlFileOrUrl:
         if multipoint is not None:
             xy = []
             for pointmember in multipoint.findall("gml:pointMember", ns):
-                xy.append(XmlFileOrUrl._read_pos(pointmember))
+                xy.append(FileOrUrl._read_pos(pointmember))
             return xy
         point = node.find("gml:Point", ns)
         if point is None:
