@@ -312,6 +312,26 @@ class FileOrUrl(ABC):
 
             self._read_contents(root, **kwargs)
 
+    def __repr__(self):
+        # retrieve properties if they exist
+        props = {}
+        if hasattr(self, "broId"):
+            props["broId"] = self.broId
+        if hasattr(self, "x"):
+            props["x"] = self.x
+        if hasattr(self, "y"):
+            props["y"] = self.y
+        # format these proerties into a string
+        props_str = ""
+        for key in props:
+            value = props[key]
+            props_str = f"{props_str}{key}={value.__repr__()}, "
+        if len(props_str) > 1:
+            props_str = props_str[:-2]
+        # generate name
+        name = f"{self.__class__.__name__}({props_str})"
+        return name
+
     @abstractmethod
     def _read_contents(self, tree, **kwargs):
         """Each subclass must overload _read_contents to parse XML result."""
@@ -368,7 +388,7 @@ class FileOrUrl(ABC):
                 )
 
     @staticmethod
-    def _parse_text(node, key, to_float, to_int):
+    def _parse_text(node, key, to_float=None, to_int=None):
         if to_float is not None and key in to_float:
             return float(node.text)
         if to_int is not None and key in to_int:
