@@ -31,6 +31,7 @@ def get_characteristics(
     epsg=28992,
     to_file=None,
     use_all_corners_of_extent=True,
+    timeout=5,
 ):
     """
     Haalt de karakteristieken op van een set van registratie objecten, gegeven een
@@ -76,6 +77,9 @@ def get_characteristics(
         issue, when use_all_corners_of_extent is True, all four corners of the extent
         are used to calculate the minimum and maximum lan and lon values. The default is
         True.
+    timeout : int or float, optional
+        A number indicating how many seconds to wait for the client to make a connection
+        and/or send a response. The default is 5.
 
     Raises
     ------
@@ -126,7 +130,7 @@ def get_characteristics(
             "lowerCorner": {"lat": lat_ll, "lon": lon_ll},
             "upperCorner": {"lat": lat_ur, "lon": lon_ur},
         }
-    req = requests.post(url, json=data)
+    req = requests.post(url, json=data, timeout=timeout)
     if req.status_code > 200:
         root = xml.etree.ElementTree.fromstring(req.text)
         FileOrUrl._check_for_rejection(root)
@@ -185,10 +189,11 @@ def get_characteristics(
 def _get_data_within_extent(
     bro_cl,
     extent=None,
+    timeout=5,
+    silent=False,
     to_path=None,
     to_zip=None,
     redownload=True,
-    silent=False,
     x="x",
     y="y",
     geometry=None,
@@ -206,7 +211,7 @@ def _get_data_within_extent(
             to_path = os.path.splitext(to_zip)[0]
         remove_path_again = not os.path.isdir(to_path)
         files = []
-    char = get_characteristics(bro_cl, extent=extent)
+    char = get_characteristics(bro_cl, extent=extent, timeout=timeout)
     to_file = None
     if to_path is not None and not os.path.isdir(to_path):
         os.makedirs(to_path)
@@ -219,7 +224,7 @@ def _get_data_within_extent(
             if not redownload and os.path.isfile(to_file):
                 data[bro_id] = bro_cl(to_file)
                 continue
-        data[bro_id] = bro_cl.from_bro_id(bro_id, to_file=to_file)
+        data[bro_id] = bro_cl.from_bro_id(bro_id, to_file=to_file, timeout=timeout)
     if to_zip is not None:
         _save_data_to_zip(to_zip, files, remove_path_again, to_path)
 

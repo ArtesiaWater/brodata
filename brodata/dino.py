@@ -16,8 +16,8 @@ from .util import (
 
 def _get_data_within_extent(
     dino_cl,
-    extent,
     kind,
+    extent,
     config=None,
     timeout=5,
     silent=False,
@@ -75,7 +75,7 @@ def get_verticaal_elektrisch_sondeeronderzoek(extent, **kwargs):
     dino_class = VerticaalElektrischSondeeronderzoek
     kind = "Verticaal elektrisch sondeeronderzoek"
     return _get_data_within_extent(
-        dino_class, extent, kind, geometry="geometry", **kwargs
+        dino_class, kind, extent, geometry="geometry", **kwargs
     )
 
 
@@ -149,19 +149,19 @@ def get_grondwaterstand(
 def get_grondwatersamenstelling(extent, **kwargs):
     dino_class = Grondwatersamenstelling
     kind = "Grondwatersamenstelling"
-    return _get_data_within_extent(dino_class, extent, kind, **kwargs)
+    return _get_data_within_extent(dino_class, kind, extent, **kwargs)
 
 
 def get_geologisch_booronderzoek(extent, **kwargs):
     dino_class = GeologischBooronderzoek
     kind = "Geologisch booronderzoek"
-    return _get_data_within_extent(dino_class, extent, kind, **kwargs)
+    return _get_data_within_extent(dino_class, kind, extent, **kwargs)
 
 
 def get_oppervlaktewaterstand(extent, **kwargs):
     dino_class = Oppervlaktewaterstand
     kind = "Oppervlaktewateronderzoek"
-    return _get_data_within_extent(dino_class, extent, kind, **kwargs)
+    return _get_data_within_extent(dino_class, kind, extent, **kwargs)
 
 
 class CsvFileOrUrl:
