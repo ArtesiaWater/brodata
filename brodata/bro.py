@@ -415,9 +415,7 @@ class FileOrUrl(ABC):
         if date is None:
             date = node.find("brocom:year", ns)
         if date is None:
-            voidReason = node.find("brocom:voidReason", ns)
-            if voidReason is not None:
-                return pd.NaT
+            return pd.NaT
         return pd.to_datetime(date.text)
 
     @staticmethod
