@@ -1,4 +1,5 @@
 import logging
+import pandas as pd
 from . import bro
 
 logger = logging.getLogger(__name__)
@@ -25,5 +26,34 @@ class GroundwaterMonitoringNetwork(bro.FileOrUrl):
             key = child.tag.split("}", 1)[1]
             if len(child) == 0:
                 setattr(self, key, child.text)
+            elif key == "monitoringNetHistory":
+                for grandchild in child:
+                    key = grandchild.tag.split("}", 1)[1]
+                    if key == "startDateMonitoring":
+                        setattr(self, key, self._read_date(grandchild))
+                    else:
+                        logger.warning(f"Unknown key: {key}")
+            elif key == "registrationHistory":
+                self._read_children_of_children(child)
+            elif key == "measuringPoint":
+                if not hasattr(self, key):
+                    self.measuringPoint = []
+                point = {}
+                self._read_children_of_children(child, point)
+                self.measuringPoint.append(point)
             else:
                 logger.warning(f"Unknown key: {key}")
+
+        if hasattr(self, "measuringPoint"):
+            self.measuringPoint = pd.DataFrame(self.measuringPoint)
+            if (
+                "broId" in self.measuringPoint.columns
+                and "tubeNumber" in self.measuringPoint.columns
+            ):
+                self.measuringPoint = self.measuringPoint.set_index(
+                    ["broId", "tubeNumber"]
+                )
+            if "date" in self.measuringPoint.columns:
+                self.measuringPoint["date"] = pd.to_datetime(
+                    self.measuringPoint["date"]
+                )
