@@ -51,13 +51,21 @@ class _BoreholeResearch(bro.FileOrUrl):
             elif key in ["siteCharacteristic"]:
                 setattr(self, key, child[0].text)
             elif key in [
-                "deliveredVerticalPosition",
                 "registrationHistory",
                 "reportHistory",
             ]:
                 for grandchild in child:
                     key = grandchild.tag.split("}", 1)[1]
                     setattr(self, key, grandchild.text)
+            elif key == "deliveredVerticalPosition":
+                for grandchild in child:
+                    key = grandchild.tag.split("}", 1)[1]
+                    if key == "verticalPositioningDate":
+                        setattr(self, key, self._read_date(grandchild))
+                    elif key == "offset":
+                        setattr(self, key, float(grandchild.text))
+                    else:
+                        setattr(self, key, grandchild.text)
             elif key == "boring":
                 for grandchild in child:
                     key = grandchild.tag.split("}", 1)[1]
