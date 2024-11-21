@@ -90,6 +90,7 @@ def get_lithology_color(hoofdgrondsoort, zandmediaanklasse=None, drilling=None):
         "hout": (157, 78, 64),
         "klei": (0, 146, 0),
         "leem": (194, 207, 92),
+        "oer": (200, 200, 200),
         "puin": (200, 200, 200),
         "stenen": (216, 163, 32),
         "veen": (157, 78, 64),
