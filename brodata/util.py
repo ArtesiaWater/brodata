@@ -3,6 +3,7 @@ import logging
 import numpy as np
 import pandas as pd
 from zipfile import ZipFile
+from tqdm import tqdm
 
 logger = logging.getLogger(__name__)
 
@@ -156,3 +157,35 @@ def read_zipfile(fname, pathnames=None):
                     else:
                         data[pathname][name] = cl(file, zipfile=zf)
         return data
+
+
+def _get_data_from_path(from_path, dino_class, silent=False, ext=".csv"):
+    if from_path.endswith(".zip"):
+        return _get_data_from_zip(from_path, dino_class, silent=silent)
+    files = os.listdir(from_path)
+    files = [file for file in files if file.endswith(ext)]
+    data = {}
+    for file in tqdm(files, disable=silent):
+        fname = os.path.join(from_path, file)
+        data[os.path.splitext(file)[0]] = dino_class(fname)
+    return data
+
+
+def _get_data_from_zip(to_zip, dino_class, silent=False):
+    # read data from zipfile
+    data = {}
+    with ZipFile(to_zip) as zf:
+        for name in tqdm(zf.namelist(), disable=silent):
+            data[name] = dino_class(name, zipfile=zf)
+    return data
+
+
+def _save_data_to_zip(to_zip, files, remove_path_again, to_path):
+    with ZipFile(to_zip, "w") as zf:
+        for file in files:
+            zf.write(file, os.path.split(file)[1])
+    if remove_path_again:
+        # remove individual files again
+        for file in files:
+            os.remove(file)
+        os.removedirs(to_path)

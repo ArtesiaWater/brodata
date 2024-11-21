@@ -4,47 +4,19 @@ from tqdm import tqdm
 import numpy as np
 import pandas as pd
 from io import StringIO, TextIOWrapper
-from zipfile import ZipFile
 from shapely.geometry import LineString
 from .webservices import get_configuration, get_gdf
-from .util import objects_to_gdf
-
-
-def _get_data_from_path(from_path, dino_class, silent=False, ext=".csv"):
-    if from_path.endswith(".zip"):
-        return _get_data_from_zip(from_path, dino_class, silent=silent)
-    files = os.listdir(from_path)
-    files = [file for file in files if file.endswith(ext)]
-    data = {}
-    for file in tqdm(files, disable=silent):
-        fname = os.path.join(from_path, file)
-        data[os.path.splitext(file)[0]] = dino_class(fname)
-    return data
-
-
-def _get_data_from_zip(to_zip, dino_class, silent=False):
-    # read data from zipfile
-    data = {}
-    with ZipFile(to_zip) as zf:
-        for name in tqdm(zf.namelist(), disable=silent):
-            data[name] = dino_class(name, zipfile=zf)
-    return data
-
-
-def _save_data_to_zip(to_zip, files, remove_path_again, to_path):
-    with ZipFile(to_zip, "w") as zf:
-        for file in files:
-            zf.write(file, os.path.split(file)[1])
-    if remove_path_again:
-        # remove individual files again
-        for file in files:
-            os.remove(file)
-        os.removedirs(to_path)
+from .util import (
+    objects_to_gdf,
+    _get_data_from_path,
+    _get_data_from_zip,
+    _save_data_to_zip,
+)
 
 
 def _get_data_within_extent(
+    dino_cl,
     extent,
-    dino_class,
     kind,
     config=None,
     timeout=5,
@@ -59,12 +31,12 @@ def _get_data_within_extent(
     to_gdf=True,
 ):
     if isinstance(extent, str):
-        data = _get_data_from_path(extent, dino_class, silent=silent)
+        data = _get_data_from_path(extent, dino_cl, silent=silent)
         return objects_to_gdf(data, x, y, geometry, index, to_gdf)
 
     if to_zip is not None:
         if not redownload and os.path.isfile(to_zip):
-            data = _get_data_from_zip(to_zip, dino_class, silent=silent)
+            data = _get_data_from_zip(to_zip, dino_cl, silent=silent)
             return objects_to_gdf(data, x, y, geometry, index, to_gdf)
         if to_path is None:
             to_path = os.path.splitext(to_zip)[0]
@@ -79,22 +51,20 @@ def _get_data_within_extent(
         extent=extent,
         timeout=timeout,
     )
-    download_url = dino_class._download_url
 
     to_file = None
     if to_path is not None and not os.path.isdir(to_path):
         os.makedirs(to_path)
     data = {}
-    for name in tqdm(gdf.index, disable=silent):
-        url = f"{download_url}/{name}"
+    for dino_nr in tqdm(gdf.index, disable=silent):
         if to_path is not None:
-            to_file = os.path.join(to_path, f"{name}.csv")
+            to_file = os.path.join(to_path, f"{dino_nr}.csv")
             if to_zip is not None:
                 files.append(to_file)
             if not redownload and os.path.isfile(to_file):
-                data[name] = dino_class(to_file)
+                data[dino_nr] = dino_cl(to_file)
                 continue
-        data[name] = dino_class(url, timeout=timeout, to_file=to_file)
+        data[dino_nr] = dino_cl.from_dino_nr(dino_nr, timeout=timeout, to_file=to_file)
     if to_zip is not None:
         _save_data_to_zip(to_zip, files, remove_path_again, to_path)
 
@@ -105,7 +75,7 @@ def get_verticaal_elektrisch_sondeeronderzoek(extent, **kwargs):
     dino_class = VerticaalElektrischSondeeronderzoek
     kind = "Verticaal elektrisch sondeeronderzoek"
     return _get_data_within_extent(
-        extent, dino_class, kind, geometry="geometry", **kwargs
+        dino_class, extent, kind, geometry="geometry", **kwargs
     )
 
 
@@ -179,34 +149,40 @@ def get_grondwaterstand(
 def get_grondwatersamenstelling(extent, **kwargs):
     dino_class = Grondwatersamenstelling
     kind = "Grondwatersamenstelling"
-    return _get_data_within_extent(extent, dino_class, kind, **kwargs)
+    return _get_data_within_extent(dino_class, extent, kind, **kwargs)
 
 
 def get_geologisch_booronderzoek(extent, **kwargs):
     dino_class = GeologischBooronderzoek
     kind = "Geologisch booronderzoek"
-    return _get_data_within_extent(extent, dino_class, kind, **kwargs)
+    return _get_data_within_extent(dino_class, extent, kind, **kwargs)
 
 
 def get_oppervlaktewaterstand(extent, **kwargs):
     dino_class = Oppervlaktewaterstand
     kind = "Oppervlaktewateronderzoek"
-    return _get_data_within_extent(extent, dino_class, kind, **kwargs)
+    return _get_data_within_extent(dino_class, extent, kind, **kwargs)
 
 
 class CsvFileOrUrl:
-    def __init__(self, url_or_file, zipfile=None, timeout=5, to_file=None):
+    def __init__(
+        self, url_or_file, zipfile=None, timeout=5, to_file=None, redownload=True
+    ):
         if zipfile is not None:
             with zipfile.open(url_or_file) as f:
                 self._read_contents(TextIOWrapper(f))
         elif url_or_file.startswith("http"):
-            r = requests.get(url_or_file, timeout=timeout)
-            if not r.ok:
-                raise (Exception((f"Retieving data from {url_or_file} failed")))
-            if to_file is not None:
-                with open(to_file, "w") as f:
-                    f.write(r.text)
-            self._read_contents(StringIO(r.text))
+            if redownload or to_file is None or not os.path.isfile(to_file):
+                r = requests.get(url_or_file, timeout=timeout)
+                if not r.ok:
+                    raise (Exception((f"Retieving data from {url_or_file} failed")))
+                if to_file is not None:
+                    with open(to_file, "w") as f:
+                        f.write(r.text)
+                self._read_contents(StringIO(r.text))
+            else:
+                with open(to_file, "r") as f:
+                    self._read_contents(f)
         else:
             with open(url_or_file, "r") as f:
                 self._read_contents(f)

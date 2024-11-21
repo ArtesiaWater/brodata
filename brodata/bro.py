@@ -1,4 +1,5 @@
 from abc import ABC, abstractmethod
+import os
 import logging
 import requests
 import xml
@@ -7,6 +8,13 @@ import pandas as pd
 from pyproj import Transformer
 import geopandas as gpd
 from io import StringIO
+from tqdm import tqdm
+from .util import (
+    objects_to_gdf,
+    _get_data_from_path,
+    _get_data_from_zip,
+    _save_data_to_zip,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -39,9 +47,11 @@ def get_characteristics(
     cl : class
         The brodata class for which characteristics are requested.
     tmin : str or pd.Timestamp, optional
-        The minimum registrationPeriod of the requested characteristics. The default is None.
+        The minimum registrationPeriod of the requested characteristics. The default is
+        None.
     tmax : str or pd.Timestamp, optional
-        The maximum registrationPeriod of the requested characteristics. The default is None.
+        The maximum registrationPeriod of the requested characteristics. The default is
+        None.
     extent : list or tuple of 4 floats, optional
         Download the characteristics within extent ([xmin, xmax, ymin, ymax]). The
         default is None.
@@ -52,8 +62,8 @@ def get_characteristics(
         The y-coordinate of the center of the circle in which the characteristics are
         requested. The default is None.
     radius : float, optional
-        The radius in meters of the center of the circle in which the characteristics are
-        requested. The default is None.. The default is 1000.0.
+        The radius in meters of the center of the circle in which the characteristics
+        are requested. The default is 1000.0.
     epsg : str, optional
         The coordinate reference system of the specified extent, x or y, and of the
         resulting GeoDataFrame. The default is 28992, which is the Dutch RD-system.
@@ -172,6 +182,51 @@ def get_characteristics(
     return df
 
 
+def _get_data_within_extent(
+    bro_cl,
+    extent=None,
+    to_path=None,
+    to_zip=None,
+    redownload=True,
+    silent=False,
+    x="x",
+    y="y",
+    geometry=None,
+    index="broId",
+    to_gdf=True,
+):
+    if isinstance(extent, str):
+        data = _get_data_from_path(extent, bro_cl, silent=silent)
+        return objects_to_gdf(data, x, y, geometry, index, to_gdf)
+    if to_zip is not None:
+        if not redownload and os.path.isfile(to_zip):
+            data = _get_data_from_zip(to_zip, bro_cl, silent=silent)
+            return objects_to_gdf(data, x, y, geometry, index, to_gdf)
+        if to_path is None:
+            to_path = os.path.splitext(to_zip)[0]
+        remove_path_again = not os.path.isdir(to_path)
+        files = []
+    char = get_characteristics(bro_cl, extent=extent)
+    to_file = None
+    if to_path is not None and not os.path.isdir(to_path):
+        os.makedirs(to_path)
+    data = {}
+    for bro_id in tqdm(char.index, disable=silent):
+        if to_path is not None:
+            to_file = os.path.join(to_path, f"{bro_id}.xml")
+            if to_zip is not None:
+                files.append(to_file)
+            if not redownload and os.path.isfile(to_file):
+                data[bro_id] = bro_cl(to_file)
+                continue
+        data[bro_id] = bro_cl.from_bro_id(bro_id, to_file=to_file)
+    if to_zip is not None:
+        _save_data_to_zip(to_zip, files, remove_path_again, to_path)
+
+    gdf = objects_to_gdf(data, x, y, geometry, index, to_gdf)
+    return gdf
+
+
 class FileOrUrl(ABC):
     """
     A class for parsing and handling XML data from files, URLs, or zipped files.
@@ -213,7 +268,15 @@ class FileOrUrl(ABC):
             Extracts time instant information from a GML-compliant time element.
     """
 
-    def __init__(self, url_or_file, zipfile=None, timeout=5, to_file=None, **kwargs):
+    def __init__(
+        self,
+        url_or_file,
+        zipfile=None,
+        timeout=5,
+        to_file=None,
+        redownload=True,
+        **kwargs,
+    ):
         # CSV
         if url_or_file.endswith(".csv"):
             if zipfile is not None:
@@ -225,15 +288,19 @@ class FileOrUrl(ABC):
             if zipfile is not None:
                 root = xml.etree.ElementTree.fromstring(zipfile.read(url_or_file))
             elif url_or_file.startswith("http"):
-                req = requests.get(url_or_file, timeout=timeout)
-                if not req.ok:
-                    # msg = req.json()["errors"][0]["message"]
-                    raise Exception(f"Retrieving data from {url_or_file} failed")
-                if to_file is not None:
-                    with open(to_file, "w") as f:
-                        f.write(req.text)
-                root = xml.etree.ElementTree.fromstring(req.text)
-                FileOrUrl._check_for_rejection(root)
+                if redownload or to_file is None or not os.path.isfile(to_file):
+                    req = requests.get(url_or_file, timeout=timeout)
+                    if not req.ok:
+                        # msg = req.json()["errors"][0]["message"]
+                        raise Exception(f"Retrieving data from {url_or_file} failed")
+                    if to_file is not None:
+                        with open(to_file, "w") as f:
+                            f.write(req.text)
+                    root = xml.etree.ElementTree.fromstring(req.text)
+                    FileOrUrl._check_for_rejection(root)
+                else:
+                    tree = xml.etree.ElementTree.parse(to_file)
+                    root = tree.getroot()
             else:
                 tree = xml.etree.ElementTree.parse(url_or_file)
                 root = tree.getroot()
@@ -302,7 +369,6 @@ class FileOrUrl(ABC):
         if to_int is not None and key in to_int:
             return int(node.text)
         return node.text
-
 
     def _read_delivered_location(self, node):
         for child in node:
