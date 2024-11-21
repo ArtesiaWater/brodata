@@ -378,9 +378,11 @@ def get_tube_gdf(gmws, index=None):
 
     Parameters
     ----------
-    gmws : pd.DataFrame
-        A DataFrame containing well and tube properties.
-
+    gmws : list or dict of GroundwaterMonitoringWell, or pd.DataFrame Well and tube data
+        in one of the following formats: a list of `GroundwaterMonitoringWell` objects,
+        a dictionary of these objects, or a DataFrame with the bro-ids of the
+        GroundwaterMonitoringWells as the index and the column monitoringTube containing
+        tube properties.
     index : str or list of str, optional
         The column or columns to use for indexing the resulting GeoDataFrame. Defaults
         to ['groundwaterMonitoringWell', 'tubeNumber'] if not provided.
@@ -557,6 +559,28 @@ def get_data_in_extent(
 
 
 def get_tube_gdf_from_characteristics(characteristics_gdf, index=None):
+    """
+    Generate a GeoDataFrame of tube properties based on well characteristics.
+
+    This function downloads the GroundwaterMonitoringWell-objects to retreive data about
+    the groundwater monitoring tubes, and combined this information in a new
+    GeoDataFrame.
+
+    Parameters
+    ----------
+    characteristics_gdf : gpd.GeoDataFrame
+        GeoDataFrame of well characteristics with bro-ids of the
+        GroundwaterMonitoringWells as the index, retreived with
+        `brodata.gmw.get_characteristics`.
+    index : str or list of str, optional
+        Column(s) to use as the index for the resulting GeoDataFrame. Defaults
+        to ['groundwaterMonitoringWell', 'tubeNumber'] if not provided.
+
+    Returns
+    -------
+    gpd.GeoDataFrame
+        GeoDataFrame of combined well and tube properties
+    """
     bids = characteristics_gdf.index.unique()
     gmws = [GroundwaterMonitoringWell.from_bro_id(bid) for bid in bids]
     gdf = get_tube_gdf(gmws, index=index)
