@@ -66,6 +66,8 @@ class ConePenetrationTest(bro.FileOrUrl):
                         self._read_cone_penetration_test(grandchild, key)
                     else:
                         logger.warning(f"Unknown key: {key}")
+            elif key == "additionalInvestigation":
+                self._read_additional_investigation(child)
             else:
                 logger.warning(f"Unknown key: {key}")
         if hasattr(self, "conePenetrationTest") and hasattr(self, "parameters"):
@@ -120,3 +122,24 @@ class ConePenetrationTest(bro.FileOrUrl):
                         logger.warning(f"Unknown key: {key}")
             else:
                 logger.warning(f"Unknown key: {key}")
+
+    def _read_additional_investigation(self, node):
+        for child in node:
+            key = child.tag.split("}", 1)[1]
+            if len(child) == 0:
+                setattr(self, key, child.text)
+            elif key == "removedLayer":
+                if not hasattr(self, key):
+                    self.removedLayer = []
+                d = {}
+                self._read_children_of_children(
+                    child,
+                    d=d,
+                    to_float=["upperBoundary", "lowerBoundary"],
+                    to_int="sequenceNumber",
+                )
+                self.removedLayer.append(d)
+        if hasattr(self, "removedLayer"):
+            self.removedLayer = pd.DataFrame(self.removedLayer)
+            if "sequenceNumber" in self.removedLayer.columns:
+                self.removedLayer = self.removedLayer.set_index("sequenceNumber")
