@@ -1,5 +1,6 @@
 import os
 import requests
+from requests.adapters import HTTPAdapter
 from tqdm import tqdm
 import numpy as np
 import pandas as pd
@@ -125,7 +126,7 @@ def get_grondwaterstand(
         url = "{}/{}/query".format(config[kind]["mapserver"], config[kind]["table"])
         GDW_DBK = gdf.at[name, "GDW_DBK"]
         params = {"where": f"GDW_DBK = {GDW_DBK}", "f": "pjson"}
-        r = requests.get(url, params=params)
+        r = requests.get(url, params=params, timeout=timeout)
         if not r.ok:
             raise (ValueError(f"Retreiving data from {url} failed"))
         for feature in r.json()["features"]:
@@ -166,20 +167,32 @@ def get_oppervlaktewaterstand(extent, **kwargs):
 
 class CsvFileOrUrl:
     def __init__(
-        self, url_or_file, zipfile=None, timeout=5, to_file=None, redownload=True
+        self,
+        url_or_file,
+        zipfile=None,
+        timeout=5,
+        to_file=None,
+        redownload=True,
+        max_retries=2,
     ):
         if zipfile is not None:
             with zipfile.open(url_or_file) as f:
                 self._read_contents(TextIOWrapper(f))
         elif url_or_file.startswith("http"):
             if redownload or to_file is None or not os.path.isfile(to_file):
-                r = requests.get(url_or_file, timeout=timeout)
-                if not r.ok:
+                if max_retries > 1:
+                    adapter = requests.adapters.HTTPAdapter(max_retries=max_retries)
+                    session = requests.Session()
+                    session.mount("https://", adapter)
+                    req = session.get(url_or_file, timeout=timeout)
+                else:
+                    req = requests.get(url_or_file, timeout=timeout)
+                if not req.ok:
                     raise (Exception((f"Retieving data from {url_or_file} failed")))
                 if to_file is not None:
                     with open(to_file, "w") as f:
-                        f.write(r.text)
-                self._read_contents(StringIO(r.text))
+                        f.write(req.text)
+                self._read_contents(StringIO(req.text))
             else:
                 with open(to_file, "r") as f:
                     self._read_contents(f)

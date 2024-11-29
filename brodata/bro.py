@@ -280,6 +280,7 @@ class FileOrUrl(ABC):
         timeout=5,
         to_file=None,
         redownload=True,
+        max_retries=2,
         **kwargs,
     ):
         # CSV
@@ -294,7 +295,13 @@ class FileOrUrl(ABC):
                 root = xml.etree.ElementTree.fromstring(zipfile.read(url_or_file))
             elif url_or_file.startswith("http"):
                 if redownload or to_file is None or not os.path.isfile(to_file):
-                    req = requests.get(url_or_file, timeout=timeout)
+                    if max_retries > 1:
+                        adapter = requests.adapters.HTTPAdapter(max_retries=max_retries)
+                        session = requests.Session()
+                        session.mount("https://", adapter)
+                        req = session.get(url_or_file, timeout=timeout)
+                    else:
+                        req = requests.get(url_or_file, timeout=timeout)
                     if not req.ok:
                         # msg = req.json()["errors"][0]["message"]
                         raise Exception(f"Retrieving data from {url_or_file} failed")
