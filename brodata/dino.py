@@ -1,6 +1,5 @@
 import os
 import requests
-from requests.adapters import HTTPAdapter
 from tqdm import tqdm
 import numpy as np
 import pandas as pd

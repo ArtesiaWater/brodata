@@ -30,6 +30,8 @@ def get_characteristics(
     radius=1000.0,
     epsg=28992,
     to_file=None,
+    redownload=True,
+    zipfile=None,
     use_all_corners_of_extent=True,
     timeout=5,
 ):
@@ -92,58 +94,68 @@ def get_characteristics(
         A GeoDataFrame contraining the characteristics.
 
     """
-    url = f"{cl._rest_url}/characteristics/searches?"
+
+    if zipfile is None and (
+        redownload or to_file is None or not os.path.isfile(to_file)
+    ):
+        url = f"{cl._rest_url}/characteristics/searches?"
+
+        data = {}
+        if tmin is not None or tmax is not None:
+            data["registrationPeriod"] = {}
+            if tmin is not None:
+                beginDate = pd.to_datetime(tmin).strftime("%Y-%m-%d")
+                data["registrationPeriod"]["beginDate"] = beginDate
+            if tmax is not None:
+                endDate = pd.to_datetime(tmax).strftime("%Y-%m-%d")
+                data["registrationPeriod"]["endDate"] = endDate
+        if (x is None or y is None) and extent is None:
+            raise (Exception("Please specify either extent or x, y and radius"))
+
+        transformer = Transformer.from_crs(epsg, 4326)
+        data["area"] = {}
+        if x is not None and y is not None:
+            lat, lon = transformer.transform(x, y)
+            data["area"]["enclosingCircle"] = {
+                "center": {"lat": lat, "lon": lon},
+                "radius": radius / 1000,
+            }
+        if extent is not None:
+            lat_ll, lon_ll = transformer.transform(extent[0], extent[2])
+            lat_ur, lon_ur = transformer.transform(extent[1], extent[3])
+            if use_all_corners_of_extent:
+                lat_ul, lon_ul = transformer.transform(extent[0], extent[3])
+                lat_lr, lon_lr = transformer.transform(extent[1], extent[2])
+                lat_ll = min(lat_ll, lat_lr)
+                lon_ll = min(lon_ll, lon_ul)
+                lat_ur = max(lat_ul, lat_ur)
+                lon_ur = max(lon_lr, lon_ur)
+
+            data["area"]["boundingBox"] = {
+                "lowerCorner": {"lat": lat_ll, "lon": lon_ll},
+                "upperCorner": {"lat": lat_ur, "lon": lon_ur},
+            }
+        req = requests.post(url, json=data, timeout=timeout)
+        if req.status_code > 200:
+            root = xml.etree.ElementTree.fromstring(req.text)
+            FileOrUrl._check_for_rejection(root)
+            # if reading of the rejection message failed, raise a more general error
+            raise (Exception((f"Retieving data from {url} failed")))
+
+        if to_file is not None:
+            with open(to_file, "w") as f:
+                f.write(req.text)
+
+        # read results
+        tree = xml.etree.ElementTree.fromstring(req.text)
+    else:
+        if zipfile is not None:
+            with zipfile.open(to_file) as f:
+                tree = xml.etree.ElementTree.parse(f).getroot()
+        else:
+            tree = xml.etree.ElementTree.parse(to_file).getroot()
+
     ns = {"xmlns": cl._xmlns}
-
-    data = {}
-    if tmin is not None or tmax is not None:
-        data["registrationPeriod"] = {}
-        if tmin is not None:
-            beginDate = pd.to_datetime(tmin).strftime("%Y-%m-%d")
-            data["registrationPeriod"]["beginDate"] = beginDate
-        if tmax is not None:
-            endDate = pd.to_datetime(tmax).strftime("%Y-%m-%d")
-            data["registrationPeriod"]["endDate"] = endDate
-    if (x is None or y is None) and extent is None:
-        raise (Exception("Please specify either extent or x, y and radius"))
-
-    transformer = Transformer.from_crs(epsg, 4326)
-    data["area"] = {}
-    if x is not None and y is not None:
-        lat, lon = transformer.transform(x, y)
-        data["area"]["enclosingCircle"] = {
-            "center": {"lat": lat, "lon": lon},
-            "radius": radius / 1000,
-        }
-    if extent is not None:
-        lat_ll, lon_ll = transformer.transform(extent[0], extent[2])
-        lat_ur, lon_ur = transformer.transform(extent[1], extent[3])
-        if use_all_corners_of_extent:
-            lat_ul, lon_ul = transformer.transform(extent[0], extent[3])
-            lat_lr, lon_lr = transformer.transform(extent[1], extent[2])
-            lat_ll = min(lat_ll, lat_lr)
-            lon_ll = min(lon_ll, lon_ul)
-            lat_ur = max(lat_ul, lat_ur)
-            lon_ur = max(lon_lr, lon_ur)
-
-        data["area"]["boundingBox"] = {
-            "lowerCorner": {"lat": lat_ll, "lon": lon_ll},
-            "upperCorner": {"lat": lat_ur, "lon": lon_ur},
-        }
-    req = requests.post(url, json=data, timeout=timeout)
-    if req.status_code > 200:
-        root = xml.etree.ElementTree.fromstring(req.text)
-        FileOrUrl._check_for_rejection(root)
-        # if reading of the rejection message failed, raise a more general error
-        raise (Exception((f"Retieving data from {url} failed")))
-
-    if to_file is not None:
-        with open(to_file, "w") as f:
-            f.write(req.text)
-
-    # read results
-    tree = xml.etree.ElementTree.fromstring(req.text)
-
     data = []
     for gmw in tree.findall(f".//xmlns:{cl._char}", ns):
         d = {}

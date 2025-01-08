@@ -1,5 +1,6 @@
 import os
 import brodata
+from pandas.testing import assert_frame_equal
 
 
 def test_get_gmw_of_bronhouder():
@@ -13,7 +14,26 @@ def test_get_gmw_characteristics():
 
 def test_gmw_get_gld_data_in_extent():
     extent = [118200, 118400, 439700, 440000]
-    brodata.gmw.get_data_in_extent(extent=extent, combine=True, as_csv=False)
+
+    fname_zip = "test_gmw_get_gld_data_in_extent.zip"
+    gdf1 = brodata.gmw.get_data_in_extent(
+        extent=extent,
+        combine=True,
+        as_csv=False,
+        to_zip=fname_zip,
+        redownload=True,
+    )
+    gdf2 = brodata.gmw.get_data_in_extent(
+        extent=extent,
+        combine=True,
+        as_csv=False,
+        to_zip=fname_zip,
+        redownload=False,
+    )
+    gdf3 = brodata.gmw.get_data_in_extent(fname_zip, combine=True)
+
+    assert_frame_equal(gdf1, gdf2)
+    assert_frame_equal(gdf1, gdf3)
 
 
 def test_gmw_get_gld_data_in_extent_as_csv():
