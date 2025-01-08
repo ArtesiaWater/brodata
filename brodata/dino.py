@@ -121,10 +121,11 @@ def get_grondwaterstand(
         os.makedirs(to_path)
     data = {}
     for name in tqdm(gdf.index, disable=silent):
-        for piezometer_nr in range(1, gdf.at[name, "ST_CNT"] + 1):
-            url = f"{download_url}/{name}/{piezometer_nr:03d}"
+        for i_st in range(1, gdf.at[name, "ST_CNT"] + 1):
+            piezometer_nr = f"{i_st:03d}"
+            url = f"{download_url}/{name}/{piezometer_nr}"
             if to_path is not None:
-                to_file = os.path.join(to_path, f"{name}_{piezometer_nr:03d}.csv")
+                to_file = os.path.join(to_path, f"{name}_{piezometer_nr}.csv")
                 if to_zip is not None:
                     files.append(to_file)
                 if not redownload and os.path.isfile(to_file):
