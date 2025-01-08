@@ -65,12 +65,12 @@ def test_get_verticaal_elektrisch_sondeeronderzoek_within_extent():
 
 def test_grondwaterstanden_within_extent():
     extent = [117700, 118700, 439400, 440400]
-    brodata.dino.get_grondwaterstand(extent)
+    brodata.dino.get_grondwaterstand(extent, timeout=100)
 
 
 def test_grondwatersamenstelling_within_extent():
     extent = [117700, 118700, 439400, 440400]
-    brodata.dino.get_grondwatersamenstelling(extent)
+    brodata.dino.get_grondwatersamenstelling(extent, timeout=100)
 
 
 def test_get_geologisch_booronderzoek_within_extent():

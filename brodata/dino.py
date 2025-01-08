@@ -121,18 +121,10 @@ def get_grondwaterstand(
         os.makedirs(to_path)
     data = {}
     for name in tqdm(gdf.index, disable=silent):
-        # get the filter-numbers
-        url = "{}/{}/query".format(config[kind]["mapserver"], config[kind]["table"])
-        GDW_DBK = gdf.at[name, "GDW_DBK"]
-        params = {"where": f"GDW_DBK = {GDW_DBK}", "f": "pjson"}
-        r = requests.get(url, params=params, timeout=timeout)
-        if not r.ok:
-            raise (ValueError(f"Retreiving data from {url} failed"))
-        for feature in r.json()["features"]:
-            piezometer_nr = feature["attributes"]["PIEZOMETER_NR"]
-            url = f"{download_url}/{name}/{piezometer_nr}"
+        for piezometer_nr in range(1, gdf.at[name, "ST_CNT"] + 1):
+            url = f"{download_url}/{name}/{piezometer_nr:03d}"
             if to_path is not None:
-                to_file = os.path.join(to_path, f"{name}_{piezometer_nr}.csv")
+                to_file = os.path.join(to_path, f"{name}_{piezometer_nr:03d}.csv")
                 if to_zip is not None:
                     files.append(to_file)
                 if not redownload and os.path.isfile(to_file):
