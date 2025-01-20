@@ -30,4 +30,4 @@ homepage = "https://github.com/ArtesiaWater/brodata"
 issues = "https://github.com/ArtesiaWater/brodata/issues"
 
 [project.optional-dependencies]
-ci = ["pytest", "pytest-sugar"]
+ci = ["pytest", "pytest-sugar", "ipython"]
