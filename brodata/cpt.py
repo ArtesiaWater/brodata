@@ -1,4 +1,6 @@
 import logging
+import requests
+import tempfile
 import pandas as pd
 from io import StringIO
 from . import bro
@@ -143,3 +145,73 @@ class ConePenetrationTest(bro.FileOrUrl):
             self.removedLayer = pd.DataFrame(self.removedLayer)
             if "sequenceNumber" in self.removedLayer.columns:
                 self.removedLayer = self.removedLayer.set_index("sequenceNumber")
+
+
+def get_graph_types(timeout=5):
+    """
+    Get the graph types that can be generated for CPT by the REST API of the BRO.
+
+    Parameters
+    ----------
+    timeout : int or float, optional
+        A number indicating how many seconds to wait for the client to make a connection
+        and/or send a response. The default is 5.
+
+    Returns
+    -------
+    pd.DataFrame
+        A Pandas DataFrame that contains the supported graph types, with the columns
+        'name' and 'description'. The index of this DataFrame contains the strings that
+        can be used for the graphType-argument in nlmod.cpt.graph().
+
+    """
+    url = "https://publiek.broservices.nl/sr/cpt/v1/result/graph/types"
+    r = requests.get(url)
+    supported_graphs = r.json()["supportedGraphs"]
+    assert len(supported_graphs) == 1
+    return pd.DataFrame(supported_graphs[0]["graphs"]).set_index("graphType")
+
+
+def graph(
+    xml_file, graphType="cptCombinedLength", to_file=None, timeout=5, return_fname=False
+):
+    """
+    Generate a svg-graph of a cpt-file (ConePenetrationTest).
+
+    Parameters
+    ----------
+    xml_file : str
+        The filename of the xml-file to generate a graphical representation of.
+    graphType : str, optional
+        The type of graph. Run `brodata.cpt.get_graph_types()` to view available graph
+        types. The default is "cptCombinedLength".
+    to_file : str, optional
+        The filename to save the svg-file to. The default is None.
+    timeout : int or float, optional
+        A number indicating how many seconds to wait for the client to make a connection
+        and/or send a response. The default is 5.
+    return_fname : bool, optional
+        If True, Return the filename of the svg-file. The default is False.
+
+    Returns
+    -------
+    IPython.display.SVG or str
+        A graphical representation of the svg-file or the filename of the svg-file.
+
+    """
+    url = "https://publiek.broservices.nl/sr/cpt/v1/result/graph/dispatch"
+
+    params = {"graphType": graphType}
+    with open(xml_file, "rb") as data:
+        r = requests.post(url, data=data, timeout=timeout, params=params)
+    r.raise_for_status()
+    if to_file is None:
+        to_file = tempfile.NamedTemporaryFile(suffix=".svg").name
+    with open(to_file, "w", encoding="utf-8") as f:
+        f.write(r.text)
+    if return_fname:
+        return to_file
+    else:
+        from IPython.display import SVG
+
+        return SVG(to_file)

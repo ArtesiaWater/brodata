@@ -1,4 +1,7 @@
+import os
 import logging
+import requests
+import tempfile
 import pandas as pd
 from . import bro
 from .webservices import get_gdf
@@ -170,6 +173,86 @@ class GeotechnicalBoreholeResearch(_BoreholeResearch):
     _xmlns = "http://www.broservices.nl/xsd/dsbhr-gt/2.1"
     _rest_url = "https://publiek.broservices.nl/sr/bhrgt/v2"
     _char = "BHR_GT_C"
+
+
+def bhrgt_graph(
+    xml_file,
+    to_file=None,
+    timeout=5,
+    language="nl",
+    asNAP=False,
+    topMv=None,
+    bottomMv=None,
+    topNap=None,
+    bottomNap=None,
+    return_fname=False,
+):
+    """
+    Generate a svg-graph of a bhrgt-file (GeotechnicalBoreholeResearch).
+
+    Parameters
+    ----------
+    xml_file : str
+        The filename of the xml-file to generate a graphical representation of.
+    to_file : str, optional
+        The filename to save the svg-file to. The default is None.
+    timeout : int or float, optional
+        A number indicating how many seconds to wait for the client to make a connection
+        and/or send a response. The default is 5.
+    language : str, optional
+        DESCRIPTION. The default is "nl".
+    asNAP : bool, optional
+        If True, display the height of the drilling in m NAP. If False, display the
+        height in meter below surface level. The default is False.
+    topMv : float, optional
+        Highest point in the graph, in m below surface level (mv). Needs to be specified
+        together with bottomMv. The default is None.
+    bottomMv : float, optional
+        Lowest point in the graph, in m below surface level (mv). Needs to be specified
+        together with topMv. The default is None.
+    topNap : float, optional
+        Highest point in the graph, in m NAP. Needs to be specified together with
+        bottomNap. The default is None.
+    bottomNap : float, optional
+        Lowest point in the graph, in m NAP. Needs to be specified together with
+        topNAP. The default is None.
+    return_fname : bool, optional
+        If True, Return the filename of the svg-file. The default is False.
+
+    Returns
+    -------
+    IPython.display.SVG or str
+        A graphical representation of the svg-file or the filename of the svg-file.
+
+    """
+    url = "https://publiek.broservices.nl/sr/bhrgt/v2/profile/graph/dispatch"
+    params = {"language": language, "asNAP": asNAP}
+
+    if ((topMv is None) + (bottomMv is None)) == 1:
+        raise (ValueError("Both topMv and bottomMv need to be specified, or none"))
+    if topMv is not None:
+        params["topMv"] = topMv
+        params["bottomMv"] = bottomMv
+
+    if ((topNap is None) + (bottomNap is None)) == 1:
+        raise (ValueError("Both topNap and bottomNap need to be specified, or none"))
+    if topNap is not None:
+        params["topNap"] = topNap
+        params["bottomNap"] = bottomNap
+
+    with open(xml_file, "rb") as data:
+        r = requests.post(url, data=data, timeout=timeout, params=params)
+    r.raise_for_status()
+    if to_file is None:
+        to_file = tempfile.NamedTemporaryFile(suffix=".svg").name
+    with open(to_file, "w", encoding="utf-8") as f:
+        f.write(r.text)
+    if return_fname:
+        return to_file
+    else:
+        from IPython.display import SVG
+
+        return SVG(to_file)
 
 
 class PedologicalBoreholeResearch(_BoreholeResearch):
