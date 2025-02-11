@@ -152,3 +152,16 @@ def get_parameter_list(url=None, timeout=5, to_file=None, **kwargs):
 
     df = pd.json_normalize(data).set_index("code")
     return df
+
+
+def _get_empty_observation_df():
+    columns = [
+        "analyticalTechnique",
+        "valuationMethod",
+        "parameter",
+        "analysisMeasurementValue",
+        "uom",
+        "qualityControlStatus",
+        "limitSymbol",
+    ]
+    return pd.DataFrame(columns=columns).set_index("analysisDate")

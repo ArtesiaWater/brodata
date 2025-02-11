@@ -114,6 +114,10 @@ def test_gar_report():
     brodata.gar.GroundwaterAnalysisReport.from_bro_id("GAR000000019636")
 
 
+def test_gar_get_parameter_list():
+    brodata.gar.get_parameter_list()
+
+
 def test_soil_face_research():
     fname = os.path.join("tests", "data", "SFR000000000243.xml")
     brodata.sfr.SoilFaceResearch(fname)

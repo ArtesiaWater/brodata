@@ -8,7 +8,7 @@ import pandas as pd
 from tqdm import tqdm
 import geopandas as gpd
 
-from . import bro, gld
+from . import bro, gld, gar
 from .util import _save_data_to_zip
 from .gld import GroundwaterLevelDossier
 from .gar import GroundwaterAnalysisReport
@@ -419,7 +419,7 @@ def get_observations(
     return pd.DataFrame(tubes)
 
 
-def get_tube_observations(gwm_id, tube_number, **kwargs):
+def get_tube_observations(gwm_id, tube_number, kind="gld", **kwargs):
     """
     Get the observations of a single groundwater monitoring tube.
 
@@ -438,12 +438,12 @@ def get_tube_observations(gwm_id, tube_number, **kwargs):
         A DataFrame containing the observations.
 
     """
-    df = get_observations(gwm_id, tube_number=tube_number, **kwargs)
+    df = get_observations(gwm_id, tube_number=tube_number, kind=kind, **kwargs)
     if df.empty:
-        return gld._get_empty_observation_df()
+        return _get_empty_observation_df(kind)
     else:
-        assert df.shape[0] == 1
-        return df["observation"][0]
+        data_column = _get_data_column(kind)
+        return _combine_observations(df[data_column], kind=kind)
 
 
 def get_tube_gdf(gmws, index=None):
@@ -670,11 +670,10 @@ def get_data_in_extent(
 
     if combine and kind in ["gld", "gar"]:
         if kind == "gld":
-            datcol = "observation"
             idcol = "groundwaterLevelDossier"
         elif kind == "gar":
-            datcol = "laboratoryAnalysis"
             idcol = "groundwaterAnalysisReport"
+        datcol = _get_data_column(kind)
 
         logger.info("Combining well-properties, tube-properties and observations")
 
@@ -683,14 +682,43 @@ def get_data_in_extent(
         for index in gdf.index:
             if index not in obs_df.index:
                 continue
-            dfs = obs_df.loc[[index], datcol]
-            data[index] = pd.concat(dfs[~dfs.isna()].values).sort_index()
+            data[index] = _combine_observations(obs_df.loc[[index], datcol], kind=kind)
             ids[index] = list(obs_df.loc[[index], "broId"])
         gdf[datcol] = data
         gdf[idcol] = ids
         return gdf
     else:
         return gdf, obs_df
+
+
+def _get_data_column(kind):
+    if kind == "gld":
+        return "observation"
+    elif kind == "gar":
+        return "laboratoryAnalysis"
+    else:
+        raise (NotImplementedError(f"Measurement-kind {kind} not supported yet"))
+
+
+def _get_empty_observation_df(kind):
+    if kind == "gld":
+        return gld._get_empty_observation_df()
+    elif kind == "gar":
+        return gar._get_empty_observation_df()
+    else:
+        raise (NotImplementedError(f"Measurement-kind {kind} not supported yet"))
+
+
+def _combine_observations(observations, kind):
+    obslist = []
+    for observation in observations:
+        if not isinstance(observation, pd.DataFrame) or observation.empty:
+            continue
+        obslist.append(observation)
+    if len(obslist) == 0:
+        return _get_empty_observation_df(kind)
+    else:
+        return pd.concat(obslist).sort_index()
 
 
 def get_tube_gdf_from_characteristics(
