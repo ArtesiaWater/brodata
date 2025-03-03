@@ -463,3 +463,62 @@ class FileOrUrl(ABC):
         time_instant = node.find("gml:TimeInstant", ns)
         time_position = time_instant.find("gml:timePosition", ns)
         return pd.to_datetime(time_position.text)
+
+
+def get_bronhouders(index="kvk", **kwargs):
+    """
+    Get the name, kvk-number and the identifier of bronhouders (data owners).
+
+    Parameters
+    ----------
+    index : string, optional
+        The column to set as the index of the resulting DataFrame. The default is "kvk".
+    **kwargs : dict
+        Kwargs are passed onto pandas.read_json().
+
+    Returns
+    -------
+    df : pd.DataFrame
+        A Pandas DataFrame, with one row per bronhouder.
+
+    """
+    url = "https://bromonitor.nl/api/rapporten/bronhouders"
+    df = pd.read_json(url, **kwargs)
+    if index is not None:
+        df = df.set_index(index)
+    return df
+
+
+def get_brondocumenten_per_bronhouder(index=("kvk", "type"), timeout=5, **kwargs):
+    """
+    Get the number of documents per bronhouder (data owner).
+
+    Parameters
+    ----------
+    index : str, tuple or list, optional
+        The column(s) to set as the index of the resulting DataFrame. The default is
+        "kvk" and "type".
+    timeout : int or float, optional
+        A number indicating how many seconds to wait for the client to make a connection
+        and/or send a response. The default is 5.
+    **kwargs : dict
+        Kwargs are passed onto pandas.DataFrame().
+
+    Returns
+    -------
+    df : pd.DataFrame
+        A Pandas DataFrame, with one row per combination of bronhouder and data-type.
+
+    """
+    url = "https://bromonitor.nl/api/rapporten/brondocumenten-per-bronhouder"
+    r = requests.get(url, timeout=timeout)
+    if not r.ok:
+        raise (Exception("Download of brondocumenten per bronhouder failed"))
+    df = pd.DataFrame(r.json()["data"], **kwargs)
+    if "key" in df.columns:
+        df = pd.concat((pd.DataFrame(list(df["key"])), df.drop(columns="key")), axis=1)
+    if index is not None:
+        if isinstance(index, tuple):
+            index = list(index)
+        df = df.set_index(index)
+    return df

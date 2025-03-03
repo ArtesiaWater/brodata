@@ -3,6 +3,14 @@ import brodata
 from pandas.testing import assert_frame_equal
 
 
+def test_get_bronhouders():
+    brodata.bro.get_bronhouders()
+
+
+def test_get_brondocumenten_per_bronhouder():
+    brodata.bro.get_brondocumenten_per_bronhouder()
+
+
 def test_get_gmw_of_bronhouder():
     brodata.gmw.get_bro_ids_of_bronhouder(30277172)
 
