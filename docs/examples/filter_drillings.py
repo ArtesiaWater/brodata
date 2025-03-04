@@ -7,9 +7,6 @@ extent = [118000, 118400, 439560, 440100]
 
 gdf_meta = brodata.dino.get_gdf(kind="Geologisch booronderzoek", extent=extent)
 
-# %% Filter metadata
-
-
 # %% download individual drillings
 data = {}
 for dino_nr in tqdm(gdf_meta.index):
