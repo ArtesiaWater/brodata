@@ -10,8 +10,8 @@ logger = logging.getLogger(__name__)
 
 def objects_to_gdf(
     objects,
-    x="X-coordinaat",
-    y="Y-coordinaat",
+    x="x",
+    y="y",
     geometry=None,
     index=None,
     to_gdf=True,
@@ -20,17 +20,23 @@ def objects_to_gdf(
 
     Parameters
     ----------
-    dino_collection: list of dinoloket objects
-        ondersteund deze dinoloket objecten: Grondwaterstanden, Peilschaal
-        of Boormonsterprofile
+    objects: dictionary of bro or dinoloket objects
+        dictionary of objects to convert to (geo)dataframe
+    geometry: str
+        name of column of geometry
     x: str
         name of column of x-coordinate
     y: str
         name of column of y-coordinate
+    index: str or list of str
+        name of column to use as index
+    to_gdf: bool
+        convert to geodataframe
 
     Returns
     -------
-    gdf: GeoDataFrame
+    gdf: GeoDataFrame or DataFrame
+        Returns a GeoDataFrame if to_gdf is True, otherwise a DataFrame
     """
     import geopandas as gpd
 
@@ -49,9 +55,9 @@ def objects_to_gdf(
             logger.warning("no data found")
         else:
             if x not in df:
-                logger.warning(f"{x} not found in data")
+                logger.warning(f"{x} not found in data. No geometry column created.")
             elif y not in df:
-                logger.warning(f"{y} not found in data")
+                logger.warning(f"{y} not found in data. No geometry column created.")
             else:
                 geometry = gpd.points_from_xy(df[x], df[y])
     gdf = gpd.GeoDataFrame(df, geometry=geometry)
