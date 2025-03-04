@@ -1,11 +1,6 @@
-# -*- coding: utf-8 -*-
-"""
-Created on Thu Nov 14 10:54:10 2024
-
-@author: ruben
-"""
+# %%
 import brodata
-from tqdm import tqdm
+from tqdm.auto import tqdm
 
 # %% Download metadata
 extent = [118000, 118400, 439560, 440100]
