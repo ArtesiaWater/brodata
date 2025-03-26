@@ -224,7 +224,7 @@ class CsvFileOrUrl:
                     # BoorgatMetingen are las files that are delivered in a zip-file
                     with ZipFile(BytesIO(req.content)) as myzip:
                         files = myzip.namelist()
-                        assert len(files) == 1
+                        assert len(files) == 1, "Only one file in the zipfile supported"
                         with myzip.open(files[0]) as myfile:
                             if to_file is not None:
                                 with open(to_file, "wb") as f:
@@ -485,7 +485,7 @@ class Boorgatmeting(CsvFileOrUrl):
         # retrieve properties if they exist
 
         props = {}
-        if "Well" in self.las.header:
+        if hasattr(self, "las") and "Well" in self.las.header:
             items = self.las.header["Well"]
             for item in items:
                 props[item.descr] = item.value
