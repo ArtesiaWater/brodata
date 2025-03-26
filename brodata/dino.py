@@ -1,9 +1,11 @@
 import os
+import logging
 import requests
 from tqdm import tqdm
 import numpy as np
 import pandas as pd
-from io import StringIO, TextIOWrapper
+from io import StringIO, BytesIO, TextIOWrapper
+from zipfile import ZipFile
 from shapely.geometry import LineString
 from .webservices import get_configuration, get_gdf
 from .util import (
@@ -11,7 +13,10 @@ from .util import (
     _get_data_from_path,
     _get_data_from_zip,
     _save_data_to_zip,
+    _format_repr,
 )
+
+logger = logging.getLogger(__name__)
 
 
 def _get_data_within_extent(
@@ -29,6 +34,7 @@ def _get_data_within_extent(
     geometry=None,
     index="NITG-nr",
     to_gdf=True,
+    max_retries=2,
 ):
     if isinstance(extent, str):
         data = _get_data_from_path(extent, dino_cl, silent=silent)
@@ -64,7 +70,9 @@ def _get_data_within_extent(
             if not redownload and os.path.isfile(to_file):
                 data[dino_nr] = dino_cl(to_file)
                 continue
-        data[dino_nr] = dino_cl.from_dino_nr(dino_nr, timeout=timeout, to_file=to_file)
+        data[dino_nr] = dino_cl.from_dino_nr(
+            dino_nr, timeout=timeout, to_file=to_file, max_retries=max_retries
+        )
     if to_zip is not None:
         _save_data_to_zip(to_zip, files, remove_path_again, to_path)
 
@@ -146,8 +154,35 @@ def get_grondwatersamenstelling(extent, **kwargs):
 
 
 def get_geologisch_booronderzoek(extent, **kwargs):
+    logger.warning(
+        "`get_geologisch_booronderzoek` is deprecated. Use `get_boormonsterprofiel` instead"
+    )
     dino_class = GeologischBooronderzoek
     kind = "Geologisch booronderzoek"
+    return _get_data_within_extent(dino_class, kind, extent, **kwargs)
+
+
+def get_boormonsterprofiel(extent, **kwargs):
+    dino_class = Boormonsterprofiel
+    kind = "Boormonsterprofiel"
+    return _get_data_within_extent(dino_class, kind, extent, **kwargs)
+
+
+def get_boorgatmeting(extent, **kwargs):
+    dino_class = Boorgatmeting
+    kind = "Boorgatmeting"
+    return _get_data_within_extent(dino_class, kind, extent, **kwargs)
+
+
+def get_chemische_analyse(extent, **kwargs):
+    dino_class = ChemischeAnalyse
+    kind = "Chemische analyse"
+    return _get_data_within_extent(dino_class, kind, extent, **kwargs)
+
+
+def get_korrelgrootte_analyse(extent, **kwargs):
+    dino_class = KorrelgrootteAnalyse
+    kind = "Korrelgrootte analyse"
     return _get_data_within_extent(dino_class, kind, extent, **kwargs)
 
 
@@ -181,16 +216,41 @@ class CsvFileOrUrl:
                     req = requests.get(url_or_file, timeout=timeout)
                 if not req.ok:
                     raise (Exception((f"Retieving data from {url_or_file} failed")))
-                if to_file is not None:
-                    with open(to_file, "w") as f:
-                        f.write(req.text)
-                self._read_contents(StringIO(req.text))
+                is_zipfile = False
+                if "content-disposition" in req.headers:
+                    if req.headers["content-disposition"].endswith(".zip"):
+                        is_zipfile = True
+                if is_zipfile:
+                    # BoorgatMetingen are las files that are delivered in a zip-file
+                    with ZipFile(BytesIO(req.content)) as myzip:
+                        files = myzip.namelist()
+                        assert len(files) == 1
+                        with myzip.open(files[0]) as myfile:
+                            if to_file is not None:
+                                with open(to_file, "wb") as f:
+                                    f.write(myfile.read())
+                            self._read_contents(TextIOWrapper(myfile))
+                else:
+                    if to_file is not None:
+                        with open(to_file, "w") as f:
+                            f.write(req.text)
+                    self._read_contents(StringIO(req.text))
             else:
                 with open(to_file, "r") as f:
                     self._read_contents(f)
         else:
             with open(url_or_file, "r") as f:
                 self._read_contents(f)
+
+    def __repr__(self):
+        # retrieve properties if they exist
+        propdict = {"NITG-nr": "NITG-nr", "X-coordinaat": "x", "Y-coordinaat": "y"}
+        props = {}
+        for key in propdict:
+            if hasattr(self, key):
+                props[propdict[key]] = getattr(self, key)
+        name = _format_repr(self, props)
+        return name
 
     @classmethod
     def from_dino_nr(cls, dino_nr, **kwargs):
@@ -251,6 +311,19 @@ class CsvFileOrUrl:
 class Oppervlaktewaterstand(CsvFileOrUrl):
     _download_url = "https://www.dinoloket.nl/uitgifteloket/api/wo/owo/full"
 
+    def __repr__(self):
+        # retrieve properties if they exist
+
+        props = {}
+        if hasattr(self, "meta") and not self.meta.empty:
+            s = self.meta.iloc[-1]
+            propdict = {"Locatie": "Locatie", "X-coordinaat": "x", "Y-coordinaat": "y"}
+            for key in propdict:
+                if key in s:
+                    props[propdict[key]] = s[key]
+        name = _format_repr(self, props)
+        return name
+
     def _read_contents(self, f):
         self.props, line = self._read_properties_csv_rows(f, merge_columns=True)
         if line.startswith(
@@ -280,6 +353,24 @@ class Grondwaterstand(CsvFileOrUrl):
     @classmethod
     def from_dino_nr(cls, dino_nr, filter_nr, **kwargs):
         return cls(f"{cls._download_url}/{dino_nr}/{filter_nr:03d}", **kwargs)
+
+    def __repr__(self):
+        # retrieve properties if they exist
+
+        props = {}
+        if hasattr(self, "meta") and not self.meta.empty:
+            s = self.meta.iloc[-1]
+            propdict = {
+                "Locatie": "Locatie",
+                "Filternummer": "filter",
+                "X-coordinaat": "x",
+                "Y-coordinaat": "y",
+            }
+            for key in propdict:
+                if key in s:
+                    props[propdict[key]] = s[key]
+        name = _format_repr(self, props)
+        return name
 
     def _read_contents(self, f):
         self.props, line = self._read_properties_csv_rows(f, merge_columns=True)
@@ -318,6 +409,8 @@ class Grondwatersamenstelling(CsvFileOrUrl):
         if line.startswith('"LOCATIE gegevens"'):
             line = f.readline()
             self.locatie_gegevens, line = self._read_properties_csv_columns(f)
+            for key in self.locatie_gegevens:
+                setattr(self, key, self.locatie_gegevens[key])
 
         # KWALITEIT gegevens VLOEIBAAR
         if line.startswith('"KWALITEIT gegevens VLOEIBAAR"'):
@@ -336,7 +429,7 @@ class Grondwatersamenstelling(CsvFileOrUrl):
         return d
 
 
-class GeologischBooronderzoek(CsvFileOrUrl):
+class Boormonsterprofiel(CsvFileOrUrl):
     _download_url = (
         "https://www.dinoloket.nl/uitgifteloket/api/brh/sampledescription/csv"
     )
@@ -349,6 +442,8 @@ class GeologischBooronderzoek(CsvFileOrUrl):
         if line.startswith('"ALGEMENE GEGEVENS BORING"'):
             line = f.readline()
             self.algemene_gegevens_boring, line = self._read_properties_csv_columns(f)
+            for key in self.algemene_gegevens_boring:
+                setattr(self, key, self.algemene_gegevens_boring[key])
         if line.startswith('"ALGEMENE GEGEVENS LITHOLOGIE"'):
             line = f.readline()
             self.algemene_gegevens_lithologie, line = self._read_properties_csv_columns(
@@ -377,6 +472,94 @@ class GeologischBooronderzoek(CsvFileOrUrl):
         return d
 
 
+class GeologischBooronderzoek(Boormonsterprofiel):
+    # In brodata, Boormonsterprofiel used to be called GeologischBooronderzoek.
+    # Therefore, this is a copy of GeologischBooronderzoek, for backwards compatibility
+    pass
+
+
+class Boorgatmeting(CsvFileOrUrl):
+    _download_url = "https://www.dinoloket.nl/uitgifteloket/api/brh/log/las"
+
+    def __repr__(self):
+        # retrieve properties if they exist
+
+        props = {}
+        if "Well" in self.las.header:
+            items = self.las.header["Well"]
+            for item in items:
+                props[item.descr] = item.value
+        name = _format_repr(self, props)
+        return name
+
+    def _read_contents(self, f):
+        import lasio
+
+        self.las = lasio.read(f)
+
+    def to_dict(self):
+        import lasio
+
+        return lasio.las.JSONEncoder().default(self.las)
+
+    def plot(self, ax=None, columns=None, z=0.0, **kwargs):
+        if ax is None:
+            import matplotlib.pyplot as plt
+
+            ax = plt.gca()
+        df = self.las.df()
+        if columns is None:
+            columns = df.columns
+        elif isinstance(columns, str):
+            columns = [columns]
+
+        for column in df.columns:
+            # df.reset_index().plot(y="DEPTH", x=column)
+            ax.plot(df[column], z - df.index, label=column, **kwargs)
+        return ax
+
+
+class ChemischeAnalyse(CsvFileOrUrl):
+    _download_url = (
+        "https://www.dinoloket.nl/uitgifteloket/api/brh/chemicalanalysis/csv"
+    )
+
+    def _read_contents(self, f):
+        # read first line and place cursor at start of document again
+        start = f.tell()
+        line = f.readline().rstrip("\n")
+        f.seek(start)
+
+        # LOCATIE gegevens
+        if line.startswith('"LOCATIE gegevens"'):
+            line = f.readline()
+            self.locatie_gegevens, line = self._read_properties_csv_columns(f)
+            for key in self.locatie_gegevens:
+                setattr(self, key, self.locatie_gegevens[key])
+
+        # KWALITEIT gegevens VLOEIBAAR
+        if line.startswith('"KWALITEIT gegevens VAST"'):
+            line = f.readline()
+            self.kwaliteit_gegevens_vast, line = self._read_csv_part(f)
+            for column in ["Monster datum", "Analyse datum"]:
+                if column in self.kwaliteit_gegevens_vast.columns:
+                    self.kwaliteit_gegevens_vast[column] = pd.to_datetime(
+                        self.kwaliteit_gegevens_vast[column], dayfirst=True
+                    )
+
+    def to_dict(self):
+        d = {**self.locatie_gegevens}
+        if hasattr(self, "kwaliteit_gegevens_vast"):
+            d["kwaliteit_gegevens_vast"] = self.kwaliteit_gegevens_vast
+        return d
+
+
+class KorrelgrootteAnalyse(ChemischeAnalyse):
+    _download_url = (
+        "https://www.dinoloket.nl/uitgifteloket/api/brh/grainsizeanalysis/csv"
+    )
+
+
 class VerticaalElektrischSondeeronderzoek(CsvFileOrUrl):
     _download_url = "https://www.dinoloket.nl/uitgifteloket/api/ves/csv"
 
@@ -391,6 +574,8 @@ class VerticaalElektrischSondeeronderzoek(CsvFileOrUrl):
         if line.startswith('"VES Overzicht"'):
             line = f.readline()
             self.ves_overzicht, line = self._read_properties_csv_columns(f)
+            for key in self.ves_overzicht:
+                setattr(self, key, self.ves_overzicht[key])
 
         # Kop
         if line.startswith('"Kop"'):

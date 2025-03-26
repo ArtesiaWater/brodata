@@ -48,14 +48,26 @@ def test_grondwatersamenstelling_from_file():
 
 
 def test_geologisch_booronderzoek():
-    brodata.dino.GeologischBooronderzoek.from_dino_nr("B42E0199")
+    brodata.dino.Boormonsterprofiel.from_dino_nr("B42E0199")
 
 
 def test_geologisch_booronderzoek_from_file():
     fname = os.path.join("tests", "data", "B38B2152.csv")
-    gb = brodata.dino.GeologischBooronderzoek(fname)
+    gb = brodata.dino.Boormonsterprofiel(fname)
     brodata.plot.dino_lithology(gb.lithologie_lagen)
     brodata.plot.dino_lithology(gb.lithologie_lagen, x=None)
+
+
+def test_boorgatmeting():
+    brodata.dino.Boorgatmeting.from_dino_nr("B02G0308")
+
+
+def test_korrelgrootte_analyse():
+    brodata.dino.KorrelgrootteAnalyse.from_dino_nr("B02G0286")
+
+
+def test_chemische_analyse():
+    brodata.dino.ChemischeAnalyse.from_dino_nr("B02G0286")
 
 
 def test_get_verticaal_elektrisch_sondeeronderzoek_within_extent():
@@ -75,7 +87,12 @@ def test_grondwatersamenstelling_within_extent():
 
 def test_get_geologisch_booronderzoek_within_extent():
     extent = [118000, 118400, 439560, 440100]
-    gdf = brodata.dino.get_geologisch_booronderzoek(extent)
+    brodata.dino.get_geologisch_booronderzoek(extent)
+
+
+def test_get_boormonsterprofiel_within_extent():
+    extent = [118000, 118400, 439560, 440100]
+    gdf = brodata.dino.get_boormonsterprofiel(extent)
 
     # plot the lithology along a line from west to east
     y_mean = gdf.geometry.y.mean()

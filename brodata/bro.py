@@ -14,6 +14,7 @@ from .util import (
     _get_data_from_path,
     _get_data_from_zip,
     _save_data_to_zip,
+    _format_repr,
 )
 
 logger = logging.getLogger(__name__)
@@ -333,22 +334,12 @@ class FileOrUrl(ABC):
 
     def __repr__(self):
         # retrieve properties if they exist
+        propdict = {"broId": "broId", "x": "x", "y": "y"}
         props = {}
-        if hasattr(self, "broId"):
-            props["broId"] = self.broId
-        if hasattr(self, "x"):
-            props["x"] = self.x
-        if hasattr(self, "y"):
-            props["y"] = self.y
-        # format these proerties into a string
-        props_str = ""
-        for key in props:
-            value = props[key]
-            props_str = f"{props_str}{key}={value.__repr__()}, "
-        if len(props_str) > 1:
-            props_str = props_str[:-2]
-        # generate name
-        name = f"{self.__class__.__name__}({props_str})"
+        for key in propdict:
+            if hasattr(self, key):
+                props[propdict[key]] = getattr(self, key)
+        name = _format_repr(self, props)
         return name
 
     @abstractmethod

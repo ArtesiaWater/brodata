@@ -66,8 +66,8 @@ def arcrest(
         "where": "1=1",
     }
     if extent is not None:
-        xmin, xmax, ymin, ymax = extent
         params["spatialRel"] = "esriSpatialRelIntersects"
+        xmin, xmax, ymin, ymax = extent
         params["geometry"] = f"{xmin},{ymin},{xmax},{ymax}"
         params["geometryType"] = "esriGeometryEnvelope"
         params["inSR"] = sr
@@ -285,6 +285,21 @@ def get_configuration(mapserver_url=None):
         "mapserver": f"{gdn_mapserver_url}/lks_gbo_rd_v1/MapServer",
         "download": "https://www.dinoloket.nl/uitgifteloket/api/brh/sampledescription/csv",
     }
+    config["Boormonsterprofiel"] = config["Geologisch booronderzoek"].copy()
+    config["Boormonsterprofiel"]["greater_than_0"] = "MP_CNT"
+
+    config["Boormonsterfoto"] = config["Geologisch booronderzoek"].copy()
+    config["Boormonsterfoto"]["greater_than_0"] = "MF_CNT"
+
+    config["Boorgatmeting"] = config["Geologisch booronderzoek"].copy()
+    config["Boorgatmeting"]["greater_than_0"] = "BM_CNT"
+
+    config["Chemische analyse"] = config["Geologisch booronderzoek"].copy()
+    config["Chemische analyse"]["greater_than_0"] = "CA_CNT"
+
+    config["Korrelgrootte analyse"] = config["Geologisch booronderzoek"].copy()
+    config["Korrelgrootte analyse"]["greater_than_0"] = "KA_CNT"
+
     config["Geologisch waterbodemonderzoek"] = {
         "mapserver": f"{gdn_mapserver_url}/lks_wbo_rd_v1/MapServer",
         "download": config["Geologisch booronderzoek"]["download"],
