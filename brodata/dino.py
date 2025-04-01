@@ -2,6 +2,7 @@ import os
 import logging
 import requests
 from tqdm import tqdm
+from pathlib import Path
 import numpy as np
 import pandas as pd
 from io import StringIO, BytesIO, TextIOWrapper
@@ -36,7 +37,7 @@ def _get_data_within_extent(
     to_gdf=True,
     max_retries=2,
 ):
-    if isinstance(extent, str):
+    if isinstance(extent, (str, Path)):
         data = _get_data_from_path(extent, dino_cl, silent=silent)
         return objects_to_gdf(data, x, y, geometry, index, to_gdf)
 

@@ -166,7 +166,7 @@ def read_zipfile(fname, pathnames=None):
 
 
 def _get_data_from_path(from_path, dino_class, silent=False, ext=".csv"):
-    if from_path.endswith(".zip"):
+    if str(from_path).endswith(".zip"):
         return _get_data_from_zip(from_path, dino_class, silent=silent)
     files = os.listdir(from_path)
     files = [file for file in files if file.endswith(ext)]
