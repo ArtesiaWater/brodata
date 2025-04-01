@@ -122,6 +122,7 @@ def get_lithology_color(hoofdgrondsoort, zandmediaanklasse=None, drilling=None):
                 "matig fijn (O)",
                 "matig grof",
                 "matig grof (O)",
+                "midden categorie (O)",
             ]:
                 label = "Zand midden categorie"
                 color = (243, 225, 6)
