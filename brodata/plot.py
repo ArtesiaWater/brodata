@@ -217,10 +217,9 @@ def lithology_along_line(
 ):
     from shapely.geometry import LineString
 
-    if ax is None:
-        ax = plt.gca()
-    if not isinstance(line, LineString):
-        line = LineString(line)
+    ax = plt.gca() if ax is None else ax
+
+    line = LineString(line) if not isinstance(line, LineString) else line
 
     if max_distance is not None:
         gdf = gdf[gdf.distance(line) < max_distance]
@@ -235,6 +234,7 @@ def lithology_along_line(
                 z=gdf.at[index, "Maaiveldhoogte (m tov NAP)"],
                 x=s[index],
                 drilling=index,
+                ax=ax,
                 **kwargs,
             )
         elif kind == "bro":
@@ -245,13 +245,12 @@ def lithology_along_line(
                 )
                 logger.warning(msg)
             df = gdf.at[index, "descriptiveBoreholeLog"][0]["layer"]
-            bro_lithology(df, x=s[index], drilling=index, **kwargs)
+            bro_lithology(df, x=s[index], drilling=index, ax=ax, **kwargs)
         else:
             raise (Exception(f"Unknown kind: {kind}"))
 
-    if legend:
-        # add a legend
-        add_lithology_legend(ax)
+    if legend: # add a legend
+        add_lithology_legend(ax=ax)
 
     return ax
 
