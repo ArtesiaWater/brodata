@@ -1,6 +1,8 @@
 import os
-import brodata
+
 from pandas.testing import assert_frame_equal
+
+import brodata
 
 
 def test_get_bronhouders():

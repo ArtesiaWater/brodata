@@ -4,10 +4,9 @@ import time
 from glob import glob
 
 import nbformat
+import nlmod
 import numpy as np
 from nbconvert.preprocessors import ExecutePreprocessor
-
-import nlmod
 
 logger = nlmod.util.get_color_logger("INFO")
 

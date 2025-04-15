@@ -1,6 +1,7 @@
 # %%
-import brodata
 from tqdm.auto import tqdm
+
+import brodata
 
 # %% Download metadata
 extent = [118000, 118400, 439560, 440100]
