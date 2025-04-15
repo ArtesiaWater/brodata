@@ -1,3 +1,4 @@
+# %%
 import os
 
 from pandas.testing import assert_frame_equal
@@ -164,3 +165,8 @@ def test_get_cpt_test_with_dissipation_test():
 def test_groundwater_utilisation_facility():
     fname = os.path.join("tests", "data", "GUF000000016723.xml")
     brodata.guf.GroundwaterUtilisationFacility(fname)
+
+
+# %%
+extent = [117700, 118700, 439400, 440400]
+brodata.gmw.get_characteristics(extent=extent)

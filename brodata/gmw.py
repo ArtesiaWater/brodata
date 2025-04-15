@@ -722,9 +722,9 @@ def get_tube_gdf_from_characteristics(
 
 
 get_bro_ids_of_bronhouder = partial(
-    bro._get_bro_ids_of_bronhouder, cl=GroundwaterMonitoringNetwork
+    bro._get_bro_ids_of_bronhouder, cl=GroundwaterMonitoringWell
 )
 get_bro_ids_of_bronhouder.__doc__ = bro._get_bro_ids_of_bronhouder.__doc__
 
-get_characteristics = partial(bro._get_characteristics, cl=GroundwaterMonitoringNetwork)
+get_characteristics = partial(bro._get_characteristics, cl=GroundwaterMonitoringWell)
 get_characteristics.__doc__ = bro._get_characteristics.__doc__
