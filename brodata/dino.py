@@ -1,21 +1,23 @@
-import os
 import logging
-import requests
-from tqdm import tqdm
+import os
+from io import BytesIO, StringIO, TextIOWrapper
 from pathlib import Path
+from zipfile import ZipFile
+
 import numpy as np
 import pandas as pd
-from io import StringIO, BytesIO, TextIOWrapper
-from zipfile import ZipFile
+import requests
 from shapely.geometry import LineString
-from .webservices import get_configuration, get_gdf
+from tqdm import tqdm
+
 from .util import (
-    objects_to_gdf,
+    _format_repr,
     _get_data_from_path,
     _get_data_from_zip,
     _save_data_to_zip,
-    _format_repr,
+    objects_to_gdf,
 )
+from .webservices import get_configuration, get_gdf
 
 logger = logging.getLogger(__name__)
 

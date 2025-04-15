@@ -1,7 +1,10 @@
 import logging
+
 import pandas as pd
 from shapely.geometry import Point
+
 from . import bro
+from functools import partial
 
 logger = logging.getLogger(__name__)
 
@@ -237,3 +240,12 @@ class GroundwaterUtilisationFacility(bro.FileOrUrl):
             if point is not None:
                 return self._read_point(point)
         logger.warning("Other types of geometries than point not supported yet")
+
+
+get_bro_ids_of_bronhouder = partial(
+    bro._get_bro_ids_of_bronhouder, cl=GroundwaterUtilisationFacility
+)
+get_bro_ids_of_bronhouder.__doc__ = bro._get_bro_ids_of_bronhouder.__doc__
+
+get_characteristics = partial(bro._get_characteristics, cl=GroundwaterUtilisationFacility)
+get_characteristics.__doc__ = bro._get_characteristics.__doc__

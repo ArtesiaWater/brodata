@@ -1,5 +1,6 @@
-import matplotlib.pyplot as plt
 import logging
+
+import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
 
@@ -250,7 +251,7 @@ def lithology_along_line(
         else:
             raise (Exception(f"Unknown kind: {kind}"))
 
-    if legend: # add a legend
+    if legend:  # add a legend
         add_lithology_legend(ax=ax)
 
     return ax

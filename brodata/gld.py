@@ -1,9 +1,12 @@
 import logging
-import requests
 from io import StringIO
+
 import numpy as np
 import pandas as pd
+import requests
+
 from . import bro
+from functools import partial
 
 logger = logging.getLogger(__name__)
 
@@ -541,3 +544,9 @@ def process_observations(
 def _get_empty_observation_df():
     columns = ["time", "value", "qualifier"]
     return pd.DataFrame(columns=columns).set_index("time")
+
+
+get_bro_ids_of_bronhouder = partial(
+    bro._get_bro_ids_of_bronhouder, cl=GroundwaterLevelDossier
+)
+get_bro_ids_of_bronhouder.__doc__ = bro._get_bro_ids_of_bronhouder.__doc__

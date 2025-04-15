@@ -1,26 +1,13 @@
+# ruff: noqa: F401
 import logging
-import requests
 import tempfile
+
 import pandas as pd
+import requests
+
 from . import bro
-from .webservices import get_gdf
 
 logger = logging.getLogger(__name__)
-
-
-def get_bhrp_within_extent(extent, config=None, timeout=5, silent=False):
-    kind = "Bodemkundig booronderzoek (BRO)"
-    gdf = get_gdf(
-        kind,
-        config=config,
-        extent=extent,
-        timeout=timeout,
-    )
-
-    bhrp_data = {}
-    logger.warning("Reading of {kind} not supported yet")
-
-    return gdf, bhrp_data
 
 
 class _BoreholeResearch(bro.FileOrUrl):
@@ -266,3 +253,92 @@ class GeologicalBoreholeResearch(_BoreholeResearch):
     _xmlns = "http://www.broservices.nl/xsd/dsbhrg/2.0"
     _rest_url = "https://publiek.broservices.nl/sr/bhrg/v3"
     _char = "BHR_C"
+
+
+def get_bro_ids_of_bronhouder(bronhouder, bhr_class=GeotechnicalBoreholeResearch):
+    """
+    Retrieve list of BRO (Basisregistratie Ondergrond) IDs for a given bronhouder.
+
+    This function sends a GET request to the REST API to fetch the BRO IDs associated
+    with the specified bronhouder. If the request is unsuccessful, it logs an error
+    message.
+
+    Parameters
+    ----------
+    bronhouder : str
+        The identifier for the bronhouder to retrieve the associated BRO IDs.
+    bhr_class : class
+        The class of borehole objects. The default is GeotechnicalBoreholeResearch.
+        Other options are PedologicalBoreholeResearch and GeologicalBoreholeResearch.
+
+    Returns
+    -------
+    list or None
+        A list of BRO IDs if the request is successful. Returns `None` if the request
+        fails.
+    """
+    return bro._get_bro_ids_of_bronhouder(bhr_class, bronhouder)
+
+
+def get_characteristics(bhr_class=GeotechnicalBoreholeResearch, **kwargs):
+    """
+    Get characteristics of a set of registered objects for a given object class.
+
+    The maximum number of objects that can be retrieved is 2000 for a single request.
+
+    Parameters
+    ----------
+    bhr_class : class
+        The class of borehole objects. The default is GeotechnicalBoreholeResearch.
+        Other options are PedologicalBoreholeResearch and GeologicalBoreholeResearch.
+    tmin : str or pd.Timestamp, optional
+        The minimum registrationPeriod of the requested characteristics. The default is
+        None.
+    tmax : str or pd.Timestamp, optional
+        The maximum registrationPeriod of the requested characteristics. The default is
+        None.
+    extent : list or tuple of 4 floats, optional
+        Download the characteristics within extent ([xmin, xmax, ymin, ymax]). The
+        default is None.
+    x : float, optional
+        The x-coordinate of the center of the circle in which the characteristics are
+        requested. The default is None.
+    y : float, optional
+        The y-coordinate of the center of the circle in which the characteristics are
+        requested. The default is None.
+    radius : float, optional
+        The radius in meters of the center of the circle in which the characteristics
+        are requested. The default is 1000.0.
+    epsg : str, optional
+        The coordinate reference system of the specified extent, x or y, and of the
+        resulting GeoDataFrame. The default is 28992, which is the Dutch RD-system.
+    to_file : str, optional
+        When not None, save the characteristics to a file with a name as specified in
+        to_file. The defaults None.
+    use_all_corners_of_extent : bool, optional
+        Because the extent by default is given in epsg 28992, some locations along the
+        border of a requested extent will not be returned in the result. To solve this
+        issue, when use_all_corners_of_extent is True, all four corners of the extent
+        are used to calculate the minimum and maximum lan and lon values. The default is
+        True.
+    timeout : int or float, optional
+        A number indicating how many seconds to wait for the client to make a connection
+        and/or send a response. The default is 5.
+
+    Returns
+    -------
+    gpd.GeoDataFrame
+        A GeoDataFrame contraining the characteristics.
+
+    Notes
+    -----
+    Haalt de karakteristieken op van een set van registratie objecten, gegeven een
+    kenmerkenverzameling (kenset).
+
+    De karakteristieken geven een samenvatting van een object zodat een verdere selectie
+    gemaakt kan worden. Het past in een tweetrapsbenadering, waarbij de eerste stap
+    bestaat uit het ophalen van de karakteristieken en de 2e stap uit het ophalen van de
+    gewenste registratie objecten. Het resultaat van deze operatie is gemaximaliseerd op
+    2000.
+    """
+    return bro._get_characteristics(bhr_class, **kwargs)

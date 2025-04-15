@@ -1,18 +1,14 @@
 import logging
-import requests
 import tempfile
-import pandas as pd
 from io import StringIO
+
+import pandas as pd
+import requests
+
 from . import bro
+from functools import partial
 
 logger = logging.getLogger(__name__)
-
-
-def get_characteristics(**kwargs):
-    """
-    Get characteristics of Cone Penetration Tests (see bro.get_characteristics)
-    """
-    return bro.get_characteristics(ConePenetrationTest, **kwargs)
 
 
 class ConePenetrationTest(bro.FileOrUrl):
@@ -28,8 +24,10 @@ class ConePenetrationTest(bro.FileOrUrl):
             "xmlns": self._xmlns,
         }
         cpts = tree.findall(".//xmlns:CPT_O", ns)
-        if len(cpts) != 1:
+        if len(cpts) > 1:
             raise (Exception("Only one CPT_0 supported"))
+        elif len(cpts) == 0:
+            raise (Exception("No CPT_0 found"))
         cpt = cpts[0]
         for key in cpt.attrib:
             setattr(self, key.split("}", 1)[1], cpt.attrib[key])
@@ -215,3 +213,12 @@ def graph(
         from IPython.display import SVG
 
         return SVG(to_file)
+
+
+get_bro_ids_of_bronhouder = partial(
+    bro._get_bro_ids_of_bronhouder, cl=ConePenetrationTest
+)
+get_bro_ids_of_bronhouder.__doc__ = bro._get_bro_ids_of_bronhouder.__doc__
+
+get_characteristics = partial(bro._get_characteristics, cl=ConePenetrationTest)
+get_characteristics.__doc__ = bro._get_characteristics.__doc__
