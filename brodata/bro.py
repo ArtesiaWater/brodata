@@ -23,7 +23,7 @@ logger = logging.getLogger(__name__)
 
 
 # %%
-def _get_bro_ids_of_bronhouder(cl, bronhouder):
+def _get_bro_ids_of_bronhouder(bronhouder, cl=None):
     """
     Retrieve list of BRO (Basisregistratie Ondergrond) IDs for a given bronhouder.
 
@@ -42,6 +42,8 @@ def _get_bro_ids_of_bronhouder(cl, bronhouder):
         A list of BRO IDs if the request is successful. Returns `None` if the request
         fails.
     """
+    if cl is None:
+        raise ValueError("No BRO object class specified.")
     url = f"{cl._rest_url}/bro-ids?"
     params = dict(bronhouder=bronhouder)
     req = requests.get(url, params=params)
