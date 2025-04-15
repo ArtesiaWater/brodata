@@ -1,9 +1,9 @@
 import logging
+from functools import partial
 
 import pandas as pd
 
 from . import bro
-from functools import partial
 
 logger = logging.getLogger(__name__)
 

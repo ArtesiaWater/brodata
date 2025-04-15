@@ -1,4 +1,5 @@
 import logging
+from functools import partial
 from io import StringIO
 
 import numpy as np
@@ -6,7 +7,6 @@ import pandas as pd
 import requests
 
 from . import bro
-from functools import partial
 
 logger = logging.getLogger(__name__)
 

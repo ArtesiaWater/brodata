@@ -1,10 +1,10 @@
 import logging
+from functools import partial
 
 import pandas as pd
 from shapely.geometry import Point
 
 from . import bro
-from functools import partial
 
 logger = logging.getLogger(__name__)
 
@@ -247,5 +247,7 @@ get_bro_ids_of_bronhouder = partial(
 )
 get_bro_ids_of_bronhouder.__doc__ = bro._get_bro_ids_of_bronhouder.__doc__
 
-get_characteristics = partial(bro._get_characteristics, cl=GroundwaterUtilisationFacility)
+get_characteristics = partial(
+    bro._get_characteristics, cl=GroundwaterUtilisationFacility
+)
 get_characteristics.__doc__ = bro._get_characteristics.__doc__

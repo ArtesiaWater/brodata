@@ -1,7 +1,7 @@
 import logging
+from functools import partial
 
 from . import bro
-from functools import partial
 
 logger = logging.getLogger(__name__)
 

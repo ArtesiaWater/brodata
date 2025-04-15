@@ -1,12 +1,12 @@
 import logging
 import tempfile
+from functools import partial
 from io import StringIO
 
 import pandas as pd
 import requests
 
 from . import bro
-from functools import partial
 
 logger = logging.getLogger(__name__)
 

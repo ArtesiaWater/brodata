@@ -393,7 +393,7 @@ class FileOrUrl(ABC):
             if attrib.startswith("_"):
                 continue
             value = getattr(self, attrib)
-            if type(value) == types.MethodType:
+            if type(value) is types.MethodType:
                 continue
             d[attrib] = value
         return d

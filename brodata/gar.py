@@ -1,10 +1,10 @@
 import logging
+from functools import partial
 
 import pandas as pd
 import requests
 
 from . import bro
-from functools import partial
 
 logger = logging.getLogger(__name__)
 
