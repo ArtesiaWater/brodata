@@ -139,7 +139,7 @@ def test_groundwater_monitoring_network():
     brodata.gmn.GroundwaterMonitoringNetwork(fname)
 
 
-def test_get_cpt_characteristics():
+def test_get_haracteristics_cpt():
     extent = [117700, 118700, 439400, 440400]
     brodata.cpt.get_characteristics(extent=extent)
 
@@ -165,8 +165,3 @@ def test_get_cpt_test_with_dissipation_test():
 def test_groundwater_utilisation_facility():
     fname = os.path.join("tests", "data", "GUF000000016723.xml")
     brodata.guf.GroundwaterUtilisationFacility(fname)
-
-
-# %%
-extent = [117700, 118700, 439400, 440400]
-brodata.gmw.get_characteristics(extent=extent)
