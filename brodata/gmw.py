@@ -1,73 +1,23 @@
-import logging
-import requests
-import os
 import json
+import logging
+import os
+from functools import partial
 from zipfile import ZipFile
+
+import geopandas as gpd
 import numpy as np
 import pandas as pd
+import requests
 from tqdm import tqdm
-import geopandas as gpd
 
-from . import bro, gld, gar
-from .util import _save_data_to_zip
-from .gld import GroundwaterLevelDossier
-from .gar import GroundwaterAnalysisReport
+from . import bro, gar, gld
 from .frd import FormationResistanceDossier
+from .gar import GroundwaterAnalysisReport
+from .gld import GroundwaterLevelDossier
 from .gmn import GroundwaterMonitoringNetwork
+from .util import _save_data_to_zip
 
 logger = logging.getLogger(__name__)
-
-
-def get_bro_ids_of_bronhouder(bronhouder):
-    """
-    Retrieve the list of BRO (Basisregistratie Ondergrond) IDs for a given bronhouder.
-
-    This function sends a GET request to the REST API to fetch the BRO IDs associated
-    with the specified bronhouder. If the request is unsuccessful, it logs an error
-    message.
-
-    Parameters
-    ----------
-    bronhouder : str
-        The identifier for the bronhouder to retrieve the associated BRO IDs.
-
-    Returns
-    -------
-    list or None
-        A list of BRO IDs if the request is successful. Returns `None` if the request
-        fails.
-    """
-    url = f"{GroundwaterMonitoringWell._rest_url}/bro-ids?"
-    params = dict(bronhouder=bronhouder)
-    req = requests.get(url, params=params)
-    if req.status_code > 200:
-        logger.error(req.json()["errors"][0]["message"])
-        return
-    bro_ids = req.json()["broIds"]
-    return bro_ids
-
-
-def get_characteristics(**kwargs):
-    """
-    Get characteristics of Groundwater Monitoring Wells.
-
-    This function fetches the characteristics of groundwater monitoring wells
-    using the `bro.get_characteristics` function, specifically for the
-    `GroundwaterMonitoringWell` class. It passes the provided keyword arguments
-    to the underlying function.
-
-    Parameters
-    ----------
-    **kwargs
-        Additional keyword arguments passed to the `bro.get_characteristics` function.
-
-    Returns
-    -------
-    gpd.GeoDataFrame
-        A GeoDataFrame contraining the characteristics of the groundwater monitoring
-        wells.
-    """
-    return bro.get_characteristics(GroundwaterMonitoringWell, **kwargs)
 
 
 def get_well_code(bro_id):
@@ -769,3 +719,12 @@ def get_tube_gdf_from_characteristics(
         gmws.append(gmw)
     gdf = get_tube_gdf(gmws, index=index)
     return gdf
+
+
+get_bro_ids_of_bronhouder = partial(
+    bro._get_bro_ids_of_bronhouder, cl=GroundwaterMonitoringWell
+)
+get_bro_ids_of_bronhouder.__doc__ = bro._get_bro_ids_of_bronhouder.__doc__
+
+get_characteristics = partial(bro._get_characteristics, cl=GroundwaterMonitoringWell)
+get_characteristics.__doc__ = bro._get_characteristics.__doc__

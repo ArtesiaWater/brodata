@@ -1,27 +1,60 @@
-from abc import ABC, abstractmethod
-import os
 import logging
-import requests
-import xml
+import os
 import types
-import pandas as pd
-from pyproj import Transformer
-import geopandas as gpd
+import xml
+from abc import ABC, abstractmethod
 from io import StringIO
+
+import geopandas as gpd
+import pandas as pd
+import requests
+from pyproj import Transformer
 from tqdm import tqdm
+
 from .util import (
-    objects_to_gdf,
+    _format_repr,
     _get_data_from_path,
     _get_data_from_zip,
     _save_data_to_zip,
-    _format_repr,
+    objects_to_gdf,
 )
 
 logger = logging.getLogger(__name__)
 
 
 # %%
-def get_characteristics(
+def _get_bro_ids_of_bronhouder(bronhouder, cl=None):
+    """
+    Retrieve list of BRO (Basisregistratie Ondergrond) IDs for a given bronhouder.
+
+    This function sends a GET request to the REST API to fetch the BRO IDs associated
+    with the specified bronhouder. If the request is unsuccessful, it logs an error
+    message.
+
+    Parameters
+    ----------
+    bronhouder : str
+        The identifier for the bronhouder to retrieve the associated BRO IDs.
+
+    Returns
+    -------
+    list or None
+        A list of BRO IDs if the request is successful. Returns `None` if the request
+        fails.
+    """
+    if cl is None:
+        raise ValueError("No BRO object class specified.")
+    url = f"{cl._rest_url}/bro-ids?"
+    params = dict(bronhouder=bronhouder)
+    req = requests.get(url, params=params)
+    if req.status_code > 200:
+        logger.error(req.json()["errors"][0]["message"])
+        return
+    bro_ids = req.json()["broIds"]
+    return bro_ids
+
+
+def _get_characteristics(
     cl,
     tmin=None,
     tmax=None,
@@ -37,19 +70,12 @@ def get_characteristics(
     timeout=5,
 ):
     """
-    Haalt de karakteristieken op van een set van registratie objecten, gegeven een
-    kenmerkenverzameling (kenset).
+    Get characteristics of a set of registered objects for a given object class.
 
-    De karakteristieken geven een samenvatting van een object zodat een verdere selectie
-    gemaakt kan worden. Het past in een tweetrapsbenadering, waarbij de eerste stap
-    bestaat uit het ophalen van de karakteristieken en de 2e stap uit het ophalen van de
-    gewenste registratie objecten. Het resultaat van deze operatie is gemaximaliseerd op
-    2000.
+    The maximum number of objects that can be retrieved is 2000 for a single request.
 
     Parameters
     ----------
-    cl : class
-        The brodata class for which characteristics are requested.
     tmin : str or pd.Timestamp, optional
         The minimum registrationPeriod of the requested characteristics. The default is
         None.
@@ -84,18 +110,22 @@ def get_characteristics(
         A number indicating how many seconds to wait for the client to make a connection
         and/or send a response. The default is 5.
 
-    Raises
-    ------
-
-        DESCRIPTION.
-
     Returns
     -------
     gpd.GeoDataFrame
         A GeoDataFrame contraining the characteristics.
 
-    """
+    Notes
+    -----
+    Haalt de karakteristieken op van een set van registratie objecten, gegeven een
+    kenmerkenverzameling (kenset).
 
+    De karakteristieken geven een samenvatting van een object zodat een verdere selectie
+    gemaakt kan worden. Het past in een tweetrapsbenadering, waarbij de eerste stap
+    bestaat uit het ophalen van de karakteristieken en de 2e stap uit het ophalen van de
+    gewenste registratie objecten. Het resultaat van deze operatie is gemaximaliseerd op
+    2000.
+    """
     if zipfile is None and (
         redownload or to_file is None or not os.path.isfile(to_file)
     ):
@@ -224,7 +254,7 @@ def _get_data_within_extent(
             to_path = os.path.splitext(to_zip)[0]
         remove_path_again = not os.path.isdir(to_path)
         files = []
-    char = get_characteristics(bro_cl, extent=extent, timeout=timeout)
+    char = _get_characteristics(bro_cl, extent=extent, timeout=timeout)
     to_file = None
     if to_path is not None and not os.path.isdir(to_path):
         os.makedirs(to_path)
@@ -363,7 +393,7 @@ class FileOrUrl(ABC):
             if attrib.startswith("_"):
                 continue
             value = getattr(self, attrib)
-            if type(value) == types.MethodType:
+            if type(value) is types.MethodType:
                 continue
             d[attrib] = value
         return d

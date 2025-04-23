@@ -1,4 +1,6 @@
 import logging
+from functools import partial
+
 from . import bro
 
 logger = logging.getLogger(__name__)
@@ -29,8 +31,8 @@ class SoilFaceResearch(bro.FileOrUrl):
                 logger.warning(f"Unknown key: {key}")
 
 
-def get_characteristics(**kwargs):
-    """
-    Get characteristics of Groundwater Monitoring Wells (see bro.get_characteristics)
-    """
-    return bro.get_characteristics(SoilFaceResearch, **kwargs)
+get_bro_ids_of_bronhouder = partial(bro._get_bro_ids_of_bronhouder, cl=SoilFaceResearch)
+get_bro_ids_of_bronhouder.__doc__ = bro._get_bro_ids_of_bronhouder.__doc__
+
+get_characteristics = partial(bro._get_characteristics, cl=SoilFaceResearch)
+get_characteristics.__doc__ = bro._get_characteristics.__doc__

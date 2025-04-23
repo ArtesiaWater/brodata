@@ -1,6 +1,9 @@
+# %%
 import os
-import brodata
+
 from pandas.testing import assert_frame_equal
+
+import brodata
 
 
 def test_get_bronhouders():
@@ -136,7 +139,7 @@ def test_groundwater_monitoring_network():
     brodata.gmn.GroundwaterMonitoringNetwork(fname)
 
 
-def test_get_cpt_characteristics():
+def test_get_haracteristics_cpt():
     extent = [117700, 118700, 439400, 440400]
     brodata.cpt.get_characteristics(extent=extent)
 

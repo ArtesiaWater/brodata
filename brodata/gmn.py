@@ -1,5 +1,8 @@
 import logging
+from functools import partial
+
 import pandas as pd
+
 from . import bro
 
 logger = logging.getLogger(__name__)
@@ -57,3 +60,9 @@ class GroundwaterMonitoringNetwork(bro.FileOrUrl):
                 self.measuringPoint["date"] = pd.to_datetime(
                     self.measuringPoint["date"]
                 )
+
+
+get_bro_ids_of_bronhouder = partial(
+    bro._get_bro_ids_of_bronhouder, cl=GroundwaterMonitoringNetwork
+)
+get_bro_ids_of_bronhouder.__doc__ = bro._get_bro_ids_of_bronhouder.__doc__

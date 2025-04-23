@@ -1,8 +1,9 @@
-import os
 import logging
+import os
+from zipfile import ZipFile
+
 import numpy as np
 import pandas as pd
-from zipfile import ZipFile
 from tqdm import tqdm
 
 logger = logging.getLogger(__name__)
@@ -71,7 +72,7 @@ def objects_to_gdf(
     return gdf
 
 
-def read_zipfile(fname, pathnames=None):
+def read_zipfile(fname, pathnames=None, override_ext=None):
     with ZipFile(fname) as zf:
         namelist = np.array(zf.namelist())
         extensions = np.array([os.path.splitext(x)[1] for x in namelist])
@@ -90,46 +91,48 @@ def read_zipfile(fname, pathnames=None):
                 from .gmw import GroundwaterMonitoringWell
 
                 cl = GroundwaterMonitoringWell
-                ext = ".xml"
+                ext = ".xml" if override_ext is None else override_ext
             elif pathname == "BRO_Grondwatergebruiksysteem":
                 from .guf import GroundwaterUtilisationFacility
 
                 cl = GroundwaterUtilisationFacility
-                ext = ".xml"
+                ext = ".xml" if override_ext is None else override_ext
             elif pathname == "BRO_Grondwatermonitoringnet":
                 from .gmn import GroundwaterMonitoringNetwork
 
                 cl = GroundwaterMonitoringNetwork
-                ext = ".xml"
+                ext = ".xml" if override_ext is None else override_ext
             elif pathname == "BRO_Grondwaterstandonderzoek":
                 from .gld import GroundwaterLevelDossier
 
                 cl = GroundwaterLevelDossier
-                ext = ".xml"
+                ext = ".xml" if override_ext is None else override_ext
             elif pathname == "BRO_GeotechnischSondeeronderzoek":
                 from .cpt import ConePenetrationTest
 
                 cl = ConePenetrationTest
-                ext = ".xml"
+                ext = ".xml" if override_ext is None else override_ext
             elif pathname == "BRO_GeotechnischBooronderzoek":
                 from .bhr import GeotechnicalBoreholeResearch
 
                 cl = GeotechnicalBoreholeResearch
-                ext = ".xml"
+                ext = ".xml" if override_ext is None else override_ext
             elif pathname == "DINO_GeologischBooronderzoekBoormonsterprofiel":
                 from .dino import GeologischBooronderzoek
 
                 cl = GeologischBooronderzoek
-                ext = ".csv"
+                ext = ".csv" if override_ext is None else override_ext
             elif pathname == "DINO_GeotechnischSondeeronderzoek":
                 cl = None
-                ext = ".tif"
+                ext = ".tif" if override_ext is None else override_ext
             elif pathname == "DINO_GeologischBooronderzoekKorrelgrootteAnalyse":
                 logger.warning(f"Folder {pathname} not supported yet")
                 cl = None
+                ext = None
             elif pathname == "DINO_GeologischBooronderzoekChemischeAnalyse":
                 logger.warning(f"Folder {pathname} not supported yet")
                 cl = None
+                ext = None
             elif pathname == "DINO_Grondwatersamenstelling":
                 from .dino import Grondwatersamenstelling
 
