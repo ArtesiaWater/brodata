@@ -6,6 +6,7 @@ from zipfile import ZipFile
 
 import numpy as np
 import pandas as pd
+import geopandas as gpd
 import requests
 from shapely.geometry import LineString
 from tqdm import tqdm
@@ -45,7 +46,7 @@ def _get_data_within_extent(
 
     if to_zip is not None:
         if not redownload and os.path.isfile(to_zip):
-            data = _get_data_from_zip(to_zip, dino_cl, silent=silent)
+            data = _get_data_from_zip(to_zip, dino_cl, silent=silent, extent=extent)
             return objects_to_gdf(data, x, y, geometry, index, to_gdf)
         if to_path is None:
             to_path = os.path.splitext(to_zip)[0]
@@ -54,16 +55,30 @@ def _get_data_within_extent(
 
     if config is None:
         config = get_configuration()
-    gdf = get_gdf(
-        kind,
-        config=config,
-        extent=extent,
-        timeout=timeout,
-    )
 
-    to_file = None
     if to_path is not None and not os.path.isdir(to_path):
         os.makedirs(to_path)
+
+    to_file = None
+    gdf = None
+    if to_path is not None:
+        to_file = os.path.join(to_path, f"{dino_cl.__name__}.geojson")
+        if to_zip is not None:
+            files.append(to_file)
+        if not redownload and os.path.isfile(to_file):
+            gdf = gpd.read_file(to_file)
+    if gdf is None:
+        gdf = get_gdf(
+            kind,
+            config=config,
+            extent=extent,
+            timeout=timeout,
+        )
+        if to_file is not None:
+            gdf.to_file(to_file)
+
+    to_file = None
+
     data = {}
     for dino_nr in tqdm(gdf.index, disable=silent):
         if to_path is not None:

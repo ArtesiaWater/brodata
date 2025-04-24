@@ -4,6 +4,7 @@ from zipfile import ZipFile
 
 import numpy as np
 import pandas as pd
+import geopandas as gpd
 from tqdm import tqdm
 
 logger = logging.getLogger(__name__)
@@ -180,11 +181,21 @@ def _get_data_from_path(from_path, dino_class, silent=False, ext=".csv"):
     return data
 
 
-def _get_data_from_zip(to_zip, dino_class, silent=False):
+def _get_data_from_zip(to_zip, dino_class, silent=False, extent=None):
     # read data from zipfile
     data = {}
     with ZipFile(to_zip) as zf:
-        for name in tqdm(zf.namelist(), disable=silent):
+        names = zf.namelist()
+        name = f"{dino_class.__name__}.geojson"
+        has_location_file = name in names
+        if has_location_file:
+            names.remove(name)
+        if has_location_file and extent is not None:
+            gdf = gpd.read_file(zf.open(name))
+            gdf = gdf.set_index("DINO_NR")
+            gdf = gdf.cx[extent[0] : extent[1], extent[2] : extent[3]]
+            names = [f"{name}.csv" for name in gdf.index]
+        for name in tqdm(names, disable=silent):
             data[name] = dino_class(name, zipfile=zf)
     return data
 
