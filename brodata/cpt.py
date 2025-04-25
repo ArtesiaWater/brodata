@@ -36,10 +36,7 @@ class ConePenetrationTest(bro.FileOrUrl):
             if len(child) == 0:
                 setattr(self, key, child.text)
             elif key == "standardizedLocation":
-                point = child.find("brocom:location", ns)
-                lat, lon = self._read_pos(point)
-                setattr(self, "lat", lat)
-                setattr(self, "lon", lon)
+                self._read_standardized_location(child)
             elif key == "deliveredLocation":
                 self._read_delivered_location(child)
             elif key in ["researchReportDate"]:
@@ -215,10 +212,13 @@ def graph(
         return SVG(to_file)
 
 
-get_bro_ids_of_bronhouder = partial(
-    bro._get_bro_ids_of_bronhouder, cl=ConePenetrationTest
-)
+cl = ConePenetrationTest
+
+get_bro_ids_of_bronhouder = partial(bro._get_bro_ids_of_bronhouder, cl=cl)
 get_bro_ids_of_bronhouder.__doc__ = bro._get_bro_ids_of_bronhouder.__doc__
 
-get_characteristics = partial(bro._get_characteristics, cl=ConePenetrationTest)
+get_characteristics = partial(bro._get_characteristics, cl)
 get_characteristics.__doc__ = bro._get_characteristics.__doc__
+
+get_data_in_extent = partial(bro._get_data_in_extent, cl)
+get_data_in_extent.__doc__ = bro._get_data_in_extent.__doc__

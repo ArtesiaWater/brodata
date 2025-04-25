@@ -4,7 +4,10 @@ import types
 import xml
 from abc import ABC, abstractmethod
 from io import StringIO
+from zipfile import ZipFile
 
+from shapely.geometry import Point, MultiPoint
+import numpy as np
 import geopandas as gpd
 import pandas as pd
 import requests
@@ -13,17 +16,14 @@ from tqdm import tqdm
 
 from .util import (
     _format_repr,
-    _get_data_from_path,
-    _get_data_from_zip,
     _save_data_to_zip,
-    objects_to_gdf,
 )
 
 logger = logging.getLogger(__name__)
 
 
 # %%
-def _get_bro_ids_of_bronhouder(bronhouder, cl=None):
+def _get_bro_ids_of_bronhouder(cl, bronhouder):
     """
     Retrieve list of BRO (Basisregistratie Ondergrond) IDs for a given bronhouder.
 
@@ -42,8 +42,6 @@ def _get_bro_ids_of_bronhouder(bronhouder, cl=None):
         A list of BRO IDs if the request is successful. Returns `None` if the request
         fails.
     """
-    if cl is None:
-        raise ValueError("No BRO object class specified.")
     url = f"{cl._rest_url}/bro-ids?"
     params = dict(bronhouder=bronhouder)
     req = requests.get(url, params=params)
@@ -56,18 +54,18 @@ def _get_bro_ids_of_bronhouder(bronhouder, cl=None):
 
 def _get_characteristics(
     cl,
+    extent=None,
     tmin=None,
     tmax=None,
-    extent=None,
     x=None,
     y=None,
     radius=1000.0,
     epsg=28992,
     to_file=None,
-    redownload=True,
-    zipfile=None,
+    redownload=False,
     use_all_corners_of_extent=True,
     timeout=5,
+    _zipfile=None,
 ):
     """
     Get characteristics of a set of registered objects for a given object class.
@@ -76,15 +74,15 @@ def _get_characteristics(
 
     Parameters
     ----------
+    extent : list or tuple of 4 floats, optional
+        Download the characteristics within extent ([xmin, xmax, ymin, ymax]). The
+        default is None.
     tmin : str or pd.Timestamp, optional
         The minimum registrationPeriod of the requested characteristics. The default is
         None.
     tmax : str or pd.Timestamp, optional
         The maximum registrationPeriod of the requested characteristics. The default is
         None.
-    extent : list or tuple of 4 floats, optional
-        Download the characteristics within extent ([xmin, xmax, ymin, ymax]). The
-        default is None.
     x : float, optional
         The x-coordinate of the center of the circle in which the characteristics are
         requested. The default is None.
@@ -100,6 +98,10 @@ def _get_characteristics(
     to_file : str, optional
         When not None, save the characteristics to a file with a name as specified in
         to_file. The defaults None.
+    redownload : bool, optional
+        When the downloaded file exists in to_file, read from this file when redownload
+        is False. If redownload is True, download the data again from the BRO-servers.
+        The default is False.
     use_all_corners_of_extent : bool, optional
         Because the extent by default is given in epsg 28992, some locations along the
         border of a requested extent will not be returned in the result. To solve this
@@ -126,7 +128,7 @@ def _get_characteristics(
     gewenste registratie objecten. Het resultaat van deze operatie is gemaximaliseerd op
     2000.
     """
-    if zipfile is None and (
+    if _zipfile is None and (
         redownload or to_file is None or not os.path.isfile(to_file)
     ):
         url = f"{cl._rest_url}/characteristics/searches?"
@@ -180,8 +182,8 @@ def _get_characteristics(
         # read results
         tree = xml.etree.ElementTree.fromstring(req.text)
     else:
-        if zipfile is not None:
-            with zipfile.open(to_file) as f:
+        if _zipfile is not None:
+            with _zipfile.open(to_file) as f:
                 tree = xml.etree.ElementTree.parse(f).getroot()
         else:
             tree = xml.etree.ElementTree.parse(to_file).getroot()
@@ -197,81 +199,151 @@ def _get_characteristics(
             if len(child) == 0:
                 d[key] = child.text
             elif key == "standardizedLocation":
-                d["lat"], d["lon"] = FileOrUrl._read_pos(child)
+                d[key] = FileOrUrl._read_pos(child)
             elif key == "deliveredLocation":
-                d["x"], d["y"] = FileOrUrl._read_pos(child)
-            elif key.endswith("Date") or key.endswith("Overview"):
+                d[key] = FileOrUrl._read_pos(child)
+            elif key.endswith("Date") or key.endswith("Overview") or key == "startTime":
                 d[key] = child[0].text
             elif key in ["diameterRange", "screenPositionRange"]:
                 for grandchild in child:
                     key = grandchild.tag.split("}", 1)[1]
                     d[key] = grandchild.text
+            elif key == "licence":
+                for grandchild in child:
+                    key2 = grandchild.tag.split("}", 1)[1]
+                    for greatgrandchild in grandchild:
+                        key3 = greatgrandchild.tag.split("}", 1)[1]
+                        if key3 == "identificationLicence":
+                            d[key] = greatgrandchild.text
+                        else:
+                            logger.warning(f"Unknown key: {key2}")
+            elif key == "realisedInstallation":
+                for grandchild in child:
+                    key2 = grandchild.tag.split("}", 1)[1]
+                    for greatgrandchild in grandchild:
+                        key3 = greatgrandchild.tag.split("}", 1)[1]
+                        if key3 == "installationFunction":
+                            d[key] = greatgrandchild.text
+                        else:
+                            logger.warning(f"Unknown key: {key2}")
+
             else:
                 logger.warning(f"Unknown key: {key}")
         data.append(d)
-    df = pd.DataFrame(data)
-    if "broId" in df.columns:
-        df = df.set_index("broId")
-        df = df.sort_index()
 
-    if "x" in df and "y" in df:
-        geometry = gpd.points_from_xy(df["x"], df["y"], crs=28992)
-        gdf = gpd.GeoDataFrame(df, geometry=geometry)
-        if epsg != 28992:
-            gdf = gdf.to_crs(epsg)
-        return gdf
-    elif "lat" in df and "lon" in df:
-        geometry = gpd.points_from_xy(df["lon"], df["lat"], crs=4326)
-        gdf = gpd.GeoDataFrame(df, geometry=geometry)
-        if epsg != 4326:
-            gdf = gdf.to_crs(epsg)
-        return gdf
-    return df
+    gdf = objects_to_gdf(data)
+    if _zipfile is not None and extent is not None:
+        gdf = gdf.cx[extent[0] : extent[1], extent[2] : extent[3]]
+    return gdf
 
 
-def _get_data_within_extent(
+def _get_data_in_extent(
     bro_cl,
     extent=None,
+    epsg=28992,
     timeout=5,
     silent=False,
     to_path=None,
     to_zip=None,
-    redownload=True,
-    x="x",
-    y="y",
+    redownload=False,
     geometry=None,
-    index="broId",
     to_gdf=True,
+    index="broId",
 ):
     if isinstance(extent, str):
-        data = _get_data_from_path(extent, bro_cl, silent=silent)
-        return objects_to_gdf(data, x, y, geometry, index, to_gdf)
+        if to_zip is not None:
+            raise (Exception("When extent is a string, do not supply to_zip"))
+        to_zip = extent
+        extent = None
+        redownload = False
+    _zipfile = None
+    _files = None
     if to_zip is not None:
         if not redownload and os.path.isfile(to_zip):
-            data = _get_data_from_zip(to_zip, bro_cl, silent=silent)
-            return objects_to_gdf(data, x, y, geometry, index, to_gdf)
-        if to_path is None:
-            to_path = os.path.splitext(to_zip)[0]
-        remove_path_again = not os.path.isdir(to_path)
-        files = []
-    char = _get_characteristics(bro_cl, extent=extent, timeout=timeout)
+            logger.info(f"Reading data from {to_zip}")
+            _zipfile = ZipFile(to_zip)
+        else:
+            if to_path is None:
+                to_path = os.path.splitext(to_zip)[0]
+            remove_path_again = not os.path.isdir(to_path)
+            _files = []
+
+    # get gwm characteristics
+    logger.info(f"Getting characteristics in extent: {extent}")
     to_file = None
+    if _zipfile is not None or to_path is not None:
+        to_file = "characteristics.xml"
+        if _zipfile is None:
+            to_file = os.path.join(to_path, to_file)
+            if _files is not None:
+                _files.append(to_file)
     if to_path is not None and not os.path.isdir(to_path):
         os.makedirs(to_path)
+
+    char = _get_characteristics(
+        bro_cl, extent=extent, to_file=to_file, redownload=redownload, _zipfile=_zipfile
+    )
+
     data = {}
     for bro_id in tqdm(char.index, disable=silent):
+        if _zipfile is not None:
+            fname = f"{bro_id}.xml"
+            data[bro_id] = bro_cl(fname, zipfile=_zipfile)
+            continue
         if to_path is not None:
             to_file = os.path.join(to_path, f"{bro_id}.xml")
             if to_zip is not None:
-                files.append(to_file)
+                _files.append(to_file)
             if not redownload and os.path.isfile(to_file):
                 data[bro_id] = bro_cl(to_file)
                 continue
         data[bro_id] = bro_cl.from_bro_id(bro_id, to_file=to_file, timeout=timeout)
-    if to_zip is not None:
-        _save_data_to_zip(to_zip, files, remove_path_again, to_path)
+    if _zipfile is not None:
+        _zipfile.close()
+    if _zipfile is None and to_zip is not None:
+        _save_data_to_zip(to_zip, _files, remove_path_again, to_path)
 
-    gdf = objects_to_gdf(data, x, y, geometry, index, to_gdf)
+    gdf = objects_to_gdf(data, geometry, to_gdf, index)
+
+    return gdf
+
+
+def objects_to_gdf(
+    data,
+    geometry=None,
+    to_gdf=True,
+    index="broId",
+    from_crs=None,
+    to_crs=28992,
+):
+    if not to_gdf:
+        return data
+    if isinstance(data, list):
+        df = pd.DataFrame(data)
+    else:
+        df = pd.DataFrame([data[key].to_dict() for key in data])
+
+    if index is not None and not df.empty:
+        if isinstance(index, str):
+            if index in df.columns:
+                df = df.set_index(index)
+        elif np.all([x in df.columns for x in index]):
+            # we assume index is an iterable (list), to form a MultiIndex
+            df = df.set_index(index)
+    if geometry is None:
+        if "deliveredLocation" in df:
+            geometry = "deliveredLocation"
+            if from_crs is None:
+                from_crs = 28992
+        elif "standardizedLocation" in df:
+            geometry = "standardizedLocation"
+            if from_crs is None:
+                from_crs = 4258
+        else:
+            return df
+    gdf = gpd.GeoDataFrame(df, geometry=geometry, crs=from_crs)
+    if to_crs is not None and from_crs is not None and to_crs != from_crs:
+        gdf = gdf.to_crs(to_crs)
     return gdf
 
 
@@ -307,7 +379,7 @@ class FileOrUrl(ABC):
             Extracts geographic location and date information from the XML node.
 
         _read_pos(node):
-            Extracts coordinates (x, y) from a GML-compliant position element.
+            Extracts geometry from a GML-compliant position element.
 
         _read_date(node):
             Extracts date information from the XML, handling multiple formats.
@@ -439,12 +511,20 @@ class FileOrUrl(ABC):
         for child in node:
             key = child.tag.split("}", 1)[1]
             if key == "location":
-                x, y = self._read_pos(child)
-                setattr(self, "x", x)
-                setattr(self, "y", y)
+                setattr(self, "deliveredLocation", self._read_pos(child))
             elif key == "horizontalPositioningDate":
                 setattr(self, key, self._read_date(child))
             elif key == "horizontalPositioningMethod":
+                setattr(self, key, child.text)
+            else:
+                logger.warning(f"Unknown key: {key}")
+
+    def _read_standardized_location(self, node):
+        for child in node:
+            key = child.tag.split("}", 1)[1]
+            if key == "location":
+                setattr(self, "standardizedLocation", self._read_pos(child))
+            elif key == "coordinateTransformation":
                 setattr(self, key, child.text)
             else:
                 logger.warning(f"Unknown key: {key}")
@@ -457,14 +537,16 @@ class FileOrUrl(ABC):
             xy = []
             for pointmember in multipoint.findall("gml:pointMember", ns):
                 xy.append(FileOrUrl._read_pos(pointmember))
-            return xy
+            return MultiPoint(xy)
         point = node.find("gml:Point", ns)
-        if point is None:
-            pos = node.find("gml:pos", ns)
-        else:
-            pos = point.find("gml:pos", ns)
-        xy = [float(x) for x in pos.text.split()]
-        return xy
+        if point is not None:
+            node = point
+        pos = node.find("gml:pos", ns)
+        x, y = [float(x) for x in pos.text.split()]
+        if "srsName" in node.attrib:
+            if node.attrib["srsName"] == "urn:ogc:def:crs:EPSG::4258":
+                x, y = y, x
+        return Point(x, y)
 
     @staticmethod
     def _read_date(node):

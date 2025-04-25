@@ -29,10 +29,7 @@ class _BoreholeResearch(bro.FileOrUrl):
             if len(child) == 0:
                 setattr(self, key, child.text)
             elif key == "standardizedLocation":
-                point = child.find("brocom:location", ns)
-                lat, lon = self._read_pos(point)
-                setattr(self, "lat", lat)
-                setattr(self, "lon", lon)
+                self._read_standardized_location(child)
             elif key == "deliveredLocation":
                 self._read_delivered_location(child)
             elif key in ["researchReportDate"]:
@@ -277,7 +274,7 @@ def get_bro_ids_of_bronhouder(bronhouder, bhr_class=GeotechnicalBoreholeResearch
         A list of BRO IDs if the request is successful. Returns `None` if the request
         fails.
     """
-    return bro._get_bro_ids_of_bronhouder(bronhouder, cl=bhr_class)
+    return bro._get_bro_ids_of_bronhouder(bhr_class, bronhouder)
 
 
 def get_characteristics(bhr_class=GeotechnicalBoreholeResearch, **kwargs):
@@ -341,4 +338,4 @@ def get_characteristics(bhr_class=GeotechnicalBoreholeResearch, **kwargs):
     gewenste registratie objecten. Het resultaat van deze operatie is gemaximaliseerd op
     2000.
     """
-    return bro._get_characteristics(cl=bhr_class, **kwargs)
+    return bro._get_characteristics(bhr_class, **kwargs)

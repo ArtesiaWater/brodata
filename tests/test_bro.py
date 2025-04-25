@@ -1,5 +1,6 @@
 # %%
 import os
+import tempfile
 
 from pandas.testing import assert_frame_equal
 
@@ -25,8 +26,8 @@ def test_get_gmw_characteristics():
 
 def test_gmw_get_gld_data_in_extent():
     extent = [118200, 118400, 439700, 440000]
-
-    fname_zip = "test_gmw_get_gld_data_in_extent.zip"
+    tempdir = tempfile.gettempdir()
+    fname_zip = os.path.join(tempdir, "test_gmw_get_gld_data_in_extent.zip")
     gdf1 = brodata.gmw.get_data_in_extent(
         extent=extent,
         combine=True,
@@ -139,7 +140,7 @@ def test_groundwater_monitoring_network():
     brodata.gmn.GroundwaterMonitoringNetwork(fname)
 
 
-def test_get_haracteristics_cpt():
+def test_get_cpt_characteristics():
     extent = [117700, 118700, 439400, 440400]
     brodata.cpt.get_characteristics(extent=extent)
 
@@ -165,3 +166,16 @@ def test_get_cpt_test_with_dissipation_test():
 def test_groundwater_utilisation_facility():
     fname = os.path.join("tests", "data", "GUF000000016723.xml")
     brodata.guf.GroundwaterUtilisationFacility(fname)
+
+
+def test_get_guf_data_in_extent():
+    extent = [117700, 118700, 439400, 440400]
+    brodata.guf.get_characteristics(extent=extent)
+
+    tempdir = tempfile.gettempdir()
+    fname_zip = os.path.join(tempdir, "test_get_guf_data_in_extent.zip")
+    gdf1 = brodata.guf.get_data_in_extent(extent=extent, to_zip=fname_zip)
+
+    extent = [118300, 118700, 439400, 440400]
+    gdf2 = brodata.guf.get_data_in_extent(extent=extent, to_zip=fname_zip)
+    assert len(gdf2) < len(gdf1)

@@ -107,9 +107,7 @@ class GroundwaterMonitoringWell(bro.FileOrUrl):
             if len(child) == 0:
                 setattr(self, key, child.text)
             elif key == "standardizedLocation":
-                lat, lon = self._read_pos(child.find("brocom:location", ns))
-                setattr(self, "lat", lat)
-                setattr(self, "lon", lon)
+                self._read_standardized_location(child)
             elif key == "deliveredLocation":
                 self._read_delivered_location(child)
             elif key == "wellHistory":
@@ -170,9 +168,9 @@ def get_observations(
     qualifier=None,
     to_path=None,
     to_zip=None,
-    redownload=True,
+    redownload=False,
     _files=None,
-    zipfile=None,
+    _zipfile=None,
 ):
     """
     Retrieve groundwater observations for the specified monitoring wells (bro_ids).
@@ -206,6 +204,17 @@ def get_observations(
     qualifier : str or list of str, optional
         A qualifier string for additional filtering. Only valid if `kind` is 'gld'.
         Defaults to None.
+    to_path : str, optional
+        If not None, save the downloaded files in the directory named to_path. The
+        default is None.
+    to_zip : str, optional
+        If not None, save the downloaded files in a zip-file named to_zip. The default
+        is None.
+    redownload : bool, optional
+        When downloaded files exist in to_path or to_zip, read from these files when
+        redownload is False. If redownload is True, download the data again from the
+        BRO-servers. The default is False.
+
 
     Returns
     -------
@@ -259,13 +268,13 @@ def get_observations(
         os.makedirs(to_path)
     for bro_id in tqdm(np.unique(bro_ids), disable=silent, desc=desc):
         to_rel_file = None
-        if zipfile is not None or to_path is not None:
+        if _zipfile is not None or to_path is not None:
             to_rel_file = f"gmw_relations_{bro_id}.json"
-            if zipfile is None:
+            if _zipfile is None:
                 to_rel_file = os.path.join(to_path, to_rel_file)
             if _files is not None:
                 _files.append(to_rel_file)
-        if zipfile is None and (
+        if _zipfile is None and (
             redownload or to_rel_file is None or not os.path.isfile(to_rel_file)
         ):
             url = f"https://publiek.broservices.nl/gm/v1/gmw-relations/{bro_id}"
@@ -278,8 +287,8 @@ def get_observations(
                     f.write(req.text)
             data = req.json()
         else:
-            if zipfile is not None:
-                with zipfile.open(to_rel_file) as f:
+            if _zipfile is not None:
+                with _zipfile.open(to_rel_file) as f:
                     data = json.load(f)
             else:
                 with open(to_rel_file) as f:
@@ -291,16 +300,16 @@ def get_observations(
                     continue
             ref_key = f"{kind}References"
             for ref in tube_ref[ref_key]:
-                if zipfile is not None or to_path is not None:
+                if _zipfile is not None or to_path is not None:
                     if as_csv:
                         to_file = f"{ref['broId']}.csv"
                     else:
                         to_file = f"{ref['broId']}.xml"
-                    if zipfile is None:
+                    if _zipfile is None:
                         to_file = os.path.join(to_path, to_file)
                     if _files is not None:
                         _files.append(to_file)
-                if zipfile is None and (
+                if _zipfile is None and (
                     redownload or to_file is None or not os.path.isfile(to_file)
                 ):
                     if kind == "gld":
@@ -327,8 +336,8 @@ def get_observations(
                 else:
                     if kind == "gld":
                         if as_csv:
-                            if zipfile is not None:
-                                to_file = zipfile.open(to_file)
+                            if _zipfile is not None:
+                                to_file = _zipfile.open(to_file)
                             df = gld.read_gld_csv(
                                 to_file,
                                 ref["broId"],
@@ -337,14 +346,14 @@ def get_observations(
                             )
                         else:
                             df = GroundwaterLevelDossier(
-                                to_file, qualifier=qualifier, zipfile=zipfile
+                                to_file, qualifier=qualifier, zipfile=_zipfile
                             )
                     elif kind == "gar":
-                        df = GroundwaterAnalysisReport(to_file, zipfile=zipfile)
+                        df = GroundwaterAnalysisReport(to_file, zipfile=_zipfile)
                     elif kind == "frd":
-                        df = FormationResistanceDossier(to_file, zipfile=zipfile)
+                        df = FormationResistanceDossier(to_file, zipfile=_zipfile)
                     elif kind == "gmn":
-                        df = GroundwaterMonitoringNetwork(to_file, zipfile=zipfile)
+                        df = GroundwaterMonitoringNetwork(to_file, zipfile=_zipfile)
 
                 if as_csv:
                     tube_ref["observation"] = df
@@ -495,7 +504,7 @@ def get_data_in_extent(
     qualifier=None,
     to_zip=None,
     to_path=None,
-    redownload=True,
+    redownload=False,
 ):
     """
     Retrieve metadata and observations within a specified spatial extent.
@@ -527,6 +536,16 @@ def get_data_in_extent(
     qualifier : str or list of str, optional
         A string or list of strings used to filter the observations. Only valid if
         `kind` is 'gld'. Defaults to None.
+    to_path : str, optional
+        If not None, save the downloaded files in the directory named to_path. The
+        default is None.
+    to_zip : str, optional
+        If not None, save the downloaded files in a zip-file named to_zip. The default
+        is None.
+    redownload : bool, optional
+        When downloaded files exist in to_path or to_zip, read from these files when
+        redownload is False. If redownload is True, download the data again from the
+        BRO-servers. The default is False.
 
     Returns
     -------
@@ -546,14 +565,15 @@ def get_data_in_extent(
         if to_zip is not None:
             raise (Exception("When extent is a string, do not supply to_zip"))
         to_zip = extent
+        extent = None
         redownload = False
 
-    zipfile = None
+    _zipfile = None
     _files = None
     if to_zip is not None:
         if not redownload and os.path.isfile(to_zip):
             logger.info(f"Reading data from {to_zip}")
-            zipfile = ZipFile(to_zip)
+            _zipfile = ZipFile(to_zip)
         else:
             if to_path is None:
                 to_path = os.path.splitext(to_zip)[0]
@@ -563,18 +583,17 @@ def get_data_in_extent(
     # get gwm characteristics
     logger.info(f"Getting gmw-characteristics in extent: {extent}")
     to_file = None
-    if zipfile is not None or to_path is not None:
+    if _zipfile is not None or to_path is not None:
         to_file = "gmw_characteristics.xml"
-        if zipfile is None:
+        if _zipfile is None:
             to_file = os.path.join(to_path, to_file)
             if _files is not None:
                 _files.append(to_file)
-    if to_path is not None:
-        if not os.path.isdir(to_path):
-            os.makedirs(to_path)
+    if to_path is not None and not os.path.isdir(to_path):
+        os.makedirs(to_path)
 
     gmw = get_characteristics(
-        extent=extent, to_file=to_file, redownload=redownload, zipfile=zipfile
+        extent=extent, to_file=to_file, redownload=redownload, _zipfile=_zipfile
     )
 
     # get observations
@@ -589,7 +608,7 @@ def get_data_in_extent(
         to_path=to_path,
         _files=_files,
         redownload=redownload,
-        zipfile=zipfile,
+        _zipfile=_zipfile,
     )
 
     # only keep wells with observations
@@ -603,14 +622,14 @@ def get_data_in_extent(
         gmw,
         index=index,
         to_path=to_path,
-        _files=_files,
         redownload=redownload,
-        zipfile=zipfile,
+        _files=_files,
+        _zipfile=_zipfile,
     )
 
-    if zipfile is not None:
-        zipfile.close()
-    if zipfile is None and to_zip is not None:
+    if _zipfile is not None:
+        _zipfile.close()
+    if _zipfile is None and to_zip is not None:
         _save_data_to_zip(to_zip, _files, remove_path_again, to_path)
 
     if not obs_df.empty:
@@ -675,9 +694,9 @@ def get_tube_gdf_from_characteristics(
     characteristics_gdf,
     index=None,
     to_path=None,
-    _files=None,
     redownload=False,
-    zipfile=None,
+    _files=None,
+    _zipfile=None,
 ):
     """
     Generate a GeoDataFrame of tube properties based on well characteristics.
@@ -704,9 +723,9 @@ def get_tube_gdf_from_characteristics(
     bids = characteristics_gdf.index.unique()
     gmws = []
     for bid in bids:
-        if zipfile is not None:
+        if _zipfile is not None:
             fname = f"{bid}.xml"
-            gmw = GroundwaterMonitoringWell(fname, zipfile=zipfile)
+            gmw = GroundwaterMonitoringWell(fname, zipfile=_zipfile)
         else:
             to_file = None
             if to_path is not None:
@@ -721,10 +740,10 @@ def get_tube_gdf_from_characteristics(
     return gdf
 
 
-get_bro_ids_of_bronhouder = partial(
-    bro._get_bro_ids_of_bronhouder, cl=GroundwaterMonitoringWell
-)
+cl = GroundwaterMonitoringWell
+
+get_bro_ids_of_bronhouder = partial(bro._get_bro_ids_of_bronhouder, cl)
 get_bro_ids_of_bronhouder.__doc__ = bro._get_bro_ids_of_bronhouder.__doc__
 
-get_characteristics = partial(bro._get_characteristics, cl=GroundwaterMonitoringWell)
+get_characteristics = partial(bro._get_characteristics, cl)
 get_characteristics.__doc__ = bro._get_characteristics.__doc__

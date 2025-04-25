@@ -31,8 +31,13 @@ class SoilFaceResearch(bro.FileOrUrl):
                 logger.warning(f"Unknown key: {key}")
 
 
-get_bro_ids_of_bronhouder = partial(bro._get_bro_ids_of_bronhouder, cl=SoilFaceResearch)
+cl = SoilFaceResearch
+
+get_bro_ids_of_bronhouder = partial(bro._get_bro_ids_of_bronhouder, cl)
 get_bro_ids_of_bronhouder.__doc__ = bro._get_bro_ids_of_bronhouder.__doc__
 
-get_characteristics = partial(bro._get_characteristics, cl=SoilFaceResearch)
+get_characteristics = partial(bro._get_characteristics, cl)
 get_characteristics.__doc__ = bro._get_characteristics.__doc__
+
+get_data_in_extent = partial(bro._get_data_in_extent, cl)
+get_data_in_extent.__doc__ = bro._get_data_in_extent.__doc__

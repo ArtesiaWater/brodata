@@ -12,6 +12,7 @@ logger = logging.getLogger(__name__)
 class GroundwaterUtilisationFacility(bro.FileOrUrl):
     _rest_url = "https://publiek.broservices.nl/gu/guf/v1"
     _xmlns = "http://www.broservices.nl/xsd/dsguf/1.0"
+    _char = "GUF_C"
     _namespace = {
         "brocom": "http://www.broservices.nl/xsd/brocommon/3.0",
         "gml": "http://www.opengis.net/gml/3.2",
@@ -34,8 +35,7 @@ class GroundwaterUtilisationFacility(bro.FileOrUrl):
             if len(child) == 0:
                 setattr(self, key, child.text)
             elif key == "standardizedLocation":
-                location = child.find("brocom:location", ns)
-                setattr(self, key, self._read_pos(location))
+                self._read_standardized_location(child)
             elif key in ["registrationHistory"]:
                 self._read_children_of_children(child)
             elif key == "validityPeriod":
@@ -242,12 +242,13 @@ class GroundwaterUtilisationFacility(bro.FileOrUrl):
         logger.warning("Other types of geometries than point not supported yet")
 
 
-get_bro_ids_of_bronhouder = partial(
-    bro._get_bro_ids_of_bronhouder, cl=GroundwaterUtilisationFacility
-)
+cl = GroundwaterUtilisationFacility
+
+get_bro_ids_of_bronhouder = partial(bro._get_bro_ids_of_bronhouder, cl)
 get_bro_ids_of_bronhouder.__doc__ = bro._get_bro_ids_of_bronhouder.__doc__
 
-get_characteristics = partial(
-    bro._get_characteristics, cl=GroundwaterUtilisationFacility
-)
+get_characteristics = partial(bro._get_characteristics, cl)
 get_characteristics.__doc__ = bro._get_characteristics.__doc__
+
+get_data_in_extent = partial(bro._get_data_in_extent, cl)
+get_data_in_extent.__doc__ = bro._get_data_in_extent.__doc__
