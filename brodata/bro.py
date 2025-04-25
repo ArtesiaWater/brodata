@@ -65,7 +65,7 @@ def _get_characteristics(
     redownload=False,
     use_all_corners_of_extent=True,
     timeout=5,
-    _zipfile=None,
+    zipfile=None,
 ):
     """
     Get characteristics of a set of registered objects for a given object class.
@@ -111,6 +111,9 @@ def _get_characteristics(
     timeout : int or float, optional
         A number indicating how many seconds to wait for the client to make a connection
         and/or send a response. The default is 5.
+    zipfile : zipfile.ZipFile, optional
+        A zipfile-object. When not None, zipfile is used to read previously downloaded
+        data from. The default is None.
 
     Returns
     -------
@@ -128,7 +131,7 @@ def _get_characteristics(
     gewenste registratie objecten. Het resultaat van deze operatie is gemaximaliseerd op
     2000.
     """
-    if _zipfile is None and (
+    if zipfile is None and (
         redownload or to_file is None or not os.path.isfile(to_file)
     ):
         url = f"{cl._rest_url}/characteristics/searches?"
@@ -182,8 +185,8 @@ def _get_characteristics(
         # read results
         tree = xml.etree.ElementTree.fromstring(req.text)
     else:
-        if _zipfile is not None:
-            with _zipfile.open(to_file) as f:
+        if zipfile is not None:
+            with zipfile.open(to_file) as f:
                 tree = xml.etree.ElementTree.parse(f).getroot()
         else:
             tree = xml.etree.ElementTree.parse(to_file).getroot()
@@ -232,7 +235,7 @@ def _get_characteristics(
         data.append(d)
 
     gdf = objects_to_gdf(data)
-    if _zipfile is not None and extent is not None:
+    if zipfile is not None and extent is not None:
         gdf = gdf.cx[extent[0] : extent[1], extent[2] : extent[3]]
     return gdf
 
@@ -256,12 +259,12 @@ def _get_data_in_extent(
         to_zip = extent
         extent = None
         redownload = False
-    _zipfile = None
+    zipfile = None
     _files = None
     if to_zip is not None:
         if not redownload and os.path.isfile(to_zip):
             logger.info(f"Reading data from {to_zip}")
-            _zipfile = ZipFile(to_zip)
+            zipfile = ZipFile(to_zip)
         else:
             if to_path is None:
                 to_path = os.path.splitext(to_zip)[0]
@@ -271,9 +274,9 @@ def _get_data_in_extent(
     # get gwm characteristics
     logger.info(f"Getting characteristics in extent: {extent}")
     to_file = None
-    if _zipfile is not None or to_path is not None:
+    if zipfile is not None or to_path is not None:
         to_file = "characteristics.xml"
-        if _zipfile is None:
+        if zipfile is None:
             to_file = os.path.join(to_path, to_file)
             if _files is not None:
                 _files.append(to_file)
@@ -281,14 +284,14 @@ def _get_data_in_extent(
         os.makedirs(to_path)
 
     char = _get_characteristics(
-        bro_cl, extent=extent, to_file=to_file, redownload=redownload, _zipfile=_zipfile
+        bro_cl, extent=extent, to_file=to_file, redownload=redownload, zipfile=zipfile
     )
 
     data = {}
     for bro_id in tqdm(char.index, disable=silent):
-        if _zipfile is not None:
+        if zipfile is not None:
             fname = f"{bro_id}.xml"
-            data[bro_id] = bro_cl(fname, zipfile=_zipfile)
+            data[bro_id] = bro_cl(fname, zipfile=zipfile)
             continue
         if to_path is not None:
             to_file = os.path.join(to_path, f"{bro_id}.xml")
@@ -298,9 +301,9 @@ def _get_data_in_extent(
                 data[bro_id] = bro_cl(to_file)
                 continue
         data[bro_id] = bro_cl.from_bro_id(bro_id, to_file=to_file, timeout=timeout)
-    if _zipfile is not None:
-        _zipfile.close()
-    if _zipfile is None and to_zip is not None:
+    if zipfile is not None:
+        zipfile.close()
+    if zipfile is None and to_zip is not None:
         _save_data_to_zip(to_zip, _files, remove_path_again, to_path)
 
     gdf = objects_to_gdf(data, geometry, to_gdf, index)
