@@ -523,7 +523,8 @@ def get_data_in_extent(
         The spatial extent ([xmin, xmax, ymin, ymax]) to filter the data.
     kind : str, optional
         The type of observations to retrieve. Valid values are {'gld', 'gar'} for
-        groundwater level dossier or groundwater analysis report. Defaults to 'gld'.
+        groundwater level dossier or groundwater analysis report. When kind is None, no
+        observations are downloaded. Defaults to 'gld'.
     tmin : str or datetime, optional
         The minimum time for filtering observations. Defaults to None.
     tmax : str or datetime, optional
@@ -599,24 +600,28 @@ def get_data_in_extent(
         extent=extent, to_file=to_file, redownload=redownload, zipfile=zipfile
     )
 
-    # get observations
-    logger.info(f"Downloading {kind}-observations")
-    obs_df = get_observations(
-        gmw,
-        kind=kind,
-        tmin=tmin,
-        tmax=tmax,
-        as_csv=as_csv,
-        qualifier=qualifier,
-        to_path=to_path,
-        redownload=redownload,
-        zipfile=zipfile,
-        _files=_files,
-    )
+    if kind is None:
+        obs_df = pd.DataFrame()
+        combine = False
+    else:
+        # get observations
+        logger.info(f"Downloading {kind}-observations")
+        obs_df = get_observations(
+            gmw,
+            kind=kind,
+            tmin=tmin,
+            tmax=tmax,
+            as_csv=as_csv,
+            qualifier=qualifier,
+            to_path=to_path,
+            redownload=redownload,
+            zipfile=zipfile,
+            _files=_files,
+        )
 
-    # only keep wells with observations
-    if "groundwaterMonitoringWell" in obs_df.columns:
-        gmw = gmw[gmw.index.isin(obs_df["groundwaterMonitoringWell"])]
+        # only keep wells with observations
+        if "groundwaterMonitoringWell" in obs_df.columns:
+            gmw = gmw[gmw.index.isin(obs_df["groundwaterMonitoringWell"])]
 
     logger.info("Downloading tube-properties")
 
@@ -660,7 +665,10 @@ def get_data_in_extent(
         gdf[idcol] = ids
         return gdf
     else:
-        return gdf, obs_df
+        if kind is None:
+            return gdf
+        else:
+            return gdf, obs_df
 
 
 def _get_data_column(kind):
