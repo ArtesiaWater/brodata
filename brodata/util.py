@@ -1,6 +1,6 @@
 import logging
 import os
-from zipfile import ZipFile
+from zipfile import ZipFile, ZIP_DEFLATED, ZIP_STORED
 
 import numpy as np
 import pandas as pd
@@ -168,7 +168,13 @@ def read_zipfile(fname, pathnames=None, override_ext=None):
 
 
 def _save_data_to_zip(to_zip, files, remove_path_again, to_path):
-    with ZipFile(to_zip, "w") as zf:
+    try:
+        import zlib
+
+        compression = ZIP_DEFLATED
+    except:
+        compression = ZIP_STORED
+    with ZipFile(to_zip, "w", compression=compression) as zf:
         for file in files:
             zf.write(file, os.path.split(file)[1])
     if remove_path_again:
