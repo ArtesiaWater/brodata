@@ -107,9 +107,7 @@ class GroundwaterMonitoringWell(bro.FileOrUrl):
             if len(child) == 0:
                 setattr(self, key, child.text)
             elif key == "standardizedLocation":
-                lat, lon = self._read_pos(child.find("brocom:location", ns))
-                setattr(self, "lat", lat)
-                setattr(self, "lon", lon)
+                self._read_standardized_location(child)
             elif key == "deliveredLocation":
                 self._read_delivered_location(child)
             elif key == "wellHistory":
@@ -170,9 +168,9 @@ def get_observations(
     qualifier=None,
     to_path=None,
     to_zip=None,
-    redownload=True,
-    _files=None,
+    redownload=False,
     zipfile=None,
+    _files=None,
 ):
     """
     Retrieve groundwater observations for the specified monitoring wells (bro_ids).
@@ -206,6 +204,20 @@ def get_observations(
     qualifier : str or list of str, optional
         A qualifier string for additional filtering. Only valid if `kind` is 'gld'.
         Defaults to None.
+    to_path : str, optional
+        If not None, save the downloaded files in the directory named to_path. The
+        default is None.
+    to_zip : str, optional
+        If not None, save the downloaded files in a zip-file named to_zip. The default
+        is None.
+    redownload : bool, optional
+        When downloaded files exist in to_path or to_zip, read from these files when
+        redownload is False. If redownload is True, download the data again from the
+        BRO-servers. The default is False.
+    zipfile : zipfile.ZipFile, optional
+        A zipfile-object. When not None, zipfile is used to read previously downloaded
+        data from. The default is None.
+
 
     Returns
     -------
@@ -495,7 +507,7 @@ def get_data_in_extent(
     qualifier=None,
     to_zip=None,
     to_path=None,
-    redownload=True,
+    redownload=False,
 ):
     """
     Retrieve metadata and observations within a specified spatial extent.
@@ -511,7 +523,8 @@ def get_data_in_extent(
         The spatial extent ([xmin, xmax, ymin, ymax]) to filter the data.
     kind : str, optional
         The type of observations to retrieve. Valid values are {'gld', 'gar'} for
-        groundwater level dossier or groundwater analysis report. Defaults to 'gld'.
+        groundwater level dossier or groundwater analysis report. When kind is None, no
+        observations are downloaded. Defaults to 'gld'.
     tmin : str or datetime, optional
         The minimum time for filtering observations. Defaults to None.
     tmax : str or datetime, optional
@@ -527,6 +540,16 @@ def get_data_in_extent(
     qualifier : str or list of str, optional
         A string or list of strings used to filter the observations. Only valid if
         `kind` is 'gld'. Defaults to None.
+    to_path : str, optional
+        If not None, save the downloaded files in the directory named to_path. The
+        default is None.
+    to_zip : str, optional
+        If not None, save the downloaded files in a zip-file named to_zip. The default
+        is None.
+    redownload : bool, optional
+        When downloaded files exist in to_path or to_zip, read from these files when
+        redownload is False. If redownload is True, download the data again from the
+        BRO-servers. The default is False.
 
     Returns
     -------
@@ -546,6 +569,7 @@ def get_data_in_extent(
         if to_zip is not None:
             raise (Exception("When extent is a string, do not supply to_zip"))
         to_zip = extent
+        extent = None
         redownload = False
 
     zipfile = None
@@ -569,32 +593,35 @@ def get_data_in_extent(
             to_file = os.path.join(to_path, to_file)
             if _files is not None:
                 _files.append(to_file)
-    if to_path is not None:
-        if not os.path.isdir(to_path):
-            os.makedirs(to_path)
+    if to_path is not None and not os.path.isdir(to_path):
+        os.makedirs(to_path)
 
     gmw = get_characteristics(
         extent=extent, to_file=to_file, redownload=redownload, zipfile=zipfile
     )
 
-    # get observations
-    logger.info(f"Downloading {kind}-observations")
-    obs_df = get_observations(
-        gmw,
-        kind=kind,
-        tmin=tmin,
-        tmax=tmax,
-        as_csv=as_csv,
-        qualifier=qualifier,
-        to_path=to_path,
-        _files=_files,
-        redownload=redownload,
-        zipfile=zipfile,
-    )
+    if kind is None:
+        obs_df = pd.DataFrame()
+        combine = False
+    else:
+        # get observations
+        logger.info(f"Downloading {kind}-observations")
+        obs_df = get_observations(
+            gmw,
+            kind=kind,
+            tmin=tmin,
+            tmax=tmax,
+            as_csv=as_csv,
+            qualifier=qualifier,
+            to_path=to_path,
+            redownload=redownload,
+            zipfile=zipfile,
+            _files=_files,
+        )
 
-    # only keep wells with observations
-    if "groundwaterMonitoringWell" in obs_df.columns:
-        gmw = gmw[gmw.index.isin(obs_df["groundwaterMonitoringWell"])]
+        # only keep wells with observations
+        if "groundwaterMonitoringWell" in obs_df.columns:
+            gmw = gmw[gmw.index.isin(obs_df["groundwaterMonitoringWell"])]
 
     logger.info("Downloading tube-properties")
 
@@ -603,9 +630,9 @@ def get_data_in_extent(
         gmw,
         index=index,
         to_path=to_path,
-        _files=_files,
         redownload=redownload,
         zipfile=zipfile,
+        _files=_files,
     )
 
     if zipfile is not None:
@@ -638,7 +665,10 @@ def get_data_in_extent(
         gdf[idcol] = ids
         return gdf
     else:
-        return gdf, obs_df
+        if kind is None:
+            return gdf
+        else:
+            return gdf, obs_df
 
 
 def _get_data_column(kind):
@@ -675,9 +705,9 @@ def get_tube_gdf_from_characteristics(
     characteristics_gdf,
     index=None,
     to_path=None,
-    _files=None,
     redownload=False,
     zipfile=None,
+    _files=None,
 ):
     """
     Generate a GeoDataFrame of tube properties based on well characteristics.
@@ -721,10 +751,10 @@ def get_tube_gdf_from_characteristics(
     return gdf
 
 
-get_bro_ids_of_bronhouder = partial(
-    bro._get_bro_ids_of_bronhouder, cl=GroundwaterMonitoringWell
-)
+cl = GroundwaterMonitoringWell
+
+get_bro_ids_of_bronhouder = partial(bro._get_bro_ids_of_bronhouder, cl)
 get_bro_ids_of_bronhouder.__doc__ = bro._get_bro_ids_of_bronhouder.__doc__
 
-get_characteristics = partial(bro._get_characteristics, cl=GroundwaterMonitoringWell)
+get_characteristics = partial(bro._get_characteristics, cl)
 get_characteristics.__doc__ = bro._get_characteristics.__doc__

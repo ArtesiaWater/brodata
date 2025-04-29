@@ -170,7 +170,7 @@ def _get_empty_observation_df():
     return pd.DataFrame(columns=columns).set_index("analysisDate")
 
 
-get_bro_ids_of_bronhouder = partial(
-    bro._get_bro_ids_of_bronhouder, cl=GroundwaterAnalysisReport
-)
+cl = GroundwaterAnalysisReport
+
+get_bro_ids_of_bronhouder = partial(bro._get_bro_ids_of_bronhouder, cl=cl)
 get_bro_ids_of_bronhouder.__doc__ = bro._get_bro_ids_of_bronhouder.__doc__

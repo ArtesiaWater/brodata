@@ -1,11 +1,10 @@
 import logging
 import os
-from zipfile import ZipFile
+from zipfile import ZipFile, ZIP_DEFLATED, ZIP_STORED
 
 import numpy as np
 import pandas as pd
 import geopandas as gpd
-from tqdm import tqdm
 
 logger = logging.getLogger(__name__)
 
@@ -40,7 +39,6 @@ def objects_to_gdf(
     gdf: GeoDataFrame or DataFrame
         Returns a GeoDataFrame if to_gdf is True, otherwise a DataFrame
     """
-    import geopandas as gpd
 
     if not to_gdf:
         return objects
@@ -169,39 +167,14 @@ def read_zipfile(fname, pathnames=None, override_ext=None):
         return data
 
 
-def _get_data_from_path(from_path, dino_class, silent=False, ext=".csv"):
-    if str(from_path).endswith(".zip"):
-        return _get_data_from_zip(from_path, dino_class, silent=silent)
-    files = os.listdir(from_path)
-    files = [file for file in files if file.endswith(ext)]
-    data = {}
-    for file in tqdm(files, disable=silent):
-        fname = os.path.join(from_path, file)
-        data[os.path.splitext(file)[0]] = dino_class(fname)
-    return data
-
-
-def _get_data_from_zip(to_zip, dino_class, silent=False, extent=None):
-    # read data from zipfile
-    data = {}
-    with ZipFile(to_zip) as zf:
-        names = zf.namelist()
-        name = f"{dino_class.__name__}.geojson"
-        has_location_file = name in names
-        if has_location_file:
-            names.remove(name)
-        if has_location_file and extent is not None:
-            gdf = gpd.read_file(zf.open(name))
-            gdf = gdf.set_index("DINO_NR")
-            gdf = gdf.cx[extent[0] : extent[1], extent[2] : extent[3]]
-            names = [f"{name}.csv" for name in gdf.index]
-        for name in tqdm(names, disable=silent):
-            data[name] = dino_class(name, zipfile=zf)
-    return data
-
-
 def _save_data_to_zip(to_zip, files, remove_path_again, to_path):
-    with ZipFile(to_zip, "w") as zf:
+    try:
+        import zlib
+
+        compression = ZIP_DEFLATED
+    except:
+        compression = ZIP_STORED
+    with ZipFile(to_zip, "w", compression=compression) as zf:
         for file in files:
             zf.write(file, os.path.split(file)[1])
     if remove_path_again:

@@ -62,7 +62,7 @@ class GroundwaterMonitoringNetwork(bro.FileOrUrl):
                 )
 
 
-get_bro_ids_of_bronhouder = partial(
-    bro._get_bro_ids_of_bronhouder, cl=GroundwaterMonitoringNetwork
-)
+cl = GroundwaterMonitoringNetwork
+
+get_bro_ids_of_bronhouder = partial(bro._get_bro_ids_of_bronhouder, cl)
 get_bro_ids_of_bronhouder.__doc__ = bro._get_bro_ids_of_bronhouder.__doc__

@@ -1,4 +1,7 @@
 import os
+import tempfile
+
+from pandas.testing import assert_frame_equal
 
 import brodata
 
@@ -73,7 +76,22 @@ def test_chemische_analyse():
 
 def test_get_verticaal_elektrisch_sondeeronderzoek_within_extent():
     extent = [116000, 120000, 439400, 442000]
-    brodata.dino.get_verticaal_elektrisch_sondeeronderzoek(extent)
+    to_zip = os.path.join(tempfile.gettempdir(), "ves.zip")
+    gdf1 = brodata.dino.get_verticaal_elektrisch_sondeeronderzoek(
+        extent, to_zip=to_zip, redownload=True
+    )
+
+    gdf2 = brodata.dino.get_verticaal_elektrisch_sondeeronderzoek(
+        extent, to_zip=to_zip, redownload=False
+    )
+
+    gdf3 = brodata.dino.get_verticaal_elektrisch_sondeeronderzoek(to_zip)
+
+    extent_part = [117000, 120000, 439400, 442000]
+    gdf2 = brodata.dino.get_verticaal_elektrisch_sondeeronderzoek(
+        extent_part, to_zip=to_zip, redownload=False
+    )
+    assert len(gdf2) < len(gdf1)
 
 
 def test_grondwaterstanden_within_extent():
