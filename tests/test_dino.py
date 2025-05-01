@@ -1,8 +1,6 @@
 import os
 import tempfile
 
-from pandas.testing import assert_frame_equal
-
 import brodata
 
 
@@ -20,6 +18,8 @@ def test_verticaal_elektrisch_sondeeronderzoek_from_file_one_model():
     fname = os.path.join("tests", "data", "W38B0022.csv")
     ves = brodata.dino.VerticaalElektrischSondeeronderzoek(fname)
     assert len(ves.interpretaties) == 1
+    # also test plot-method
+    ves.plot_interpretaties()
 
 
 def test_verticaal_elektrisch_sondeeronderzoek_from_file_multiple_models():

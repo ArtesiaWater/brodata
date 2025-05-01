@@ -9,6 +9,7 @@ import pandas as pd
 import geopandas as gpd
 import requests
 from shapely.geometry import LineString
+import matplotlib.pyplot as plt
 from tqdm import tqdm
 
 from .util import (
@@ -672,3 +673,78 @@ class VerticaalElektrischSondeeronderzoek(CsvFileOrUrl):
             dy = np.sin(angle) * d["Maximale elektrode afstand L2"]
             d["geometry"] = LineString([(x + dx, y + dy), (x - dx, y - dy)])
         return d
+
+    def plot_interpretaties(
+        self, nr=None, ax=None, top=0, bot=None, negative_depth=True, **kwargs
+    ):
+        """
+        Plot interpreted resistance profiles from CPT data.
+
+        This method visualizes one or more interpretation profiles by plotting the
+        'Werkelijke weerstand' (actual resistance) against depth as a line (stairs).
+
+        Parameters
+        ----------
+        nr : int or None, optional
+            Index of a specific interpretation to plot. If None (default), all
+            interpretations in `self.interpretaties` are plotted.
+        ax : matplotlib.axes.Axes, optional
+            The matplotlib Axes object to draw the plot on. If None, the current Axes
+            (`plt.gca()`) is used. The default is None.
+        top : float, optional
+            Top depth of the plot in meters. The default is 0.
+        bot : float or None, optional
+            Bottom depth of the plot in meters. If None (default), it is inferred from
+            the data, by setting the length of the last section equal to the length of
+            the next to last section.
+        negative_depth : bool, optional
+            If True (default), depth is plotted as negative (i.e., increasing downwards,
+            following geotechnical convention).
+        **kwargs : dict, optional
+            Additional keyword arguments passed to `matplotlib.axes.Axes.plot` (e.g.,
+            color, linestyle, label).
+
+        Returns
+        -------
+        ax : matplotlib.axes.Axes
+            The Axes object containing the plot.
+        """
+        if nr is None:
+            dfs = self.interpretaties
+            if len(dfs) == 0:
+                nitg_nr = getattr(self, "NITG-nr")
+                logger.warning(f"No interpretations in {nitg_nr}")
+                return
+        else:
+            dfs = [self.interpretaties[nr]]
+
+        if ax is None:
+            ax = plt.gca()
+
+        for df in dfs:
+            values = df["Werkelijke weerstand"].values
+
+            edges = df["Bovenkant laag (m)"].values[1:]
+            edges = np.vstack((edges, edges)).transpose().ravel()
+            edge_top = df["Bovenkant laag (m)"].iloc[0]
+            if np.isnan(edge_top):
+                edge_top = top
+            edge_bot = df["Onderkant laag (m)"].iloc[-1]
+            if np.isnan(edge_bot):
+                if bot is None or np.isnan(bot):
+                    edge_bot = df["Bovenkant laag (m)"].iloc[-1] + (
+                        df["Bovenkant laag (m)"].iloc[-1]
+                        - df["Bovenkant laag (m)"].iloc[-2]
+                    )
+                else:
+                    edge_bot = bot
+            edges = np.hstack((edge_top, edges, edge_bot))
+
+            values = np.vstack((values, values)).transpose().ravel()
+
+            if negative_depth:
+                edges = -edges
+
+            ax.plot(values, edges, **kwargs)
+
+        return ax
