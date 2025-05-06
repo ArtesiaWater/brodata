@@ -66,6 +66,8 @@ def _get_data_within_extent(
             files.append(to_file)
         if not redownload and os.path.isfile(to_file):
             gdf = gpd.read_file(to_file)
+            if not gdf.empty and "DINO_NR" in gdf.columns:
+                gdf = gdf.set_index("DINO_NR")
     if gdf is None:
         gdf = get_gdf(
             kind,
