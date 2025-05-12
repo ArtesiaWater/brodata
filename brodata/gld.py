@@ -298,7 +298,7 @@ class GroundwaterLevelDossier(bro.FileOrUrl):
 
     _rest_url = "https://publiek.broservices.nl/gm/gld/v1"
 
-    def _read_contents(self, tree, **kwargs):
+    def _read_contents(self, tree, status=None, observation_type=None, **kwargs):
         """
         Parse and extract data from the XML tree to populate the Groundwater Level
         Dossier attributes.
@@ -336,6 +336,8 @@ class GroundwaterLevelDossier(bro.FileOrUrl):
             "gldcommon": "http://www.broservices.nl/xsd/gldcommon/1.0",
             "waterml": "http://www.opengis.net/waterml/2.0",
             "swe": "http://www.opengis.net/swe/2.0",
+            "om": "http://www.opengis.net/om/2.0",
+            "xlink": "http://www.w3.org/1999/xlink",
         }
         glds = tree.findall(".//ns11:GLD_O", ns)
         if len(glds) != 1:
@@ -363,6 +365,37 @@ class GroundwaterLevelDossier(bro.FileOrUrl):
                     else:
                         logger.warning(f"Unknown key: {key2}")
             elif key == "observation":
+                # get observation_metadata
+                om_observation = child.find("om:OM_Observation", ns)
+                if om_observation is None:
+                    continue
+                metadata = om_observation.find("om:metadata", ns)
+                observation_metadata = metadata.find("waterml:ObservationMetadata", ns)
+
+                # get status
+                water_ml_status = observation_metadata.find("waterml:status", ns)
+                status_value = water_ml_status.attrib[f"{{{ns['xlink']}}}href"].rsplit(
+                    ":", 1
+                )[-1]
+                if status is not None and status != status_value:
+                    continue
+
+                # get observation_type
+                parameter = observation_metadata.find("waterml:parameter", ns)
+                named_value = parameter.find("om:NamedValue", ns)
+                name = named_value.find("om:name", ns)
+                assert (
+                    name.attrib[f"{{{ns['xlink']}}}href"]
+                    == "urn:bro:gld:ObservationMetadata:observationType"
+                )
+                value = named_value.find("om:value", ns)
+                observation_type_value = value.text
+                if (
+                    observation_type is not None
+                    and observation_type != observation_type_value
+                ):
+                    continue
+
                 times = []
                 values = []
                 qualifiers = []
@@ -383,6 +416,8 @@ class GroundwaterLevelDossier(bro.FileOrUrl):
                         "time": pd.to_datetime(times, utc=True),
                         "value": values,
                         "qualifier": qualifiers,
+                        "status": status_value,
+                        "observation_type": observation_type_value,
                     }
                 ).set_index("time")
                 if not hasattr(self, key):
