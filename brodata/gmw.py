@@ -464,20 +464,10 @@ def get_tube_gdf(gmws, index=None):
 
             tubes.append(tube)
 
-    tubes = pd.DataFrame(tubes)
     if index is None:
         index = ["groundwaterMonitoringWell", "tubeNumber"]
-    elif isinstance(index, str):
-        index = [index]
-    if np.all([x in tubes.columns for x in index]):
-        tubes = tubes.set_index(index)
+    gdf = bro.objects_to_gdf(tubes, index=index)
 
-    # make a geodataframe
-    if "x" in tubes.columns and "y" in tubes.columns:
-        geometry = gpd.points_from_xy(tubes["x"], tubes["y"], crs=28992)
-    else:
-        geometry = None
-    gdf = gpd.GeoDataFrame(tubes, geometry=geometry)
     gdf = gdf.sort_index()
 
     # makes sure some columns consist of floats
