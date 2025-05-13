@@ -374,9 +374,12 @@ class GroundwaterLevelDossier(bro.FileOrUrl):
 
                 # get status
                 water_ml_status = observation_metadata.find("waterml:status", ns)
-                status_value = water_ml_status.attrib[f"{{{ns['xlink']}}}href"].rsplit(
-                    ":", 1
-                )[-1]
+                if water_ml_status is None:
+                    status_value = None
+                else:
+                    status_value = water_ml_status.attrib[
+                        f"{{{ns['xlink']}}}href"
+                    ].rsplit(":", 1)[-1]
                 if status is not None and status != status_value:
                     continue
 
