@@ -3,72 +3,8 @@ import os
 from zipfile import ZipFile, ZIP_DEFLATED, ZIP_STORED
 
 import numpy as np
-import pandas as pd
-import geopandas as gpd
 
 logger = logging.getLogger(__name__)
-
-
-def objects_to_gdf(
-    objects,
-    x="x",
-    y="y",
-    geometry=None,
-    index=None,
-    to_gdf=True,
-):
-    """
-
-    Parameters
-    ----------
-    objects: dictionary of bro or dinoloket objects
-        dictionary of objects to convert to (geo)dataframe
-    geometry: str
-        name of column of geometry
-    x: str
-        name of column of x-coordinate
-    y: str
-        name of column of y-coordinate
-    index: str or list of str
-        name of column to use as index
-    to_gdf: bool
-        convert to geodataframe
-
-    Returns
-    -------
-    gdf: GeoDataFrame or DataFrame
-        Returns a GeoDataFrame if to_gdf is True, otherwise a DataFrame
-    """
-
-    if not to_gdf:
-        return objects
-
-    # convert a list of dino-objects to a geodataframe
-    df = pd.DataFrame([objects[key].to_dict() for key in objects])
-    if geometry is not None:
-        if geometry in df.columns:
-            geometry = df[geometry]
-        else:
-            geometry = None
-    else:
-        if df.empty:
-            logger.warning("no data found")
-        else:
-            if x not in df:
-                logger.warning(f"{x} not found in data. No geometry column created.")
-            elif y not in df:
-                logger.warning(f"{y} not found in data. No geometry column created.")
-            else:
-                geometry = gpd.points_from_xy(df[x], df[y])
-    gdf = gpd.GeoDataFrame(df, geometry=geometry)
-    if index is not None and not gdf.empty:
-        if isinstance(index, str):
-            if index in gdf.columns:
-                gdf = gdf.set_index(index)
-        elif np.all([x in gdf.columns for x in index]):
-            # we assume index is an iterable (list), to form a MultiIndex
-            gdf = gdf.set_index(index)
-    return gdf
 
 
 def read_zipfile(fname, pathnames=None, override_ext=None):
