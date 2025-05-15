@@ -219,9 +219,10 @@ def read_gld_csv(fname, bro_id, rapportagetype, **kwargs):
     )
     if rapportagetype == "compact_met_timestamps":
         df.index = pd.to_datetime(df.index, unit="ms")
-    # remove last row with empty indices
-    if pd.isna(df.index[-1]) and df.iloc[-1].isna().all():
-        df = df.iloc[:-1]
+    # remove empty indices
+    mask = df.index.isna() & df.isna().all(1)
+    if mask.any():
+        df = df[~mask]
     df = process_observations(df, bro_id, **kwargs)
     return df
 
