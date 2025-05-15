@@ -205,7 +205,11 @@ def _get_characteristics(
                 d[key] = FileOrUrl._read_pos(child)
             elif key == "deliveredLocation":
                 d[key] = FileOrUrl._read_pos(child)
-            elif key.endswith("Date") or key.endswith("Overview") or key == "startTime":
+            elif (
+                key.endswith("Date")
+                or key.endswith("Overview")
+                or key in ["startTime", "endTime"]
+            ):
                 d[key] = child[0].text
             elif key in ["diameterRange", "screenPositionRange"]:
                 for grandchild in child:
