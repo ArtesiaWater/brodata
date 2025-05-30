@@ -217,6 +217,45 @@ def lithology(
 def lithology_along_line(
     gdf, line, kind, ax=None, legend=True, max_distance=None, **kwargs
 ):
+    """
+    Plot lithological drillings along a cross-sectional line.
+
+    This function visualizes subsurface lithology data from borehole records
+    in a 2D cross-section view, based on their proximity to a specified line.
+    It supports both 'dino' and 'bro' formatted datasets.
+
+    Parameters
+    ----------
+    gdf : geopandas.GeoDataFrame
+        GeoDataFrame containing borehole data. This typically includes geometry and
+        lithology-related columns. Can be retrieved using, for example,
+        `brodata.dino.get_boormonsterprofiel`.
+    line : shapely.geometry.LineString or list of tuple[float, float]
+        The cross-sectional line along which to plot the lithologies. Determines the
+        x-coordinates of the lithology logs. If `max_distance` is set, only boreholes
+        within this distance from the line will be included.
+    kind : str
+        Specifies the data source format. Must be either 'dino' or 'bro'.
+    ax : matplotlib.axes.Axes, optional
+        The matplotlib axes object to plot on. If None, uses the current axes.
+    legend : bool, optional
+        Whether to include a legend for the lithology classes. Default is True.
+    max_distance : float, optional
+        Maximum distance (in the same units as the GeoDataFrame's CRS) from the line
+        within which boreholes are included in the cross-section. If None, includes all.
+    **kwargs :
+        Additional keyword arguments passed to either `dino_lithology` or `bro_lithology`.
+
+    Returns
+    -------
+    ax : matplotlib.axes.Axes
+        The matplotlib axes object containing the lithology cross-section plot.
+
+    Raises
+    ------
+    Exception
+        If `kind` is not 'dino' or 'bro'.
+    """
     from shapely.geometry import LineString
 
     ax = plt.gca() if ax is None else ax
