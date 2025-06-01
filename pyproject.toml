@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "brodata"
-version = "0.0.2"
+dynamic = ["version"]
 authors = [{ name = "Ruben Calje", email = "r.calje@artesia-water.nl" }]
 description = "A Python-package to download and process subsurface data from DINO and BRO"
 readme = "README.md"
@@ -31,3 +31,6 @@ issues = "https://github.com/ArtesiaWater/brodata/issues"
 
 [project.optional-dependencies]
 ci = ["pytest", "pytest-sugar", "ipython", "lasio"]
+
+[tool.setuptools.dynamic]
+version = { attr = "nlmod.version.__version__" }

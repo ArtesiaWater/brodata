@@ -1,7 +1,7 @@
 ========
-Examples
+Package
 ========
-The following examples are available as Jupyter Notebooks.
+This section describes the general setup of the Python-package `brodata`.
 
 .. toctree::
   :maxdepth: 4

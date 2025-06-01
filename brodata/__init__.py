@@ -14,3 +14,4 @@ from . import (
     util,
     webservices,
 )
+from .version import __version__
