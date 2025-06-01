@@ -33,4 +33,4 @@ issues = "https://github.com/ArtesiaWater/brodata/issues"
 ci = ["pytest", "pytest-sugar", "ipython", "lasio"]
 
 [tool.setuptools.dynamic]
-version = { attr = "nlmod.version.__version__" }
+version = { attr = "brodata.version.__version__" }
