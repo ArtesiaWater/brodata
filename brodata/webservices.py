@@ -312,7 +312,7 @@ def get_configuration(mapserver_url=None):
         "mapserver": f"{gdn_mapserver_url}/lks_gso_rd_v1/MapServer",
     }
     config["Put met onderzoekgegevens"] = {
-        "mapserver": f"{gdn_mapserver_url}/lks_gwo_rd_v1/MapServer",
+        "mapserver": f"{gdn_mapserver_url}/lks_gwo_rd_tiled_v1/MapServer",
     }
     config["Grondwatersamenstelling"] = {
         "mapserver": config["Put met onderzoekgegevens"]["mapserver"],

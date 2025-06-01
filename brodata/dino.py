@@ -256,7 +256,9 @@ def get_grondwaterstand(
             )
     if to_zip is not None:
         _save_data_to_zip(to_zip, files, remove_path_again, to_path)
-    return objects_to_gdf(data, index=index, to_gdf=to_gdf)
+    return objects_to_gdf(
+        data, index=index, to_gdf=to_gdf, x="X-coordinaat", y="Y-coordinaat"
+    )
 
 
 def get_grondwatersamenstelling(extent, **kwargs):
