@@ -5,7 +5,7 @@ build-backend = "setuptools.build_meta"
 [project]
 name = "brodata"
 dynamic = ["version"]
-authors = [{ name = "Ruben Calje", email = "r.calje@artesia-water.nl" }]
+authors = [{ name = "Ruben Calje", email = "r.calje@artesia-water.nl" }, { name = "Davíd Brakenhoff", email = "d.brakenhoff@artesia-water.nl"}]
 description = "A Python-package to download and process subsurface data from DINO and BRO"
 readme = "README.md"
 requires-python = ">=3.10"
