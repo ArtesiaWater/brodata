@@ -4,7 +4,6 @@ import os
 from functools import partial
 from zipfile import ZipFile
 
-import geopandas as gpd
 import numpy as np
 import pandas as pd
 import requests
@@ -15,7 +14,7 @@ from .frd import FormationResistanceDossier
 from .gar import GroundwaterAnalysisReport
 from .gld import GroundwaterLevelDossier
 from .gmn import GroundwaterMonitoringNetwork
-from .util import _save_data_to_zip
+from .util import _save_data_to_zip, _get_to_file
 
 logger = logging.getLogger(__name__)
 
@@ -270,13 +269,9 @@ def get_observations(
     if to_path is not None and not os.path.isdir(to_path):
         os.makedirs(to_path)
     for bro_id in tqdm(np.unique(bro_ids), disable=silent, desc=desc):
-        to_rel_file = None
-        if zipfile is not None or to_path is not None:
-            to_rel_file = f"gmw_relations_{bro_id}.json"
-            if zipfile is None:
-                to_rel_file = os.path.join(to_path, to_rel_file)
-            if _files is not None:
-                _files.append(to_rel_file)
+        to_rel_file = _get_to_file(
+            f"gmw_relations_{bro_id}.json", zipfile, to_path, _files
+        )
         if zipfile is None and (
             redownload or to_rel_file is None or not os.path.isfile(to_rel_file)
         ):
@@ -303,15 +298,11 @@ def get_observations(
                     continue
             ref_key = f"{kind}References"
             for ref in tube_ref[ref_key]:
-                if zipfile is not None or to_path is not None:
-                    if as_csv:
-                        to_file = f"{ref['broId']}.csv"
-                    else:
-                        to_file = f"{ref['broId']}.xml"
-                    if zipfile is None:
-                        to_file = os.path.join(to_path, to_file)
-                    if _files is not None:
-                        _files.append(to_file)
+                if as_csv:
+                    fname = f"{ref['broId']}.csv"
+                else:
+                    fname = f"{ref['broId']}.xml"
+                to_file = _get_to_file(fname, zipfile, to_path, _files)
                 if zipfile is None and (
                     redownload or to_file is None or not os.path.isfile(to_file)
                 ):
@@ -574,18 +565,13 @@ def get_data_in_extent(
             remove_path_again = not os.path.isdir(to_path)
             _files = []
 
-    # get gwm characteristics
-    logger.info(f"Getting gmw-characteristics in extent: {extent}")
-    to_file = None
-    if zipfile is not None or to_path is not None:
-        to_file = "gmw_characteristics.xml"
-        if zipfile is None:
-            to_file = os.path.join(to_path, to_file)
-            if _files is not None:
-                _files.append(to_file)
     if to_path is not None and not os.path.isdir(to_path):
         os.makedirs(to_path)
 
+    # get gwm characteristics
+    logger.info(f"Getting gmw-characteristics in extent: {extent}")
+
+    to_file = _get_to_file("gmw_characteristics.xml", zipfile, to_path, _files)
     gmw = get_characteristics(
         extent=extent, to_file=to_file, redownload=redownload, zipfile=zipfile
     )
