@@ -13,5 +13,6 @@ from . import (
     sfr,
     util,
     webservices,
+    gm,
 )
 from .version import __version__
