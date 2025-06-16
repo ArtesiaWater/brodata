@@ -3,6 +3,6 @@ brodata is a Python-package to download and process subsurface data from DINO an
 
 The package can be installed via pip from PyPI, with the following command:
 ```
-pip install pandas
+pip install brodata
 ```
 Documentation can be found on https://brodata.readthedocs.io/.
