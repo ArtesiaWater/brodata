@@ -70,15 +70,22 @@ def get_objects_as_csv(
     and fetches the data in CSV format. The `rapportagetype` and `observatietype`
     parameters can be used to filter the data.
     """
-    url = f"{GroundwaterLevelDossier._rest_url}/objectsAsCsv/{bro_id}"
-    params = {
-        "rapportagetype": rapportagetype,
-    }
-    if observatietype is not None:
-        params["observatietype"] = observatietype
-    req = requests.get(url, params=params)
+    if bro_id.startswith("http"):
+        req = requests.get(bro_id)
+    else:
+        url = f"{GroundwaterLevelDossier._rest_url}/objectsAsCsv/{bro_id}"
+        params = {
+            "rapportagetype": rapportagetype,
+        }
+        if observatietype is not None:
+            params["observatietype"] = observatietype
+        req = requests.get(url, params=params)
     if req.status_code > 200:
-        logger.error(req.json()["errors"][0]["message"])
+        json_data = req.json()
+        if "errors" in json_data:
+            logger.error(json_data["errors"][0]["message"])
+        else:
+            logger.error("{}: {}".format(json_data["title"], json_data["description"]))
         return
     if to_file is not None:
         with open(to_file, "w") as f:

@@ -313,7 +313,11 @@ def get_observations(
                             )
                         else:
                             df = GroundwaterLevelDossier.from_bro_id(
-                                ref["broId"], qualifier=qualifier, to_file=to_file
+                                ref["broId"],
+                                qualifier=qualifier,
+                                to_file=to_file,
+                                tmin=tmin,
+                                tmax=tmax,
                             )
                     elif kind == "gar":
                         df = GroundwaterAnalysisReport.from_bro_id(
