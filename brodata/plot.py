@@ -99,6 +99,7 @@ def get_lithology_color(hoofdgrondsoort, zandmediaanklasse=None, drilling=None):
         "slib": (144, 144, 144),
         "schelpen": (95, 95, 255),
         "sterkGrindigZand": (231, 195, 22),  # same as zand grove categorie
+        "siltigZand": (255, 255, 0), # same as zand
         "wegverhardingsmateriaal": (200, 200, 200),  # same as puin, check at B25D3298
         "zwakZandigeKlei": (0, 146, 0),  # same as klei
         "gyttja": (157, 78, 64),  # same as hout, check at B02G0307
