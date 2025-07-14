@@ -455,6 +455,8 @@ def process_observations(
     drop_duplicates=True,
     sort=True,
     qualifier=None,
+    tmin=None,
+    tmax=None,
 ):
     """
     Process groundwater level observations.
@@ -484,6 +486,10 @@ def process_observations(
     qualifier : str or list of str, optional
         If provided, the observations are filtered based on their "qualifier"
         column. Only rows with the specified qualifier(s) will be kept.
+    tmin : str or datetime, optional
+        The minimum time for filtering observations. Defaults to None.
+    tmax : str or datetime, optional
+        The maximum time for filtering observations. Defaults to None.
 
     Returns
     -------
@@ -507,6 +513,12 @@ def process_observations(
             df = df[df["qualifier"] == qualifier]
         else:
             df = df[df["qualifier"].isin(qualifier)]
+
+    if tmin is not None:
+        df = df.loc[pd.Timestamp(tmin) :]
+
+    if tmax is not None:
+        df = df.loc[: pd.Timestamp(tmax)]
 
     if df.index.has_duplicates and drop_duplicates:
         duplicates = df.index.duplicated(keep="first")

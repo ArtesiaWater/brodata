@@ -335,6 +335,9 @@ def get_data_in_extent(
         if tmax is not None:
             meas_gdf = meas_gdf[meas_gdf["research_first_date"] <= tmax]
             meas_cl_kwargs["tmax"] = tmax
+
+        if qualifier is not None:
+            meas_cl_kwargs["qualifier"] = qualifier
         meas_cl = gld.GroundwaterLevelDossier
     else:
         raise (ValueError("kind='{kind}' not supported"))
@@ -370,9 +373,7 @@ def get_data_in_extent(
                 )
                 meas_dict = {"broId": bro_id, datcol: df}
             else:
-                meas_dict = meas_cl(
-                    url, to_file=to_file, qualifier=qualifier, **meas_cl_kwargs
-                ).to_dict()
+                meas_dict = meas_cl(url, to_file=to_file, **meas_cl_kwargs).to_dict()
         else:
             # read the data from a file
             if as_csv:
@@ -387,7 +388,7 @@ def get_data_in_extent(
                 meas_dict = {"broId": bro_id, datcol: df}
             else:
                 meas_dict = meas_cl(
-                    to_file, zipfile=zipfile, qualifier=qualifier
+                    to_file, zipfile=zipfile, **meas_cl_kwargs
                 ).to_dict()
 
         meas_dict["gm_gmw_monitoringtube_fk"] = meas_gdf.at[

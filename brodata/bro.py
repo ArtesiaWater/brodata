@@ -418,11 +418,11 @@ class FileOrUrl(ABC):
             elif url_or_file.startswith("http"):
                 if redownload or to_file is None or not os.path.isfile(to_file):
                     params = {}
-                    if "tmin" in kwargs:
+                    if "tmin" in kwargs and kwargs["tmin"] is not None:
                         tmin = kwargs.pop("tmin")
                         tmin = pd.to_datetime(tmin).strftime("%Y-%m-%d")
                         params["observationPeriodBeginDate"] = tmin
-                    if "tmax" in kwargs:
+                    if "tmax" in kwargs and kwargs["tmax"] is not None:
                         tmax = kwargs.pop("tmax")
                         tmax = pd.to_datetime(tmax).strftime("%Y-%m-%d")
                         params["observationPeriodEndDate"] = tmax
