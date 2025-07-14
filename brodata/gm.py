@@ -283,6 +283,8 @@ def get_data_in_extent(
         if to_zip is not None:
             raise (Exception("When extent is a string, do not supply to_zip"))
         to_zip = extent
+        if not os.path.isfile(to_zip):
+            raise (FileExistsError(f"The file {to_zip} is not present"))
         extent = None
         redownload = False
 

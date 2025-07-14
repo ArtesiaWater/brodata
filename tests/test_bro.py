@@ -193,6 +193,15 @@ def test_gm_gar2():
     assert "screen_top_position" in gars_gdf.columns
 
 
+def test_gm_gld():
+    extent = [112_000, 119_000, 430_000, 445_000]
+    tempdir = tempfile.gettempdir()
+    fname_zip = os.path.join(tempdir, "test_gm_gld.zip")
+    brodata.gm.get_data_in_extent(
+        extent, kind="gld", tmin="2000", tmax="2010", to_zip=fname_zip
+    )
+
+
 def test_get_guf_data_in_extent():
     extent = [117700, 118700, 439400, 440400]
     brodata.guf.get_characteristics(extent=extent)
