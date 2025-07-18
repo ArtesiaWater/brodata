@@ -159,6 +159,7 @@ def get_parameter_list(url=None, timeout=5, to_file=None, **kwargs):
 
 def _get_empty_observation_df():
     columns = [
+        "analysisDate",
         "analyticalTechnique",
         "valuationMethod",
         "parameter",

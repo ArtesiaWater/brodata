@@ -103,6 +103,17 @@ def read_zipfile(fname, pathnames=None, override_ext=None):
         return data
 
 
+def _get_to_file(fname, zipfile, to_path, _files):
+    to_file = None
+    if zipfile is not None or to_path is not None:
+        to_file = fname
+        if zipfile is None:
+            to_file = os.path.join(to_path, to_file)
+            if _files is not None:
+                _files.append(to_file)
+    return to_file
+
+
 def _save_data_to_zip(to_zip, files, remove_path_again, to_path):
     try:
         import zlib
