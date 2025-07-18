@@ -26,7 +26,10 @@ def get_objects_as_csv(
     Parameters
     ----------
     bro_id : str
-        The BRO-ID of the Groundwater Level Dossier to fetch.
+        The BRO-ID of the Groundwater Level Dossier to fetch. It can also be a full url,
+        which is used by the gm-services. When using a full url, the parameter
+        `rapportagetype` needs to reflect the choice in the url, and the parameter
+        `observatietype` is ignored.
     rapportagetype : str, optional
         Type of report. The valid values are:
         - "volledig" : Full report
@@ -44,8 +47,8 @@ def get_objects_as_csv(
         (observatietype = controle meting)
         - "onbekend" : Unknown evaluation
         (observatietype = reguliere meting en mate beoordeling = onbekend)
-        If None, all observation types will be included, separated by empty lines and with an explanation.
-        Default is "regulier_voorlopig".
+        If None, all observation types will be included, separated by empty lines and
+        with an explanation. Default is "regulier_voorlopig".
     to_file : str, optional
         If provided, the CSV data will be written to the specified file.
         If None, the function returns the CSV data as a DataFrame. Default is None.
@@ -70,15 +73,22 @@ def get_objects_as_csv(
     and fetches the data in CSV format. The `rapportagetype` and `observatietype`
     parameters can be used to filter the data.
     """
-    url = f"{GroundwaterLevelDossier._rest_url}/objectsAsCsv/{bro_id}"
-    params = {
-        "rapportagetype": rapportagetype,
-    }
-    if observatietype is not None:
-        params["observatietype"] = observatietype
-    req = requests.get(url, params=params)
+    if bro_id.startswith("http"):
+        req = requests.get(bro_id)
+    else:
+        url = f"{GroundwaterLevelDossier._rest_url}/objectsAsCsv/{bro_id}"
+        params = {
+            "rapportagetype": rapportagetype,
+        }
+        if observatietype is not None:
+            params["observatietype"] = observatietype
+        req = requests.get(url, params=params)
     if req.status_code > 200:
-        logger.error(req.json()["errors"][0]["message"])
+        json_data = req.json()
+        if "errors" in json_data:
+            logger.error(json_data["errors"][0]["message"])
+        else:
+            logger.error("{}: {}".format(json_data["title"], json_data["description"]))
         return
     if to_file is not None:
         with open(to_file, "w") as f:
@@ -448,6 +458,8 @@ def process_observations(
     drop_duplicates=True,
     sort=True,
     qualifier=None,
+    tmin=None,
+    tmax=None,
 ):
     """
     Process groundwater level observations.
@@ -477,6 +489,10 @@ def process_observations(
     qualifier : str or list of str, optional
         If provided, the observations are filtered based on their "qualifier"
         column. Only rows with the specified qualifier(s) will be kept.
+    tmin : str or datetime, optional
+        The minimum time for filtering observations. Defaults to None.
+    tmax : str or datetime, optional
+        The maximum time for filtering observations. Defaults to None.
 
     Returns
     -------
@@ -500,6 +516,12 @@ def process_observations(
             df = df[df["qualifier"] == qualifier]
         else:
             df = df[df["qualifier"].isin(qualifier)]
+
+    if tmin is not None:
+        df = df.loc[pd.Timestamp(tmin) :]
+
+    if tmax is not None:
+        df = df.loc[: pd.Timestamp(tmax)]
 
     if df.index.has_duplicates and drop_duplicates:
         duplicates = df.index.duplicated(keep="first")

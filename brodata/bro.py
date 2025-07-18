@@ -417,13 +417,22 @@ class FileOrUrl(ABC):
                 root = xml.etree.ElementTree.fromstring(zipfile.read(url_or_file))
             elif url_or_file.startswith("http"):
                 if redownload or to_file is None or not os.path.isfile(to_file):
+                    params = {}
+                    if "tmin" in kwargs and kwargs["tmin"] is not None:
+                        tmin = kwargs.pop("tmin")
+                        tmin = pd.to_datetime(tmin).strftime("%Y-%m-%d")
+                        params["observationPeriodBeginDate"] = tmin
+                    if "tmax" in kwargs and kwargs["tmax"] is not None:
+                        tmax = kwargs.pop("tmax")
+                        tmax = pd.to_datetime(tmax).strftime("%Y-%m-%d")
+                        params["observationPeriodEndDate"] = tmax
                     if max_retries > 1:
                         adapter = requests.adapters.HTTPAdapter(max_retries=max_retries)
                         session = requests.Session()
                         session.mount("https://", adapter)
-                        req = session.get(url_or_file, timeout=timeout)
+                        req = session.get(url_or_file, params=params, timeout=timeout)
                     else:
-                        req = requests.get(url_or_file, timeout=timeout)
+                        req = requests.get(url_or_file, params=params, timeout=timeout)
                     if not req.ok:
                         # msg = req.json()["errors"][0]["message"]
                         raise Exception(f"Retrieving data from {url_or_file} failed")
@@ -464,6 +473,7 @@ class FileOrUrl(ABC):
     def from_bro_id(cls, bro_id, **kwargs):
         if not hasattr(cls, "_rest_url"):
             raise (NotImplementedError(f"No rest-service defined for {cls.__name__}"))
+
         return cls(f"{cls._rest_url}/objects/{bro_id}", **kwargs)
 
     def to_dict(self):
