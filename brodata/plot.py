@@ -87,9 +87,11 @@ def cone_penetration_test(
 
 def get_lithology_color(hoofdgrondsoort, zandmediaanklasse=None, drilling=None):
     colors = {
+        "ballast": (200, 200, 200),  # checked at B38D4055
+        "detritus": (157, 78, 64),  # checked at B44A0733
         "grind": (216, 163, 32),
         "hout": (157, 78, 64),
-        "keien": (216, 163, 32),  # same as stenen, check at B19A0161
+        "kalksteen": (140, 180, 255),  # checked at B44B0062
         "klei": (0, 146, 0),
         "leem": (194, 207, 92),
         "oer": (200, 200, 200),
@@ -100,10 +102,10 @@ def get_lithology_color(hoofdgrondsoort, zandmediaanklasse=None, drilling=None):
         "slib": (144, 144, 144),
         "schelpen": (95, 95, 255),
         "sterkGrindigZand": (231, 195, 22),  # same as zand grove categorie
-        "siltigZand": (255, 255, 0),  # same as zand
-        "wegverhardingsmateriaal": (200, 200, 200),  # same as puin, check at B25D3298
+        "wegverhardingsmateriaal": (200, 200, 200),  # same as puin, checked at B25D3298
         "zwakZandigeKlei": (0, 146, 0),  # same as klei
-        "gyttja": (157, 78, 64),  # same as hout, check at B02G0307
+        "gyttja": (157, 78, 64),  # same as hout, checked at B02G0307
+        "zandsteen": (200, 171, 55),  # checked at B44B0119
         "niet benoemd": (255, 255, 255),
         "geen monster": (255, 255, 255),
     }
