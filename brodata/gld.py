@@ -26,7 +26,10 @@ def get_objects_as_csv(
     Parameters
     ----------
     bro_id : str
-        The BRO-ID of the Groundwater Level Dossier to fetch.
+        The BRO-ID of the Groundwater Level Dossier to fetch. It can also be a full url,
+        which is used by the gm-services. When using a full url, the parameter
+        `rapportagetype` needs to reflect the choice in the url, and the parameter
+        `observatietype` is ignored.
     rapportagetype : str, optional
         Type of report. The valid values are:
         - "volledig" : Full report
@@ -44,8 +47,8 @@ def get_objects_as_csv(
         (observatietype = controle meting)
         - "onbekend" : Unknown evaluation
         (observatietype = reguliere meting en mate beoordeling = onbekend)
-        If None, all observation types will be included, separated by empty lines and with an explanation.
-        Default is "regulier_voorlopig".
+        If None, all observation types will be included, separated by empty lines and
+        with an explanation. Default is "regulier_voorlopig".
     to_file : str, optional
         If provided, the CSV data will be written to the specified file.
         If None, the function returns the CSV data as a DataFrame. Default is None.
