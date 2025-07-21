@@ -8,8 +8,5 @@ pip install brodata
 Documentation can be found on https://brodata.readthedocs.io/.
 
 <p align="center">
-  <img width="498" height="761" alt="image" src="https://github.com/user-attachments/assets/d869d13b-da0d-48f0-b3e0-5f1f794e2063" />
+  <img alt="logo brodata" src="docs/_static/logo_brodata_200.png" />
 </p>
-
-
-
