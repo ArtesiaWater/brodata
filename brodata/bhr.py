@@ -339,3 +339,7 @@ def get_characteristics(bhr_class=GeotechnicalBoreholeResearch, **kwargs):
     2000.
     """
     return bro._get_characteristics(bhr_class, **kwargs)
+
+
+def get_data_in_extent(bhr_class=GeotechnicalBoreholeResearch, **kwargs):
+    return bro._get_data_in_extent(bhr_class, **kwargs)
