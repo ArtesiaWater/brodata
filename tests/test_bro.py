@@ -213,3 +213,12 @@ def test_get_guf_data_in_extent():
     extent = [118300, 118700, 439400, 440400]
     gdf2 = brodata.guf.get_data_in_extent(extent=extent, to_zip=fname_zip)
     assert len(gdf2) < len(gdf1)
+
+
+def test_get_bhr_in_extent():
+    extent = [119000, 120000, 440500, 441000]
+    gdf = brodata.bhr.get_data_in_extent(extent=extent)
+    line = [(extent[0], extent[2]), (extent[1], extent[3])]
+    colors = brodata.plot.lithology_colors.copy()
+    colors["kleiigeHumus"] = colors["klei"]
+    brodata.plot.lithology_along_line(gdf, line, "bro", colors=colors)
