@@ -87,9 +87,12 @@ def cone_penetration_test(
 
 lithology_colors = {
     "ballast": (200, 200, 200),  # checked at B38D4055
+    "bruinkool": (140, 92, 54),  # checked at B51G2426
     "detritus": (157, 78, 64),  # checked at B44A0733
+    "glauconietzand": (204, 255, 153),  # checked at B49E1446
     "grind": (216, 163, 32),
     "hout": (157, 78, 64),
+    "ijzeroer": (242, 128, 13),  # checked at B49E1446
     "kalksteen": (140, 180, 255),  # checked at B44B0062
     "klei": (0, 146, 0),
     "leem": (194, 207, 92),
@@ -101,6 +104,7 @@ lithology_colors = {
     "zand fijn": (255, 255, 0),  # same as zand
     "zand midden": (243, 225, 6),
     "zand grof": (231, 195, 22),
+    "sideriet": (242, 128, 13),  # checked at B51D2864
     "slib": (144, 144, 144),
     "schelpen": (95, 95, 255),
     "sterkGrindigZand": (231, 195, 22),  # same as zand grove categorie
