@@ -1,7 +1,7 @@
 import logging
 import os
 import types
-import xml
+from xml.etree import ElementTree
 from abc import ABC, abstractmethod
 from io import StringIO
 from zipfile import ZipFile
@@ -173,7 +173,7 @@ def _get_characteristics(
             }
         req = requests.post(url, json=data, timeout=timeout)
         if req.status_code > 200:
-            root = xml.etree.ElementTree.fromstring(req.text)
+            root = ElementTree.fromstring(req.text)
             FileOrUrl._check_for_rejection(root)
             # if reading of the rejection message failed, raise a more general error
             raise (Exception((f"Retieving data from {url} failed")))
@@ -183,13 +183,13 @@ def _get_characteristics(
                 f.write(req.text)
 
         # read results
-        tree = xml.etree.ElementTree.fromstring(req.text)
+        tree = ElementTree.fromstring(req.text)
     else:
         if zipfile is not None:
             with zipfile.open(to_file) as f:
-                tree = xml.etree.ElementTree.parse(f).getroot()
+                tree = ElementTree.parse(f).getroot()
         else:
-            tree = xml.etree.ElementTree.parse(to_file).getroot()
+            tree = ElementTree.parse(to_file).getroot()
 
     ns = {"xmlns": cl._xmlns}
     data = []
@@ -414,7 +414,7 @@ class FileOrUrl(ABC):
         # XML or URL
         else:
             if zipfile is not None:
-                root = xml.etree.ElementTree.fromstring(zipfile.read(url_or_file))
+                root = ElementTree.fromstring(zipfile.read(url_or_file))
             elif url_or_file.startswith("http"):
                 if redownload or to_file is None or not os.path.isfile(to_file):
                     params = {}
@@ -439,13 +439,13 @@ class FileOrUrl(ABC):
                     if to_file is not None:
                         with open(to_file, "w") as f:
                             f.write(req.text)
-                    root = xml.etree.ElementTree.fromstring(req.text)
+                    root = ElementTree.fromstring(req.text)
                     FileOrUrl._check_for_rejection(root)
                 else:
-                    tree = xml.etree.ElementTree.parse(to_file)
+                    tree = ElementTree.parse(to_file)
                     root = tree.getroot()
             else:
-                tree = xml.etree.ElementTree.parse(url_or_file)
+                tree = ElementTree.parse(url_or_file)
                 root = tree.getroot()
 
             self._read_contents(root, **kwargs)
