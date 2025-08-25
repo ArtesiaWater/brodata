@@ -6,6 +6,12 @@ import numpy as np
 
 logger = logging.getLogger(__name__)
 
+try:
+    from tqdm import tqdm
+except ImportError:
+    # fallback: generate a dummy method with the same interface
+    def tqdm(iterable=None, **kwargs):
+        return iterable if iterable is not None else []
 
 def read_zipfile(fname, pathnames=None, override_ext=None):
     with ZipFile(fname) as zf:

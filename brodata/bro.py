@@ -12,11 +12,11 @@ import geopandas as gpd
 import pandas as pd
 import requests
 from pyproj import Transformer
-from tqdm import tqdm
 
 from .util import (
     _format_repr,
     _save_data_to_zip,
+    tqdm
 )
 
 logger = logging.getLogger(__name__)
