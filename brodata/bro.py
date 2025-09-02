@@ -640,3 +640,57 @@ def get_brondocumenten_per_bronhouder(index=("kvk", "type"), timeout=5, **kwargs
             index = list(index)
         df = df.set_index(index)
     return df
+
+
+def dataframe_kvk(fn_bronhouder_kvk=None):
+    """
+    Read manually saved table of KVK and Organisatienaam to DataFrame.
+
+    from https://basisregistratieondergrond.nl/service-contact/formulieren/aangemeld-bro/
+    :param fn_bronhouder_kvk: str, filename of the file with bronhouder and kvk numbers
+    :return: pandas DataFrame with kvk as index and column 'Organisatienaam' and 'Bronhouder'
+    """
+    if fn_bronhouder_kvk is None:
+        fn_bronhouder_kvk = os.path.join(
+            os.path.dirname(__file__), "data", "bronhouder_kvk.txt"
+        )
+
+    df_bron_kvk = pd.read_csv(
+        fn_bronhouder_kvk,
+        sep=";",  # is a dummy value, data will be split later on the last | sign
+        dtype=str,
+        header=None,
+        names=["all_data"],
+        skipinitialspace=True,
+        comment="#",
+    )
+
+    # split column all_data into bronhouder and kvk, using last | sign; both as string type
+    # mind that index has string type, as that is format provided in brodata downloads
+    df_bron_kvk[["Organisatienaam", "KVK-nummer"]] = (
+        df_bron_kvk["all_data"].str.rsplit("|", n=1, expand=True).astype(str)
+    )
+    df_bron_kvk = df_bron_kvk.drop(columns=["all_data"])
+
+    # add column Bronhouder, value is True when (​B) in kvk
+    df_bron_kvk["Bronhouder"] = False
+
+    bronhouder_pattern = r"[(​B)|(B)]"
+    df_bron_kvk.loc[
+        df_bron_kvk["KVK-nummer"].str.contains(bronhouder_pattern, regex=True),
+        "Bronhouder",
+    ] = True
+    # clean up kvk
+    df_bron_kvk["KVK-nummer"] = (
+        df_bron_kvk["KVK-nummer"]
+        .str.replace(bronhouder_pattern, "", regex=True)
+        .str.strip()
+    )
+
+    # remove leading and trailing whitespace from all columns
+    df_bron_kvk = df_bron_kvk.map(lambda x: x.strip() if isinstance(x, str) else x)
+
+    # make kvk index
+    df_bron_kvk.set_index("KVK-nummer", inplace=True)
+
+    return df_bron_kvk
