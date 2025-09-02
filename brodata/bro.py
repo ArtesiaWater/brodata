@@ -13,11 +13,7 @@ import pandas as pd
 import requests
 from pyproj import Transformer
 
-from .util import (
-    _format_repr,
-    _save_data_to_zip,
-    tqdm
-)
+from .util import _format_repr, _save_data_to_zip, tqdm
 
 logger = logging.getLogger(__name__)
 
@@ -434,7 +430,9 @@ class FileOrUrl(ABC):
                     else:
                         req = requests.get(url_or_file, params=params, timeout=timeout)
                     if not req.ok:
-                        # msg = req.json()["errors"][0]["message"]
+                        if req.reason == "Bad Request":
+                            root = ElementTree.fromstring(req.text)
+                            FileOrUrl._check_for_rejection(root)
                         raise Exception(f"Retrieving data from {url_or_file} failed")
                     if to_file is not None:
                         with open(to_file, "w") as f:
