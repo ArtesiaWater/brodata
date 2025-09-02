@@ -224,5 +224,5 @@ def test_get_bhr_in_extent():
     brodata.plot.lithology_along_line(gdf, line, "bro", colors=colors)
 
 
-def test_dataframe_kvk():
-    brodata.bro.dataframe_kvk()
+def test_get_kvk_df():
+    brodata.bro.get_kvk_df()

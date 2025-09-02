@@ -642,7 +642,7 @@ def get_brondocumenten_per_bronhouder(index=("kvk", "type"), timeout=5, **kwargs
     return df
 
 
-def dataframe_kvk(fn_bronhouder_kvk=None):
+def get_kvk_df(fn_bronhouder_kvk=None):
     """
     Read manually saved table of KVK and Organisatienaam to DataFrame.
 
