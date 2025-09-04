@@ -222,3 +222,7 @@ def test_get_bhr_in_extent():
     colors = brodata.plot.lithology_colors.copy()
     colors["kleiigeHumus"] = colors["klei"]
     brodata.plot.lithology_along_line(gdf, line, "bro", colors=colors)
+
+
+def test_get_kvk_df():
+    brodata.bro.get_kvk_df()
