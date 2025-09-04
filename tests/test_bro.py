@@ -1,7 +1,7 @@
 # %%
 import os
 import tempfile
-
+import pytest
 from pandas.testing import assert_frame_equal
 
 import brodata
@@ -226,3 +226,9 @@ def test_get_bhr_in_extent():
 
 def test_get_kvk_df():
     brodata.bro.get_kvk_df()
+
+
+def test_unknwon_gmw_raises_value_error():
+    # make sure a not existant bro-id of a gmw returns a ValueError
+    with pytest.raises(ValueError):
+        brodata.gmw.GroundwaterMonitoringWell.from_bro_id("GMW000000000000")
