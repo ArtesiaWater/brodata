@@ -536,7 +536,7 @@ def process_observations(
 
 
 def _get_empty_observation_df():
-    columns = ["time", "value", "qualifier"]
+    columns = ["time", "value", "qualifier", "status", "observation_type"]
     return pd.DataFrame(columns=columns).set_index("time")
 
 

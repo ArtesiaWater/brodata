@@ -5,7 +5,7 @@ import numpy as np
 import requests
 from requests.exceptions import HTTPError
 from shapely.geometry import MultiPolygon, Point, Polygon
-from tqdm import tqdm
+from .util import tqdm
 
 logger = logging.getLogger(__name__)
 

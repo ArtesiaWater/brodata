@@ -3,10 +3,9 @@ from zipfile import ZipFile
 import logging
 import requests
 import json
-from tqdm import tqdm
 import pandas as pd
 import geopandas as gpd
-from .util import _save_data_to_zip, _get_to_file
+from .util import _save_data_to_zip, _get_to_file, tqdm
 from . import gmw, gld, gar
 
 
@@ -120,7 +119,7 @@ def _gm_items(
         with open(to_file) as f:
             json_data = json.load(f)
 
-    gdf = gpd.GeoDataFrame.from_features(json_data["features"])
+    gdf = gpd.GeoDataFrame.from_features(json_data["features"], crs=crs)
     url = _get_next_url(json_data)
     if url is not None:
         gdfs = [gdf]

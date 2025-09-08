@@ -10,11 +10,11 @@ import geopandas as gpd
 import requests
 from shapely.geometry import LineString
 import matplotlib.pyplot as plt
-from tqdm import tqdm
 
 from .util import (
     _format_repr,
     _save_data_to_zip,
+    tqdm
 )
 from .webservices import get_configuration, get_gdf
 

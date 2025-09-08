@@ -29,3 +29,6 @@ html_static_path = ["_static"]
 html_theme_options = {"navigation_depth": 4}
 
 nbsphinx_allow_errors = True
+
+# add a logo
+html_logo = "_static/logo_brodata_200.png"

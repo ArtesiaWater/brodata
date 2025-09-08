@@ -21,7 +21,6 @@ dependencies = [
   "requests",
   "lxml",
   "pyproj",
-  "tqdm",
   "matplotlib",
 ]
 
@@ -30,7 +29,7 @@ homepage = "https://github.com/ArtesiaWater/brodata"
 issues = "https://github.com/ArtesiaWater/brodata/issues"
 
 [project.optional-dependencies]
-ci = ["pytest", "pytest-sugar", "ipython", "lasio"]
+ci = ["pytest", "pytest-sugar", "ipython", "lasio", "tqdm"]
 
 [tool.setuptools.dynamic]
 version = { attr = "brodata.version.__version__" }

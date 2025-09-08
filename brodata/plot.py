@@ -85,60 +85,85 @@ def cone_penetration_test(
     return axes
 
 
-def get_lithology_color(hoofdgrondsoort, zandmediaanklasse=None, drilling=None):
-    colors = {
-        "ballast": (200, 200, 200),  # checked at B38D4055
-        "detritus": (157, 78, 64),  # checked at B44A0733
-        "grind": (216, 163, 32),
-        "hout": (157, 78, 64),
-        "kalksteen": (140, 180, 255),  # checked at B44B0062
-        "klei": (0, 146, 0),
-        "leem": (194, 207, 92),
-        "oer": (200, 200, 200),
-        "puin": (200, 200, 200),
-        "stenen": (216, 163, 32),
-        "veen": (157, 78, 64),
-        "zand": (255, 255, 0),
-        "slib": (144, 144, 144),
-        "schelpen": (95, 95, 255),
-        "sterkGrindigZand": (231, 195, 22),  # same as zand grove categorie
-        "wegverhardingsmateriaal": (200, 200, 200),  # same as puin, checked at B25D3298
-        "zwakZandigeKlei": (0, 146, 0),  # same as klei
-        "gyttja": (157, 78, 64),  # same as hout, checked at B02G0307
-        "zandsteen": (200, 171, 55),  # checked at B44B0119
-        "niet benoemd": (255, 255, 255),
-        "geen monster": (255, 255, 255),
-    }
+lithology_colors = {
+    "ballast": (200, 200, 200),  # checked at B38D4055
+    "bruinkool": (140, 92, 54),  # checked at B51G2426
+    "detritus": (157, 78, 64),  # checked at B44A0733
+    "glauconietzand": (204, 255, 153),  # checked at B49E1446
+    "grind": (216, 163, 32),
+    "hout": (157, 78, 64),
+    "ijzeroer": (242, 128, 13),  # checked at B49E1446
+    "kalksteen": (140, 180, 255),  # checked at B44B0062
+    "klei": (0, 146, 0),
+    "leem": (194, 207, 92),
+    "oer": (200, 200, 200),
+    "puin": (200, 200, 200),
+    "stenen": (216, 163, 32),
+    "veen": (157, 78, 64),
+    "zand": (255, 255, 0),
+    "zand fijn": (255, 255, 0),  # same as zand
+    "zand midden": (243, 225, 6),
+    "zand grof": (231, 195, 22),
+    "sideriet": (242, 128, 13),  # checked at B51D2864
+    "slib": (144, 144, 144),
+    "schelpen": (95, 95, 255),
+    "sterkGrindigZand": (231, 195, 22),  # same as zand grove categorie
+    "wegverhardingsmateriaal": (200, 200, 200),  # same as puin, checked at B25D3298
+    "zwakZandigeKlei": (0, 146, 0),  # same as klei
+    "gyttja": (157, 78, 64),  # same as hout, checked at B02G0307
+    "zandsteen": (200, 171, 55),  # checked at B44B0119
+    "niet benoemd": (255, 255, 255),
+    "geen monster": (255, 255, 255),
+}
 
+sand_class_fine = [
+    "fijne categorie (O)",
+    "zeer fijn (O)",
+    "uiterst fijn (O)",
+    "zeer fijn",
+    "uiterst fijn",
+]
+
+sand_class_medium = [
+    "matig fijn",
+    "matig fijn (O)",
+    "matig grof",
+    "matig grof (O)",
+    "midden categorie (O)",
+]
+
+sand_class_course = [
+    "grove  categorie (O)",
+    "zeer grof",
+    "zeer grof (O)",
+    "uiterst grof",
+    "uiterst grof (O)",
+]
+
+
+def get_lithology_color(
+    hoofdgrondsoort,
+    zandmediaanklasse=None,
+    drilling=None,
+    colors=None,
+):
+    if colors is None:
+        colors = lithology_colors
     label = None
-    if hoofdgrondsoort in colors:
+    if not isinstance(hoofdgrondsoort, str):
+        # hoofdgrondsoort is nan
+        color = tuple(x / 255 for x in colors["niet benoemd"])
+        label = str(hoofdgrondsoort)
+    elif hoofdgrondsoort in colors:
         if hoofdgrondsoort == "zand":
-            if zandmediaanklasse in [
-                "fijne categorie (O)",
-                "zeer fijn (O)",
-                "uiterst fijn (O)",
-                "zeer fijn",
-                "uiterst fijn",
-            ]:
-                color = colors[hoofdgrondsoort]
+            if zandmediaanklasse in sand_class_fine:
+                color = colors["zand fijn"]
                 label = "Zand fijne categorie"
-            elif zandmediaanklasse in [
-                "matig fijn",
-                "matig fijn (O)",
-                "matig grof",
-                "matig grof (O)",
-                "midden categorie (O)",
-            ]:
+            elif zandmediaanklasse in sand_class_medium:
                 label = "Zand midden categorie"
-                color = (243, 225, 6)
-            elif zandmediaanklasse in [
-                "grove  categorie (O)",
-                "zeer grof",
-                "zeer grof (O)",
-                "uiterst grof",
-                "uiterst grof (O)",
-            ]:
-                color = (231, 195, 22)
+                color = colors["zand midden"]
+            elif zandmediaanklasse in sand_class_course:
+                color = colors["zand grof"]
                 label = "Zand grove categorie"
             else:
                 if not (
@@ -178,6 +203,7 @@ def lithology(
     solid_capstyle="butt",
     linewidth=6,
     drilling=None,
+    colors=None,
     **kwargs,
 ):
     h = []
@@ -190,7 +216,7 @@ def lithology(
         z_bot = z - df.at[index, bot]
         zandmediaanklasse = None if sand_class is None else df.at[index, sand_class]
         color, label = get_lithology_color(
-            df.at[index, kind], zandmediaanklasse, drilling=drilling
+            df.at[index, kind], zandmediaanklasse, drilling=drilling, colors=colors
         )
         if x is not None and np.isfinite(x):
             h.append(
@@ -270,7 +296,7 @@ def lithology_along_line(
         gdf = gdf[gdf.distance(line) < max_distance]
 
     # calculate length along line
-    s = pd.Series([line.project(point) for point in gdf["geometry"]], gdf.index)
+    s = pd.Series([line.project(point) for point in gdf.geometry], gdf.index)
 
     for index in gdf.index:
         if kind == "dino":

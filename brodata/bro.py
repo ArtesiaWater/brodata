@@ -1,7 +1,7 @@
 import logging
 import os
 import types
-import xml
+from xml.etree import ElementTree
 from abc import ABC, abstractmethod
 from io import StringIO
 from zipfile import ZipFile
@@ -12,12 +12,8 @@ import geopandas as gpd
 import pandas as pd
 import requests
 from pyproj import Transformer
-from tqdm import tqdm
 
-from .util import (
-    _format_repr,
-    _save_data_to_zip,
-)
+from .util import _format_repr, _save_data_to_zip, tqdm
 
 logger = logging.getLogger(__name__)
 
@@ -173,7 +169,7 @@ def _get_characteristics(
             }
         req = requests.post(url, json=data, timeout=timeout)
         if req.status_code > 200:
-            root = xml.etree.ElementTree.fromstring(req.text)
+            root = ElementTree.fromstring(req.text)
             FileOrUrl._check_for_rejection(root)
             # if reading of the rejection message failed, raise a more general error
             raise (Exception((f"Retieving data from {url} failed")))
@@ -183,13 +179,13 @@ def _get_characteristics(
                 f.write(req.text)
 
         # read results
-        tree = xml.etree.ElementTree.fromstring(req.text)
+        tree = ElementTree.fromstring(req.text)
     else:
         if zipfile is not None:
             with zipfile.open(to_file) as f:
-                tree = xml.etree.ElementTree.parse(f).getroot()
+                tree = ElementTree.parse(f).getroot()
         else:
-            tree = xml.etree.ElementTree.parse(to_file).getroot()
+            tree = ElementTree.parse(to_file).getroot()
 
     ns = {"xmlns": cl._xmlns}
     data = []
@@ -414,7 +410,7 @@ class FileOrUrl(ABC):
         # XML or URL
         else:
             if zipfile is not None:
-                root = xml.etree.ElementTree.fromstring(zipfile.read(url_or_file))
+                root = ElementTree.fromstring(zipfile.read(url_or_file))
             elif url_or_file.startswith("http"):
                 if redownload or to_file is None or not os.path.isfile(to_file):
                     params = {}
@@ -434,18 +430,20 @@ class FileOrUrl(ABC):
                     else:
                         req = requests.get(url_or_file, params=params, timeout=timeout)
                     if not req.ok:
-                        # msg = req.json()["errors"][0]["message"]
+                        if req.reason == "Bad Request":
+                            root = ElementTree.fromstring(req.text)
+                            FileOrUrl._check_for_rejection(root)
                         raise Exception(f"Retrieving data from {url_or_file} failed")
                     if to_file is not None:
                         with open(to_file, "w") as f:
                             f.write(req.text)
-                    root = xml.etree.ElementTree.fromstring(req.text)
+                    root = ElementTree.fromstring(req.text)
                     FileOrUrl._check_for_rejection(root)
                 else:
-                    tree = xml.etree.ElementTree.parse(to_file)
+                    tree = ElementTree.parse(to_file)
                     root = tree.getroot()
             else:
-                tree = xml.etree.ElementTree.parse(url_or_file)
+                tree = ElementTree.parse(url_or_file)
                 root = tree.getroot()
 
             self._read_contents(root, **kwargs)
@@ -642,3 +640,57 @@ def get_brondocumenten_per_bronhouder(index=("kvk", "type"), timeout=5, **kwargs
             index = list(index)
         df = df.set_index(index)
     return df
+
+
+def get_kvk_df(fn_bronhouder_kvk=None):
+    """
+    Read manually saved table of KVK and Organisatienaam to DataFrame.
+
+    from https://basisregistratieondergrond.nl/service-contact/formulieren/aangemeld-bro/
+    :param fn_bronhouder_kvk: str, filename of the file with bronhouder and kvk numbers
+    :return: pandas DataFrame with kvk as index and column 'Organisatienaam' and 'Bronhouder'
+    """
+    if fn_bronhouder_kvk is None:
+        fn_bronhouder_kvk = os.path.join(
+            os.path.dirname(__file__), "data", "bronhouder_kvk.txt"
+        )
+
+    df_bron_kvk = pd.read_csv(
+        fn_bronhouder_kvk,
+        sep=";",  # is a dummy value, data will be split later on the last | sign
+        dtype=str,
+        header=None,
+        names=["all_data"],
+        skipinitialspace=True,
+        comment="#",
+    )
+
+    # split column all_data into bronhouder and kvk, using last | sign; both as string type
+    # mind that index has string type, as that is format provided in brodata downloads
+    df_bron_kvk[["Organisatienaam", "KVK-nummer"]] = (
+        df_bron_kvk["all_data"].str.rsplit("|", n=1, expand=True).astype(str)
+    )
+    df_bron_kvk = df_bron_kvk.drop(columns=["all_data"])
+
+    # add column Bronhouder, value is True when (​B) in kvk
+    df_bron_kvk["Bronhouder"] = False
+
+    bronhouder_pattern = r"[(​B)|(B)]"
+    df_bron_kvk.loc[
+        df_bron_kvk["KVK-nummer"].str.contains(bronhouder_pattern, regex=True),
+        "Bronhouder",
+    ] = True
+    # clean up kvk
+    df_bron_kvk["KVK-nummer"] = (
+        df_bron_kvk["KVK-nummer"]
+        .str.replace(bronhouder_pattern, "", regex=True)
+        .str.strip()
+    )
+
+    # remove leading and trailing whitespace from all columns
+    df_bron_kvk = df_bron_kvk.map(lambda x: x.strip() if isinstance(x, str) else x)
+
+    # make kvk index
+    df_bron_kvk.set_index("KVK-nummer", inplace=True)
+
+    return df_bron_kvk

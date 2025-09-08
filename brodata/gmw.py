@@ -7,14 +7,13 @@ from zipfile import ZipFile
 import numpy as np
 import pandas as pd
 import requests
-from tqdm import tqdm
 
 from . import bro, gar, gld
 from .frd import FormationResistanceDossier
 from .gar import GroundwaterAnalysisReport
 from .gld import GroundwaterLevelDossier
 from .gmn import GroundwaterMonitoringNetwork
-from .util import _save_data_to_zip, _get_to_file
+from .util import _save_data_to_zip, _get_to_file, tqdm
 
 logger = logging.getLogger(__name__)
 
