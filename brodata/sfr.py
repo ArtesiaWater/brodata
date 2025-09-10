@@ -1,7 +1,7 @@
 import logging
 from functools import partial
 
-from . import bro
+from . import bro, util
 
 logger = logging.getLogger(__name__)
 
@@ -24,11 +24,11 @@ class SoilFaceResearch(bro.FileOrUrl):
         for key in sfr.attrib:
             setattr(self, key.split("}", 1)[1], sfr.attrib[key])
         for child in sfr:
-            key = child.tag.split("}", 1)[1]
+            key = util._get_key_from_tag(child)
             if len(child) == 0:
                 setattr(self, key, child.text)
             else:
-                logger.warning(f"Unknown key: {key}")
+                util._warn_unknown_key(key, self)
 
 
 cl = SoilFaceResearch

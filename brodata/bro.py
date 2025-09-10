@@ -13,7 +13,7 @@ import pandas as pd
 import requests
 from pyproj import Transformer
 
-from .util import _format_repr, _save_data_to_zip, tqdm
+from . import util
 
 logger = logging.getLogger(__name__)
 
@@ -194,7 +194,7 @@ def _get_characteristics(
         for key in gmw.attrib:
             d[key.split("}", 1)[1]] = gmw.attrib[key]
         for child in gmw:
-            key = child.tag.split("}", 1)[1]
+            key = util._get_key_from_tag(child)
             if len(child) == 0:
                 d[key] = child.text
             elif key == "standardizedLocation":
@@ -209,7 +209,7 @@ def _get_characteristics(
                 d[key] = child[0].text
             elif key in ["diameterRange", "screenPositionRange"]:
                 for grandchild in child:
-                    key = grandchild.tag.split("}", 1)[1]
+                    key = util._get_key_from_tag(grandchild)
                     d[key] = grandchild.text
             elif key == "licence":
                 for grandchild in child:
@@ -231,7 +231,7 @@ def _get_characteristics(
                             logger.warning(f"Unknown key: {key2}")
 
             else:
-                logger.warning(f"Unknown key: {key}")
+                util._warn_unknown_key(key, self)
         data.append(d)
 
     gdf = objects_to_gdf(data)
@@ -243,7 +243,6 @@ def _get_characteristics(
 def _get_data_in_extent(
     bro_cl,
     extent=None,
-    epsg=28992,
     timeout=5,
     silent=False,
     to_path=None,
@@ -252,6 +251,7 @@ def _get_data_in_extent(
     geometry=None,
     to_gdf=True,
     index="broId",
+    continue_on_error=False,
 ):
     if isinstance(extent, str):
         if to_zip is not None:
@@ -288,7 +288,7 @@ def _get_data_in_extent(
     )
 
     data = {}
-    for bro_id in tqdm(char.index, disable=silent):
+    for bro_id in util.tqdm(char.index, disable=silent):
         if zipfile is not None:
             fname = f"{bro_id}.xml"
             data[bro_id] = bro_cl(fname, zipfile=zipfile)
@@ -300,11 +300,18 @@ def _get_data_in_extent(
             if not redownload and os.path.isfile(to_file):
                 data[bro_id] = bro_cl(to_file)
                 continue
-        data[bro_id] = bro_cl.from_bro_id(bro_id, to_file=to_file, timeout=timeout)
+        kwargs = {"to_file": to_file, "timeout": timeout}
+        if continue_on_error:
+            try:
+                data[bro_id] = bro_cl.from_bro_id(bro_id, **kwargs)
+            except Exception as e:
+                logger.error(f"Error retrieving {bro_id}: {e}")
+        else:
+            data[bro_id] = bro_cl.from_bro_id(bro_id, **kwargs)
     if zipfile is not None:
         zipfile.close()
     if zipfile is None and to_zip is not None:
-        _save_data_to_zip(to_zip, _files, remove_path_again, to_path)
+        util._save_data_to_zip(to_zip, _files, remove_path_again, to_path)
 
     gdf = objects_to_gdf(data, geometry, to_gdf, index)
 
@@ -455,7 +462,7 @@ class FileOrUrl(ABC):
         for key in propdict:
             if hasattr(self, key):
                 props[propdict[key]] = getattr(self, key)
-        name = _format_repr(self, props)
+        name = util._format_repr(self, props)
         return name
 
     @abstractmethod
@@ -517,6 +524,8 @@ class FileOrUrl(ABC):
     @staticmethod
     def _parse_text(node, key, to_float=None, to_int=None):
         if to_float is not None and key in to_float:
+            if node.text is None:
+                return np.nan
             return float(node.text)
         if to_int is not None and key in to_int:
             return int(node.text)
@@ -524,7 +533,7 @@ class FileOrUrl(ABC):
 
     def _read_delivered_location(self, node):
         for child in node:
-            key = child.tag.split("}", 1)[1]
+            key = util._get_key_from_tag(child)
             if key == "location":
                 setattr(self, "deliveredLocation", self._read_pos(child))
             elif key == "horizontalPositioningDate":
@@ -532,17 +541,44 @@ class FileOrUrl(ABC):
             elif key == "horizontalPositioningMethod":
                 setattr(self, key, child.text)
             else:
-                logger.warning(f"Unknown key: {key}")
+                util._warn_unknown_key(key, self)
 
     def _read_standardized_location(self, node):
         for child in node:
-            key = child.tag.split("}", 1)[1]
+            key = util._get_key_from_tag(child)
             if key == "location":
                 setattr(self, "standardizedLocation", self._read_pos(child))
             elif key == "coordinateTransformation":
                 setattr(self, key, child.text)
             else:
-                logger.warning(f"Unknown key: {key}")
+                util._warn_unknown_key(key, self)
+
+    def _read_lifespan(self, node, d=None):
+        for child in node:
+            key = util._get_key_from_tag(child)
+            if key in ["startTime", "endTime"]:
+                if d is None:
+                    setattr(self, key, self._read_date(child))
+                else:
+                    d[key] = self._read_date(child)
+            else:
+                util._warn_unknown_key(key, self)
+
+    def _read_validity_period(self, node, d=None):
+        for child in node:
+            key = util._get_key_from_tag(child)
+            if key == "startValidity":
+                if d is None:
+                    setattr(self, key, self._read_date(child))
+                else:
+                    d[key] = self._read_date(child)
+            elif key == "endValidity":
+                if d is None:
+                    setattr(self, key, self._read_date(child))
+                else:
+                    d[key] = self._read_date(child)
+            else:
+                util._warn_unknown_key(key, self)
 
     @staticmethod
     def _read_pos(node):

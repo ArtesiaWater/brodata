@@ -8,12 +8,7 @@ import numpy as np
 import pandas as pd
 import requests
 
-from . import bro, gar, gld
-from .frd import FormationResistanceDossier
-from .gar import GroundwaterAnalysisReport
-from .gld import GroundwaterLevelDossier
-from .gmn import GroundwaterMonitoringNetwork
-from .util import _save_data_to_zip, _get_to_file, tqdm
+from . import bro, gld, gar, frd, gmn, util
 
 logger = logging.getLogger(__name__)
 
@@ -101,7 +96,7 @@ class GroundwaterMonitoringWell(bro.FileOrUrl):
         for key in gmw.attrib:
             setattr(self, key.split("}", 1)[1], gmw.attrib[key])
         for child in gmw:
-            key = child.tag.split("}", 1)[1]
+            key = util._get_key_from_tag(child)
             if len(child) == 0:
                 setattr(self, key, child.text)
             elif key == "standardizedLocation":
@@ -110,7 +105,7 @@ class GroundwaterMonitoringWell(bro.FileOrUrl):
                 self._read_delivered_location(child)
             elif key == "wellHistory":
                 for grandchild in child:
-                    key = grandchild.tag.split("}", 1)[1]
+                    key = util._get_key_from_tag(grandchild)
                     if key == "wellConstructionDate":
                         setattr(self, key, self._read_date(grandchild))
                     elif key == "intermediateEvent":
@@ -119,11 +114,11 @@ class GroundwaterMonitoringWell(bro.FileOrUrl):
                         event = self._read_intermediate_event(grandchild)
                         self.intermediateEvent.append(event)
                     else:
-                        logger.warning(f"Unknown key: {key}")
+                        util._warn_unknown_key(key, self)
 
             elif key in ["deliveredVerticalPosition", "registrationHistory"]:
                 for grandchild in child:
-                    key = grandchild.tag.split("}", 1)[1]
+                    key = util._get_key_from_tag(grandchild)
                     setattr(self, key, grandchild.text)
             elif key in ["monitoringTube"]:
                 if not hasattr(self, key):
@@ -132,7 +127,7 @@ class GroundwaterMonitoringWell(bro.FileOrUrl):
                 self._read_children_of_children(child, tube)
                 self.monitoringTube.append(tube)
             else:
-                logger.warning(f"Unknown key: {key}")
+                util._warn_unknown_key(key, self)
         if hasattr(self, "monitoringTube"):
             self.monitoringTube = pd.DataFrame(self.monitoringTube)
             tubeNumber = self.monitoringTube["tubeNumber"].astype(int)
@@ -144,13 +139,13 @@ class GroundwaterMonitoringWell(bro.FileOrUrl):
     def _read_intermediate_event(self, node):
         d = {}
         for child in node:
-            key = child.tag.split("}", 1)[1]
+            key = util._get_key_from_tag(child)
             if key == "eventName":
                 d[key] = child.text
             elif key == "eventDate":
                 d[key] = self._read_date(child)
             else:
-                logger.warning(f"Unknown key: {key}")
+                util._warn_unknown_key(key, self)
         return d
 
 
@@ -267,8 +262,8 @@ def get_observations(
     to_file = None
     if to_path is not None and not os.path.isdir(to_path):
         os.makedirs(to_path)
-    for bro_id in tqdm(np.unique(bro_ids), disable=silent, desc=desc):
-        to_rel_file = _get_to_file(
+    for bro_id in util.tqdm(np.unique(bro_ids), disable=silent, desc=desc):
+        to_rel_file = util._get_to_file(
             f"gmw_relations_{bro_id}.json", zipfile, to_path, _files
         )
         if zipfile is None and (
@@ -301,7 +296,7 @@ def get_observations(
                     fname = f"{ref['broId']}.csv"
                 else:
                     fname = f"{ref['broId']}.xml"
-                to_file = _get_to_file(fname, zipfile, to_path, _files)
+                to_file = util._get_to_file(fname, zipfile, to_path, _files)
                 if zipfile is None and (
                     redownload or to_file is None or not os.path.isfile(to_file)
                 ):
@@ -311,7 +306,7 @@ def get_observations(
                                 ref["broId"], qualifier=qualifier, to_file=to_file
                             )
                         else:
-                            df = GroundwaterLevelDossier.from_bro_id(
+                            df = gld.GroundwaterLevelDossier.from_bro_id(
                                 ref["broId"],
                                 qualifier=qualifier,
                                 to_file=to_file,
@@ -319,15 +314,15 @@ def get_observations(
                                 tmax=tmax,
                             )
                     elif kind == "gar":
-                        df = GroundwaterAnalysisReport.from_bro_id(
+                        df = gar.GroundwaterAnalysisReport.from_bro_id(
                             ref["broId"], to_file=to_file
                         )
                     elif kind == "frd":
-                        df = FormationResistanceDossier.from_bro_id(
+                        df = frd.FormationResistanceDossier.from_bro_id(
                             ref["broId"], to_file=to_file
                         )
                     elif kind == "gmn":
-                        df = GroundwaterMonitoringNetwork.from_bro_id(
+                        df = gmn.GroundwaterMonitoringNetwork.from_bro_id(
                             ref["broId"], to_file=to_file
                         )
                 else:
@@ -342,15 +337,15 @@ def get_observations(
                                 qualifier=qualifier,
                             )
                         else:
-                            df = GroundwaterLevelDossier(
+                            df = gld.GroundwaterLevelDossier(
                                 to_file, qualifier=qualifier, zipfile=zipfile
                             )
                     elif kind == "gar":
-                        df = GroundwaterAnalysisReport(to_file, zipfile=zipfile)
+                        df = gar.GroundwaterAnalysisReport(to_file, zipfile=zipfile)
                     elif kind == "frd":
-                        df = FormationResistanceDossier(to_file, zipfile=zipfile)
+                        df = frd.FormationResistanceDossier(to_file, zipfile=zipfile)
                     elif kind == "gmn":
-                        df = GroundwaterMonitoringNetwork(to_file, zipfile=zipfile)
+                        df = gmn.GroundwaterMonitoringNetwork(to_file, zipfile=zipfile)
 
                 if as_csv:
                     tube_ref["observation"] = df
@@ -371,7 +366,7 @@ def get_observations(
                 else:
                     tubes.append(df.to_dict())
     if to_zip is not None:
-        _save_data_to_zip(to_zip, _files, remove_path_again, to_path)
+        util._save_data_to_zip(to_zip, _files, remove_path_again, to_path)
     return pd.DataFrame(tubes)
 
 
@@ -574,7 +569,7 @@ def get_data_in_extent(
     # get gwm characteristics
     logger.info(f"Getting gmw-characteristics in extent: {extent}")
 
-    to_file = _get_to_file("gmw_characteristics.xml", zipfile, to_path, _files)
+    to_file = util._get_to_file("gmw_characteristics.xml", zipfile, to_path, _files)
     gmw = get_characteristics(
         extent=extent, to_file=to_file, redownload=redownload, zipfile=zipfile
     )
@@ -617,7 +612,7 @@ def get_data_in_extent(
     if zipfile is not None:
         zipfile.close()
     if zipfile is None and to_zip is not None:
-        _save_data_to_zip(to_zip, _files, remove_path_again, to_path)
+        util._save_data_to_zip(to_zip, _files, remove_path_again, to_path)
 
     if not obs_df.empty:
         obs_df = obs_df.set_index(

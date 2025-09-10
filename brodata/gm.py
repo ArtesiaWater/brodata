@@ -5,8 +5,7 @@ import requests
 import json
 import pandas as pd
 import geopandas as gpd
-from .util import _save_data_to_zip, _get_to_file, tqdm
-from . import gmw, gld, gar
+from . import gmw, gld, gar, util
 
 
 base_url = "https://api.pdok.nl/bzk/bro-gminsamenhang-karakteristieken/ogc/v1"
@@ -127,9 +126,9 @@ def _gm_items(
             r = requests.get(url)
             if not r.ok:
                 raise Exception(f"Retrieving data from {url} failed")
-                json_data = r.json()
-                gdfs.append(gpd.GeoDataFrame.from_features(json_data["features"]))
-                url = _get_next_url(json_data)
+            json_data = r.json()
+            gdfs.append(gpd.GeoDataFrame.from_features(json_data["features"], crs=crs))
+            url = _get_next_url(json_data)
         gdf = pd.concat(gdfs, ignore_index=True)
     if time_columns is None:
         time_columns = gdf.columns[gdf.columns.str.endswith("_time")]
@@ -302,7 +301,7 @@ def get_data_in_extent(
     if to_path is not None and not os.path.isdir(to_path):
         os.makedirs(to_path)
 
-    to_file = _get_to_file("gm_gmw_monitoringtube.json", zipfile, to_path, _files)
+    to_file = util._get_to_file("gm_gmw_monitoringtube.json", zipfile, to_path, _files)
     tubes = gmw_monitoringtube_items(
         extent, to_file=to_file, redownload=redownload, zipfile=zipfile
     )
@@ -311,7 +310,7 @@ def get_data_in_extent(
 
     meas_cl_kwargs = {}
     if kind == "gar":
-        to_file = _get_to_file("gm_gar.json", zipfile, to_path, _files)
+        to_file = util._get_to_file("gm_gar.json", zipfile, to_path, _files)
         meas_gdf = gar_items(
             extent, to_file=to_file, redownload=redownload, zipfile=zipfile
         )
@@ -322,7 +321,7 @@ def get_data_in_extent(
             meas_gdf = meas_gdf[meas_gdf["sampling_date_time"] <= tmax]
         meas_cl = gar.GroundwaterAnalysisReport
     elif kind == "gld":
-        to_file = _get_to_file("gm_gld.json", zipfile, to_path, _files)
+        to_file = util._get_to_file("gm_gld.json", zipfile, to_path, _files)
         meas_gdf = gld_items(
             extent, to_file=to_file, redownload=redownload, zipfile=zipfile
         )
@@ -351,14 +350,14 @@ def get_data_in_extent(
     if qualifier is not None and kind != "gld":
         raise (Exception("A qualifier is only supported for kind=='gld'"))
     datcol = gmw._get_data_column(kind)
-    for bro_id in tqdm(meas_gdf.index, disable=silent, desc=desc):
+    for bro_id in util.tqdm(meas_gdf.index, disable=silent, desc=desc):
         if as_csv:
             url = meas_gdf.at[bro_id, "series_preliminary_csv_url"]
             to_file = f"{bro_id}.csv"
         else:
             url = meas_gdf.at[bro_id, "imbro_xml_url"]
             to_file = f"{bro_id}.xml"
-        to_file = _get_to_file(to_file, zipfile, to_path, _files)
+        to_file = util._get_to_file(to_file, zipfile, to_path, _files)
         if zipfile is None and (
             redownload or to_file is None or not os.path.isfile(to_file)
         ):
@@ -399,7 +398,7 @@ def get_data_in_extent(
     if zipfile is not None:
         zipfile.close()
     if zipfile is None and to_zip is not None:
-        _save_data_to_zip(to_zip, _files, remove_path_again, to_path)
+        util._save_data_to_zip(to_zip, _files, remove_path_again, to_path)
 
     # only keep tubes with active measurements
     mask = tubes["gm_gmw_monitoringtube_pk"].isin(meas_gdf["gm_gmw_monitoringtube_fk"])

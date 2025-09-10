@@ -3,7 +3,7 @@ from functools import partial
 
 import pandas as pd
 
-from . import bro
+from . import bro, util
 
 logger = logging.getLogger(__name__)
 
@@ -26,16 +26,16 @@ class GroundwaterMonitoringNetwork(bro.FileOrUrl):
         for key in gmn.attrib:
             setattr(self, key.split("}", 1)[1], gmn.attrib[key])
         for child in gmn:
-            key = child.tag.split("}", 1)[1]
+            key = util._get_key_from_tag(child)
             if len(child) == 0:
                 setattr(self, key, child.text)
             elif key == "monitoringNetHistory":
                 for grandchild in child:
-                    key = grandchild.tag.split("}", 1)[1]
+                    key = util._get_key_from_tag(grandchild)
                     if key == "startDateMonitoring":
                         setattr(self, key, self._read_date(grandchild))
                     else:
-                        logger.warning(f"Unknown key: {key}")
+                        util._warn_unknown_key(key, self)
             elif key == "registrationHistory":
                 self._read_children_of_children(child)
             elif key == "measuringPoint":
@@ -45,7 +45,7 @@ class GroundwaterMonitoringNetwork(bro.FileOrUrl):
                 self._read_children_of_children(child, point)
                 self.measuringPoint.append(point)
             else:
-                logger.warning(f"Unknown key: {key}")
+                util._warn_unknown_key(key, self)
 
         if hasattr(self, "measuringPoint"):
             self.measuringPoint = pd.DataFrame(self.measuringPoint)

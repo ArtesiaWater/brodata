@@ -13,6 +13,7 @@ except ImportError:
     def tqdm(iterable=None, **kwargs):
         return iterable if iterable is not None else []
 
+
 def read_zipfile(fname, pathnames=None, override_ext=None):
     with ZipFile(fname) as zf:
         namelist = np.array(zf.namelist())
@@ -148,3 +149,20 @@ def _format_repr(self, props):
     # generate name
     name = f"{self.__class__.__name__}({props_str})"
     return name
+
+
+def _get_key_from_tag(node):
+    key = node.tag.split("}", 1)[1]
+    return key
+
+
+def _warn_unknown_key(key, obj):
+    logger.warning(
+        f"Unknown key {key} in {obj.__class__.__name__} {getattr(obj, 'broId', '')}"
+    )
+
+
+def _raise_assumed_single(key, obj):
+    raise ValueError(
+        f"Assumed there is only one {key} in {obj.__class__.__name__} {getattr(obj, 'broId', '')}"
+    )

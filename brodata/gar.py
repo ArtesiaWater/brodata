@@ -44,7 +44,7 @@ class GroundwaterAnalysisReport(bro.FileOrUrl):
         for key in gar.attrib:
             setattr(self, key.split("}", 1)[1], gar.attrib[key])
         for child in gar:
-            key = child.tag.split("}", 1)[1]
+            key = util._get_key_from_tag(child)
             if len(child) == 0:
                 setattr(self, key, child.text)
             elif key == "registrationHistory":
@@ -71,7 +71,7 @@ class GroundwaterAnalysisReport(bro.FileOrUrl):
                     self.laboratoryAnalysis = []
                 self.laboratoryAnalysis.append(self._read_laboratory_analysis(child))
             else:
-                logger.warning(f"Unknown key: {key}")
+                util._warn_unknown_key(key, self)
         if hasattr(self, "fieldResearch"):
             self.fieldResearch = pd.concat(self.fieldResearch)
         if hasattr(self, "laboratoryAnalysis"):
@@ -82,7 +82,7 @@ class GroundwaterAnalysisReport(bro.FileOrUrl):
 
         d = {}
         for child in node:
-            key = child.tag.split("}", 1)[1]
+            key = util._get_key_from_tag(child)
             if key == "samplingDateTime":
                 d[key] = pd.to_datetime(child.text)
             elif key in ["samplingStandard", "valuationMethod"]:
@@ -114,7 +114,7 @@ class GroundwaterAnalysisReport(bro.FileOrUrl):
         for child in node:
             d = {}
             for grandchild in child:
-                key = grandchild.tag.split("}", 1)[1]
+                key = util._get_key_from_tag(grandchild)
                 if key == "analysisDate":
                     d[key] = self._read_date(grandchild)
                 elif key in ["analyticalTechnique", "valuationMethod"]:

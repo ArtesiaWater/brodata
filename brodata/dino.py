@@ -11,11 +11,7 @@ import requests
 from shapely.geometry import LineString
 import matplotlib.pyplot as plt
 
-from .util import (
-    _format_repr,
-    _save_data_to_zip,
-    tqdm
-)
+from . import util
 from .webservices import get_configuration, get_gdf
 
 logger = logging.getLogger(__name__)
@@ -143,7 +139,7 @@ def _get_data_within_extent(
     to_file = None
 
     data = {}
-    for dino_nr in tqdm(gdf.index, disable=silent):
+    for dino_nr in util.tqdm(gdf.index, disable=silent):
         if to_path is not None:
             to_file = os.path.join(to_path, f"{dino_nr}.csv")
             if to_zip is not None:
@@ -155,7 +151,7 @@ def _get_data_within_extent(
             dino_nr, timeout=timeout, to_file=to_file, max_retries=max_retries
         )
     if to_zip is not None:
-        _save_data_to_zip(to_zip, files, remove_path_again, to_path)
+        util._save_data_to_zip(to_zip, files, remove_path_again, to_path)
 
     return objects_to_gdf(data, x, y, geometry, index, to_gdf)
 
@@ -166,7 +162,7 @@ def _get_data_from_path(from_path, dino_class, silent=False, ext=".csv"):
     files = os.listdir(from_path)
     files = [file for file in files if file.endswith(ext)]
     data = {}
-    for file in tqdm(files, disable=silent):
+    for file in util.tqdm(files, disable=silent):
         fname = os.path.join(from_path, file)
         data[os.path.splitext(file)[0]] = dino_class(fname)
     return data
@@ -186,7 +182,7 @@ def _get_data_from_zip(to_zip, dino_class, silent=False, extent=None):
             gdf = gdf.set_index("DINO_NR")
             gdf = gdf.cx[extent[0] : extent[1], extent[2] : extent[3]]
             names = [f"{name}.csv" for name in gdf.index]
-        for name in tqdm(names, disable=silent):
+        for name in util.tqdm(names, disable=silent):
             data[name] = dino_class(name, zipfile=zf)
     return data
 
@@ -240,7 +236,7 @@ def get_grondwaterstand(
     if to_path is not None and not os.path.isdir(to_path):
         os.makedirs(to_path)
     data = {}
-    for name in tqdm(gdf.index, disable=silent):
+    for name in util.tqdm(gdf.index, disable=silent):
         for i_st in range(1, gdf.at[name, "ST_CNT"] + 1):
             piezometer_nr = f"{i_st:03d}"
             url = f"{download_url}/{name}/{piezometer_nr}"
@@ -255,7 +251,7 @@ def get_grondwaterstand(
                 url, timeout=timeout, to_file=to_file
             )
     if to_zip is not None:
-        _save_data_to_zip(to_zip, files, remove_path_again, to_path)
+        util._save_data_to_zip(to_zip, files, remove_path_again, to_path)
     return objects_to_gdf(
         data, index=index, to_gdf=to_gdf, x="X-coordinaat", y="Y-coordinaat"
     )
@@ -363,7 +359,7 @@ class CsvFileOrUrl:
         for key in propdict:
             if hasattr(self, key):
                 props[propdict[key]] = getattr(self, key)
-        name = _format_repr(self, props)
+        name = util._format_repr(self, props)
         return name
 
     @classmethod
@@ -435,7 +431,7 @@ class Oppervlaktewaterstand(CsvFileOrUrl):
             for key in propdict:
                 if key in s:
                     props[propdict[key]] = s[key]
-        name = _format_repr(self, props)
+        name = util._format_repr(self, props)
         return name
 
     def _read_contents(self, f):
@@ -483,7 +479,7 @@ class Grondwaterstand(CsvFileOrUrl):
             for key in propdict:
                 if key in s:
                     props[propdict[key]] = s[key]
-        name = _format_repr(self, props)
+        name = util._format_repr(self, props)
         return name
 
     def _read_contents(self, f):
@@ -603,7 +599,7 @@ class Boorgatmeting(CsvFileOrUrl):
             items = self.las.header["Well"]
             for item in items:
                 props[item.descr] = item.value
-        name = _format_repr(self, props)
+        name = util._format_repr(self, props)
         return name
 
     def _read_contents(self, f):
