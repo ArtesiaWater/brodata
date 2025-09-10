@@ -6,7 +6,7 @@ from abc import ABC, abstractmethod
 from io import StringIO
 from zipfile import ZipFile
 
-from shapely.geometry import Point, MultiPoint
+from shapely.geometry import Point
 import numpy as np
 import geopandas as gpd
 import pandas as pd
@@ -198,9 +198,9 @@ def _get_characteristics(
             if len(child) == 0:
                 d[key] = child.text
             elif key == "standardizedLocation":
-                d[key] = FileOrUrl._read_pos(child)
+                d[key] = FileOrUrl._read_geometry(child)
             elif key == "deliveredLocation":
-                d[key] = FileOrUrl._read_pos(child)
+                d[key] = FileOrUrl._read_geometry(child)
             elif (
                 key.endswith("Date")
                 or key.endswith("Overview")
@@ -436,9 +436,6 @@ class FileOrUrl(ABC):
         _read_delivered_location(node):
             Extracts geographic location and date information from the XML node.
 
-        _read_pos(node):
-            Extracts geometry from a GML-compliant position element.
-
         _read_date(node):
             Extracts date information from the XML, handling multiple formats.
 
@@ -583,7 +580,7 @@ class FileOrUrl(ABC):
         for child in node:
             key = util._get_key_from_tag(child)
             if key == "location":
-                setattr(self, "deliveredLocation", self._read_pos(child))
+                setattr(self, "deliveredLocation", self._read_geometry(child))
             elif key == "horizontalPositioningDate":
                 setattr(self, key, self._read_date(child))
             elif key == "horizontalPositioningMethod":
@@ -595,7 +592,7 @@ class FileOrUrl(ABC):
         for child in node:
             key = util._get_key_from_tag(child)
             if key == "location":
-                setattr(self, "standardizedLocation", self._read_pos(child))
+                setattr(self, "standardizedLocation", self._read_geometry(child))
             elif key == "coordinateTransformation":
                 setattr(self, key, child.text)
             else:
@@ -631,26 +628,14 @@ class FileOrUrl(ABC):
     @staticmethod
     def _read_geometry(node):
         assert len(node) == 1
+        tag = node[0].tag.split("}")[-1]
+        if tag == "pos":
+            x, y = tuple(map(float, node[0].text.strip().split()))
+            if "srsName" in node.attrib:
+                if node.attrib["srsName"] == "urn:ogc:def:crs:EPSG::4258":
+                    x, y = y, x
+            return Point(x, y)
         return gml.parse_geometry(node[0])
-
-    @staticmethod
-    def _read_pos(node):
-        ns = {"gml": "http://www.opengis.net/gml/3.2"}
-        multipoint = node.find("gml:MultiPoint", ns)
-        if multipoint is not None:
-            xy = []
-            for pointmember in multipoint.findall("gml:pointMember", ns):
-                xy.append(FileOrUrl._read_pos(pointmember))
-            return MultiPoint(xy)
-        point = node.find("gml:Point", ns)
-        if point is not None:
-            node = point
-        pos = node.find("gml:pos", ns)
-        x, y = [float(x) for x in pos.text.split()]
-        if "srsName" in node.attrib:
-            if node.attrib["srsName"] == "urn:ogc:def:crs:EPSG::4258":
-                x, y = y, x
-        return Point(x, y)
 
     @staticmethod
     def _read_date(node):

@@ -237,3 +237,8 @@ def test_unknwon_gmw_raises_value_error():
 def test_get_gpd():
     fname = os.path.join("tests", "data", "GPD000000017250.xml")
     brodata.gpd.GroundwaterProductionDossier(fname)
+
+
+def test_site_assessment_data():
+    fname = os.path.join("tests", "data", "SAD000000011742.xml")
+    brodata.sad.SiteAssessmentData(fname)

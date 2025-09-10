@@ -25,5 +25,9 @@ class SiteAssessmentData(bro.FileOrUrl):
                 setattr(self, key, child.text)
             elif key == "geometry":
                 setattr(self, key, self._read_geometry(child))
+            elif key in ["registrationHistory"]:
+                self._read_children_of_children(child)
+            elif key == "standardizedLocation":
+                self._read_standardized_location(child)
             else:
                 util._warn_unknown_key(key, self)
