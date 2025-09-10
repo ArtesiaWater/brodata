@@ -54,6 +54,8 @@ class GroundwaterProductionDossier(bro.FileOrUrl):
                     self.volumeSeries[column] = pd.to_datetime(
                         self.volumeSeries[column]
                     )
+            if "volume" in self.volumeSeries.columns:
+                self.volumeSeries["volume"] = pd.to_numeric(self.volumeSeries["volume"])
 
     def _read_report(self, node):
         d = {}
