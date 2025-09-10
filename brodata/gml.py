@@ -16,47 +16,60 @@ def parse_coordinates(text):
     return [tuple(map(float, c.split(","))) for c in text.strip().split()]
 
 
-def polygon_from_gml(polygon_node):
-    """Convert GML Polygon node to Shapely Polygon"""
-    # Exterior
+def parse_poslist(poslist_text, dim=2):
+    """Convert a GML posList string to list of coordinate tuples (2D or 3D)."""
+    numbers = list(map(float, poslist_text.strip().split()))
+    if len(numbers) % dim != 0:
+        raise ValueError(f"Number of coordinates not divisible by dimension {dim}")
+    return [tuple(numbers[i : i + dim]) for i in range(0, len(numbers), dim)]
+
+
+def polygon_from_gml(polygon_node, dim=2):
+    """Convert GML 3.2 Polygon or PolygonPatch node to Shapely Polygon"""
     exterior_text = polygon_node.findtext(
-        ".//gml:outerBoundaryIs/gml:LinearRing/gml:coordinates", namespaces=ns
+        ".//gml:exterior/gml:LinearRing/gml:posList", namespaces=ns
     )
     if not exterior_text:
-        exterior_text = polygon_node.findtext(
-            ".//gml:exterior/gml:LinearRing/gml:coordinates", namespaces=ns
-        )
-    exterior = parse_coordinates(exterior_text)
+        raise ValueError("Polygon has no exterior")
+    exterior = parse_poslist(exterior_text, dim=dim)
 
-    # Interiors
     interiors = []
     for inner in polygon_node.findall(
-        ".//gml:innerBoundaryIs/gml:LinearRing/gml:coordinates", namespaces=ns
+        ".//gml:interior/gml:LinearRing/gml:posList", namespaces=ns
     ):
-        interiors.append(parse_coordinates(inner.text))
+        interiors.append(parse_poslist(inner.text, dim=dim))
 
     return Polygon(exterior, interiors)
 
 
 def multisurface_from_gml(ms_node):
-    """Convert GML MultiSurface node to Shapely MultiPolygon"""
+    """Convert GML 3.2 MultiSurface to Shapely MultiPolygon (supports Surface with PolygonPatch)"""
     polygons = []
+
     for member in ms_node.findall(".//gml:surfaceMember", namespaces=ns):
-        poly_node = member.find(".//gml:Polygon", namespaces=ns)
-        if poly_node is not None:
-            polygons.append(polygon_from_gml(poly_node))
+        # Look for Surface inside surfaceMember
+        surface_node = member.find(".//gml:Surface", namespaces=ns)
+        if surface_node is None:
+            continue  # skip if no surface found
+
+        # Each Surface can have multiple PolygonPatch under patches
+        for patch in surface_node.findall(".//gml:PolygonPatch", namespaces=ns):
+            polygons.append(polygon_from_gml(patch))
+
     return MultiPolygon(polygons)
 
 
 def parse_geometry(node):
-    """Parse any GML geometry node to Shapely"""
+    """Parse any GML 3.2 geometry node to Shapely"""
     tag = node.tag.split("}")[-1]
     if tag == "Point":
-        coords = parse_coordinates(node.findtext(".//gml:pos", namespaces=ns))
-        return Point(coords[0])
+        pos_text = node.findtext(".//gml:pos", namespaces=ns)
+        coords = tuple(map(float, pos_text.split()))
+        return Point(coords)
     elif tag == "LineString":
-        coords = parse_coordinates(node.findtext(".//gml:coordinates", namespaces=ns))
-        return LineString(coords)
+        pos_list = node.findtext(".//gml:posList", namespaces=ns)
+        points = [tuple(map(float, p.split())) for p in pos_list.strip().split()]
+        return LineString(points)
     elif tag == "Polygon":
         return polygon_from_gml(node)
     elif tag == "MultiSurface":
@@ -70,7 +83,10 @@ def parse_geometry(node):
     elif tag == "MultiLineString":
         lines = [
             LineString(
-                parse_coordinates(l.findtext(".//gml:coordinates", namespaces=ns))
+                [
+                    tuple(map(float, c.split()))
+                    for c in l.findtext(".//gml:posList", namespaces=ns).strip().split()
+                ]
             )
             for l in node.findall(
                 ".//gml:lineStringMember/gml:LineString", namespaces=ns
@@ -79,7 +95,7 @@ def parse_geometry(node):
         return MultiLineString(lines)
     elif tag == "MultiPoint":
         points = [
-            Point(parse_coordinates(p.findtext(".//gml:coordinates", namespaces=ns))[0])
+            Point(tuple(map(float, p.findtext(".//gml:pos", namespaces=ns).split())))
             for p in node.findall(".//gml:pointMember/gml:Point", namespaces=ns)
         ]
         return MultiPoint(points)
