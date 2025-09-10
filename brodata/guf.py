@@ -185,6 +185,7 @@ class GroundwaterUtilisationFacility(bro.FileOrUrl):
                 "height",
                 "maximumWellDepth",
                 "maximumWellCapacity",
+                "relativeTemperature",
             ]:
                 to_int = ["designWellId"]
                 to_float = ["height", "maximumWellDepth", "maximumWellCapacity"]
@@ -277,6 +278,7 @@ class GroundwaterUtilisationFacility(bro.FileOrUrl):
                         "screenType",
                         "topScreenDepth",
                         "length",
+                        "relativeTemperature",
                     ]:
                         if key == "realisedScreenId" and key in d:
                             util._raise_assumed_single("realisedScreenId", self)
