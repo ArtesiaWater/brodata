@@ -294,25 +294,16 @@ class GroundwaterUtilisationFacility(bro.FileOrUrl):
                 util._warn_unknown_key(key, self)
         return d
 
-    def _read_point(self, node):
-        pos = node.find("gml:pos", self._namespace)
-        x, y = [float(x) for x in pos.text.split()]
-        return Point(x, y)
-
     def _read_geometry(self, node):
+        assert len(node) == 1
         ns = {
             "gml": "http://www.opengis.net/gml/3.2",
             "gufcommon": "http://www.broservices.nl/xsd/gufcommon/1.0",
         }
-        point = node.find("gml:Point", self._namespace)
-        if point is not None:
-            return self._read_point(point)
         point_or_curve_or_surface = node.find("gufcommon:PointOrCurveOrSurface", ns)
         if point_or_curve_or_surface is not None:
-            point = point_or_curve_or_surface.find("gml:Point", self._namespace)
-            if point is not None:
-                return self._read_point(point)
-        logger.warning("Other types of geometries than point not supported yet")
+            node = point_or_curve_or_surface
+        return super()._read_geometry(node)
 
 
 cl = GroundwaterUtilisationFacility

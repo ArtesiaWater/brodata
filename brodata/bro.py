@@ -13,7 +13,7 @@ import pandas as pd
 import requests
 from pyproj import Transformer
 
-from . import util
+from . import util, gml
 
 logger = logging.getLogger(__name__)
 
@@ -231,7 +231,7 @@ def _get_characteristics(
                             logger.warning(f"Unknown key: {key2}")
 
             else:
-                util._warn_unknown_key(key, self)
+                logger.warning(f"Unknown key: {key}")
         data.append(d)
 
     gdf = objects_to_gdf(data)
@@ -253,6 +253,54 @@ def _get_data_in_extent(
     index="broId",
     continue_on_error=False,
 ):
+    """
+    Retrieve data within a specified extent from a BRO client.
+
+    Parameters
+    ----------
+    bro_cl : class
+        brodata class.
+    extent : str or object, optional
+        Spatial extent to query. If a string, interpreted as a zip file path.
+    timeout : int, default=5
+        Timeout in seconds for data retrieval requests.
+    silent : bool, default=False
+        If True, disables progress bars and reduces logging output.
+    to_path : str, optional
+        Directory path to save downloaded files.
+    to_zip : str, optional
+        Path to a zip file to read from or save data to.
+    redownload : bool, default=False
+        If True, forces redownload of data even if files exist.
+    geometry : str or object, optional
+        Geometry specification for the output GeoDataFrame.
+    to_gdf : bool, default=True
+        If True, converts the output to a GeoDataFrame.
+    index : str, default="broId"
+        Column name to use as index in the output GeoDataFrame.
+    continue_on_error : bool, default=False
+        If True, continues processing other items if an error occurs.
+
+    Returns
+    -------
+    gdf : GeoDataFrame
+        GeoDataFrame containing the retrieved data objects, indexed by the specified
+        column.
+
+    Raises
+    ------
+    Exception
+        If invalid arguments are provided or data retrieval fails (unless
+       continue_on_error is True).
+
+    Notes
+    -----
+    - If `extent` is a string, it is treated as a zip file path and `to_zip` must not
+        be provided.
+    - Data can be read from or saved to zip archives or directories, depending on the
+        provided arguments.
+    - Progress is displayed unless `silent` is True.
+    """
     if isinstance(extent, str):
         if to_zip is not None:
             raise (Exception("When extent is a string, do not supply to_zip"))
@@ -579,6 +627,11 @@ class FileOrUrl(ABC):
                     d[key] = self._read_date(child)
             else:
                 util._warn_unknown_key(key, self)
+
+    @staticmethod
+    def _read_geometry(node):
+        assert len(node) == 1
+        return gml.parse_geometry(node[0])
 
     @staticmethod
     def _read_pos(node):

@@ -12,6 +12,7 @@ from . import (
     gpd,
     plot,
     sfr,
+    sad,
     util,
     webservices,
     gm,
