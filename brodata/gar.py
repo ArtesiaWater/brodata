@@ -4,7 +4,7 @@ from functools import partial
 import pandas as pd
 import requests
 
-from . import bro
+from . import bro, util
 
 logger = logging.getLogger(__name__)
 
