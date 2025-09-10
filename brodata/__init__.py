@@ -9,6 +9,7 @@ from . import (
     gmn,
     gmw,
     guf,
+    gpd,
     plot,
     sfr,
     util,

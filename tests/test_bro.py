@@ -232,3 +232,8 @@ def test_unknwon_gmw_raises_value_error():
     # make sure a not existant bro-id of a gmw returns a ValueError
     with pytest.raises(ValueError):
         brodata.gmw.GroundwaterMonitoringWell.from_bro_id("GMW000000000000")
+
+
+def test_get_gpd():
+    fname = os.path.join("tests", "data", "GPD000000017250.xml")
+    brodata.gpd.GroundwaterProductionDossier(fname)
