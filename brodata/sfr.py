@@ -24,11 +24,11 @@ class SoilFaceResearch(bro.FileOrUrl):
         for key in sfr.attrib:
             setattr(self, key.split("}", 1)[1], sfr.attrib[key])
         for child in sfr:
-            key = util._get_key_from_tag(child)
+            key = self._get_tag(child)
             if len(child) == 0:
                 setattr(self, key, child.text)
             else:
-                util._warn_unknown_key(key, self)
+                self._warn_unknown_tag(key)
 
 
 cl = SoilFaceResearch

@@ -96,7 +96,7 @@ class GroundwaterMonitoringWell(bro.FileOrUrl):
         for key in gmw.attrib:
             setattr(self, key.split("}", 1)[1], gmw.attrib[key])
         for child in gmw:
-            key = util._get_key_from_tag(child)
+            key = self._get_tag(child)
             if len(child) == 0:
                 setattr(self, key, child.text)
             elif key == "standardizedLocation":
@@ -105,7 +105,7 @@ class GroundwaterMonitoringWell(bro.FileOrUrl):
                 self._read_delivered_location(child)
             elif key == "wellHistory":
                 for grandchild in child:
-                    key = util._get_key_from_tag(grandchild)
+                    key = self._get_tag(grandchild)
                     if key == "wellConstructionDate":
                         setattr(self, key, self._read_date(grandchild))
                     elif key == "intermediateEvent":
@@ -114,11 +114,11 @@ class GroundwaterMonitoringWell(bro.FileOrUrl):
                         event = self._read_intermediate_event(grandchild)
                         self.intermediateEvent.append(event)
                     else:
-                        util._warn_unknown_key(key, self)
+                        self._warn_unknown_tag(key)
 
             elif key in ["deliveredVerticalPosition", "registrationHistory"]:
                 for grandchild in child:
-                    key = util._get_key_from_tag(grandchild)
+                    key = self._get_tag(grandchild)
                     setattr(self, key, grandchild.text)
             elif key in ["monitoringTube"]:
                 if not hasattr(self, key):
@@ -127,7 +127,7 @@ class GroundwaterMonitoringWell(bro.FileOrUrl):
                 self._read_children_of_children(child, tube)
                 self.monitoringTube.append(tube)
             else:
-                util._warn_unknown_key(key, self)
+                self._warn_unknown_tag(key)
         if hasattr(self, "monitoringTube"):
             self.monitoringTube = pd.DataFrame(self.monitoringTube)
             tubeNumber = self.monitoringTube["tubeNumber"].astype(int)
@@ -139,13 +139,13 @@ class GroundwaterMonitoringWell(bro.FileOrUrl):
     def _read_intermediate_event(self, node):
         d = {}
         for child in node:
-            key = util._get_key_from_tag(child)
+            key = self._get_tag(child)
             if key == "eventName":
                 d[key] = child.text
             elif key == "eventDate":
                 d[key] = self._read_date(child)
             else:
-                util._warn_unknown_key(key, self)
+                self._warn_unknown_tag(key)
         return d
 
 

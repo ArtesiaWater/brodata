@@ -32,7 +32,7 @@ class ConePenetrationTest(bro.FileOrUrl):
         for key in cpt.attrib:
             setattr(self, key.split("}", 1)[1], cpt.attrib[key])
         for child in cpt:
-            key = util._get_key_from_tag(child)
+            key = self._get_tag(child)
             if len(child) == 0:
                 setattr(self, key, child.text)
             elif key == "standardizedLocation":
@@ -45,7 +45,7 @@ class ConePenetrationTest(bro.FileOrUrl):
                 self._read_children_of_children(child)
             elif key in ["conePenetrometerSurvey"]:
                 for grandchild in child:
-                    key = util._get_key_from_tag(grandchild)
+                    key = self._get_tag(grandchild)
                     if len(grandchild) == 0:
                         setattr(self, key, grandchild.text)
                     elif key in [
@@ -62,11 +62,11 @@ class ConePenetrationTest(bro.FileOrUrl):
                     elif key == "dissipationTest":
                         self._read_cone_penetration_test(grandchild, key)
                     else:
-                        util._warn_unknown_key(key, self)
+                        self._warn_unknown_tag(key)
             elif key == "additionalInvestigation":
                 self._read_additional_investigation(child)
             else:
-                util._warn_unknown_key(key, self)
+                self._warn_unknown_tag(key)
         if hasattr(self, "conePenetrationTest") and hasattr(self, "parameters"):
             self.conePenetrationTest.columns = self.parameters.index
             if "penetrationLength" in self.conePenetrationTest.columns:
@@ -77,12 +77,12 @@ class ConePenetrationTest(bro.FileOrUrl):
     def _read_parameters(self, node):
         self.parameters = pd.Series()
         for child in node:
-            key = util._get_key_from_tag(child)
+            key = self._get_tag(child)
             self.parameters[key] = child.text
 
     def _read_cone_penetration_test(self, node, name):
         for child in node:
-            key = util._get_key_from_tag(child)
+            key = self._get_tag(child)
             if key in ["phenomenonTime", "resultTime"]:
                 setattr(self, f"{name}_{key}", self._read_time_instant(child))
             elif key in [
@@ -116,13 +116,13 @@ class ConePenetrationTest(bro.FileOrUrl):
                         )
                         setattr(self, name, values)
                     else:
-                        util._warn_unknown_key(key, self)
+                        self._warn_unknown_tag(key)
             else:
-                util._warn_unknown_key(key, self)
+                self._warn_unknown_tag(key)
 
     def _read_additional_investigation(self, node):
         for child in node:
-            key = util._get_key_from_tag(child)
+            key = self._get_tag(child)
             if len(child) == 0:
                 setattr(self, key, child.text)
             elif key == "removedLayer":

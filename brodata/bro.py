@@ -7,6 +7,7 @@ from io import StringIO
 from zipfile import ZipFile
 
 from shapely.geometry import Point
+import shapely
 import numpy as np
 import geopandas as gpd
 import pandas as pd
@@ -194,7 +195,7 @@ def _get_characteristics(
         for key in gmw.attrib:
             d[key.split("}", 1)[1]] = gmw.attrib[key]
         for child in gmw:
-            key = util._get_key_from_tag(child)
+            key = util._get_tag(child)
             if len(child) == 0:
                 d[key] = child.text
             elif key == "standardizedLocation":
@@ -209,7 +210,7 @@ def _get_characteristics(
                 d[key] = child[0].text
             elif key in ["diameterRange", "screenPositionRange"]:
                 for grandchild in child:
-                    key = util._get_key_from_tag(grandchild)
+                    key = util._get_tag(grandchild)
                     d[key] = grandchild.text
             elif key == "licence":
                 for grandchild in child:
@@ -548,6 +549,22 @@ class FileOrUrl(ABC):
             else:
                 msg = criterionError.find("brocom:specification", ns).text
             raise (ValueError(msg))
+    
+    @staticmethod
+    def _get_tag(node):
+        return util._get_tag(node)
+
+
+    def _warn_unknown_tag(self, tag):
+        logger.warning(
+            f"Unknown tag {tag} in {self.__class__.__name__} {getattr(self, 'broId', '')}"
+        )
+
+
+    def _raise_assumed_single(self, key):
+        raise ValueError(
+            f"Assumed there is only one {key} in {self.__class__.__name__} {getattr(self, 'broId', '')}"
+        )
 
     def _read_children_of_children(self, node, d=None, to_float=None, to_int=None):
         if to_float is not None and isinstance(to_float, str):
@@ -578,7 +595,7 @@ class FileOrUrl(ABC):
 
     def _read_delivered_location(self, node):
         for child in node:
-            key = util._get_key_from_tag(child)
+            key = self._get_tag(child)
             if key == "location":
                 setattr(self, "deliveredLocation", self._read_geometry(child))
             elif key == "horizontalPositioningDate":
@@ -586,32 +603,32 @@ class FileOrUrl(ABC):
             elif key == "horizontalPositioningMethod":
                 setattr(self, key, child.text)
             else:
-                util._warn_unknown_key(key, self)
+                self._warn_unknown_tag(key)
 
     def _read_standardized_location(self, node):
         for child in node:
-            key = util._get_key_from_tag(child)
+            key = self._get_tag(child)
             if key == "location":
                 setattr(self, "standardizedLocation", self._read_geometry(child))
             elif key == "coordinateTransformation":
                 setattr(self, key, child.text)
             else:
-                util._warn_unknown_key(key, self)
+                self._warn_unknown_tag(key)
 
     def _read_lifespan(self, node, d=None):
         for child in node:
-            key = util._get_key_from_tag(child)
+            key = self._get_tag(child)
             if key in ["startTime", "endTime"]:
                 if d is None:
                     setattr(self, key, self._read_date(child))
                 else:
                     d[key] = self._read_date(child)
             else:
-                util._warn_unknown_key(key, self)
+                self._warn_unknown_tag(key)
 
     def _read_validity_period(self, node, d=None):
         for child in node:
-            key = util._get_key_from_tag(child)
+            key = self._get_tag(child)
             if key == "startValidity":
                 if d is None:
                     setattr(self, key, self._read_date(child))
@@ -623,7 +640,7 @@ class FileOrUrl(ABC):
                 else:
                     d[key] = self._read_date(child)
             else:
-                util._warn_unknown_key(key, self)
+                self._warn_unknown_tag(key)
 
     @staticmethod
     def _read_geometry(node):
@@ -631,11 +648,18 @@ class FileOrUrl(ABC):
         tag = node[0].tag.split("}")[-1]
         if tag == "pos":
             x, y = tuple(map(float, node[0].text.strip().split()))
-            if "srsName" in node.attrib:
-                if node.attrib["srsName"] == "urn:ogc:def:crs:EPSG::4258":
-                    x, y = y, x
+            if FileOrUrl._is_epsg_4258(node):
+                x, y = y, x
             return Point(x, y)
-        return gml.parse_geometry(node[0])
+        geometry = gml.parse_geometry(node[0])
+        if FileOrUrl._is_epsg_4258(node[0]):
+            geometry = shapely.ops.transform(lambda x, y: (y, x), geometry)
+        return geometry
+
+    @staticmethod
+    def _is_epsg_4258(node):
+        srsName = "urn:ogc:def:crs:EPSG::4258"
+        return "srsName" in node.attrib and node.attrib["srsName"] == srsName
 
     @staticmethod
     def _read_date(node):

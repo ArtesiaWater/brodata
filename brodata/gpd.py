@@ -28,7 +28,7 @@ class GroundwaterProductionDossier(bro.FileOrUrl):
         for key in gpd.attrib:
             setattr(self, key.split("}", 1)[1], gpd.attrib[key])
         for child in gpd:
-            key = util._get_key_from_tag(child)
+            key = self._get_tag(child)
             if len(child) == 0:
                 setattr(self, key, child.text)
             elif key in ["registrationHistory", "lifespan"]:
@@ -37,13 +37,13 @@ class GroundwaterProductionDossier(bro.FileOrUrl):
                 if not hasattr(self, "report"):
                     self.report = []
                 for grandchild in child:
-                    key = util._get_key_from_tag(grandchild)
+                    key = self._get_tag(grandchild)
                     if key == "Report":
                         self.report.append(self._read_report(grandchild))
                     else:
-                        util._warn_unknown_key(key, self)
+                        self._warn_unknown_tag(key)
             else:
-                util._warn_unknown_key(key, self)
+                self._warn_unknown_tag(key)
 
         if hasattr(self, "report"):
             self.report = pd.DataFrame(self.report)
@@ -60,16 +60,16 @@ class GroundwaterProductionDossier(bro.FileOrUrl):
     def _read_report(self, node):
         d = {}
         for child in node:
-            key = util._get_key_from_tag(child)
+            key = self._get_tag(child)
             if len(child) == 0:
                 d[key] = child.text
             elif key == "reportPeriod":
                 for grandchild in child:
-                    key = util._get_key_from_tag(grandchild)
+                    key = self._get_tag(grandchild)
                     if key in ["beginDate", "endDate"]:
                         d[key] = grandchild.text
                     else:
-                        util._warn_unknown_key(key, self)
+                        self._warn_unknown_tag(key)
             elif key == "volumeSeries":
                 if not hasattr(self, "volumeSeries"):
                     self.volumeSeries = []
@@ -79,13 +79,13 @@ class GroundwaterProductionDossier(bro.FileOrUrl):
 
             elif key == "installationOrFacility":
                 for grandchild in child:
-                    key = util._get_key_from_tag(grandchild)
+                    key = self._get_tag(grandchild)
                     if key == "InstallationOrFacility":
                         self._read_installation_facility(grandchild)
                     else:
-                        util._warn_unknown_key(key, self)
+                        self._warn_unknown_tag(key)
             else:
-                util._warn_unknown_key(key, self)
+                self._warn_unknown_tag(key)
 
         if "volumeSeries" in d:
             d["volumeSeries"] = pd.DataFrame(d["volumeSeries"])
@@ -94,16 +94,16 @@ class GroundwaterProductionDossier(bro.FileOrUrl):
     def _read_volume_series(self, node):
         d = {}
         for child in node:
-            key = util._get_key_from_tag(child)
+            key = self._get_tag(child)
             if len(child) == 0:
                 d[key] = child.text
             elif key == "period":
                 for grandchild in child:
-                    key = util._get_key_from_tag(grandchild)
+                    key = self._get_tag(grandchild)
                     if key in ["beginDate", "endDate"]:
                         d[key] = grandchild.text
                     else:
-                        util._warn_unknown_key(key, self)
+                        self._warn_unknown_tag(key)
         return d
 
     def _read_installation_facility(self, node):
@@ -111,7 +111,7 @@ class GroundwaterProductionDossier(bro.FileOrUrl):
             key = child.tag.split("}", 1)[1]
             if key == "relatedGroundwaterUsageFacility":
                 for grandchild in child:
-                    key = util._get_key_from_tag(grandchild)
+                    key = self._get_tag(grandchild)
                     if key == "GroundwaterUsageFacility":
                         for greatgrandchild in grandchild:
                             key2 = greatgrandchild.tag.split("}", 1)[1]
@@ -120,10 +120,10 @@ class GroundwaterProductionDossier(bro.FileOrUrl):
                             else:
                                 util._warn_unknown_key(key2, self)
                     else:
-                        util._warn_unknown_key(key, self)
+                        self._warn_unknown_tag(key)
             elif key == "relatedRealisedInstallation":
                 for grandchild in child:
-                    key = util._get_key_from_tag(grandchild)
+                    key = self._get_tag(grandchild)
                     if key == "RealisedInstallation":
                         for greatgrandchild in grandchild:
                             key2 = greatgrandchild.tag.split("}", 1)[1]
@@ -134,9 +134,9 @@ class GroundwaterProductionDossier(bro.FileOrUrl):
                             else:
                                 util._warn_unknown_key(key2, self)
                     else:
-                        util._warn_unknown_key(key, self)
+                        self._warn_unknown_tag(key)
             else:
-                util._warn_unknown_key(key, self)
+                self._warn_unknown_tag(key)
 
 
 cl = GroundwaterProductionDossier

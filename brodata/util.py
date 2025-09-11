@@ -150,19 +150,5 @@ def _format_repr(self, props):
     name = f"{self.__class__.__name__}({props_str})"
     return name
 
-
-def _get_key_from_tag(node):
-    key = node.tag.split("}", 1)[1]
-    return key
-
-
-def _warn_unknown_key(key, obj):
-    logger.warning(
-        f"Unknown key {key} in {obj.__class__.__name__} {getattr(obj, 'broId', '')}"
-    )
-
-
-def _raise_assumed_single(key, obj):
-    raise ValueError(
-        f"Assumed there is only one {key} in {obj.__class__.__name__} {getattr(obj, 'broId', '')}"
-    )
+def _get_tag(node):
+    return node.tag.split("}", 1)[1]

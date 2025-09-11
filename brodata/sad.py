@@ -20,7 +20,7 @@ class SiteAssessmentData(bro.FileOrUrl):
         for key in sad.attrib:
             setattr(self, key.split("}", 1)[1], sad.attrib[key])
         for child in sad:
-            key = util._get_key_from_tag(child)
+            key = self._get_tag(child)
             if len(child) == 0:
                 setattr(self, key, child.text)
             elif key == "geometry":
@@ -30,4 +30,4 @@ class SiteAssessmentData(bro.FileOrUrl):
             elif key == "standardizedLocation":
                 self._read_standardized_location(child)
             else:
-                util._warn_unknown_key(key, self)
+                self._warn_unknown_tag(key)

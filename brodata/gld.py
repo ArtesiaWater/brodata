@@ -360,7 +360,7 @@ class GroundwaterLevelDossier(bro.FileOrUrl):
         for key in gld.attrib:
             setattr(self, key.split("}", 1)[1], gld.attrib[key])
         for child in gld:
-            key = util._get_key_from_tag(child)
+            key = self._get_tag(child)
             if len(child) == 0:
                 setattr(self, key, child.text)
             elif key == "monitoringPoint":
@@ -441,7 +441,7 @@ class GroundwaterLevelDossier(bro.FileOrUrl):
                     self.observation = []
                 self.observation.append(observation)
             else:
-                util._warn_unknown_key(key, self)
+                self._warn_unknown_tag(key)
         if hasattr(self, "observation"):
             self.observation = pd.concat(self.observation)
             self.observation = process_observations(

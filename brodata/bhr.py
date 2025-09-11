@@ -25,7 +25,7 @@ class _BoreholeResearch(bro.FileOrUrl):
         for key in bhr.attrib:
             setattr(self, key.split("}", 1)[1], bhr.attrib[key])
         for child in bhr:
-            key = util._get_key_from_tag(child)
+            key = self._get_tag(child)
             if len(child) == 0:
                 setattr(self, key, child.text)
             elif key == "standardizedLocation":
@@ -41,11 +41,11 @@ class _BoreholeResearch(bro.FileOrUrl):
                 "reportHistory",
             ]:
                 for grandchild in child:
-                    key = util._get_key_from_tag(grandchild)
+                    key = self._get_tag(grandchild)
                     setattr(self, key, grandchild.text)
             elif key == "deliveredVerticalPosition":
                 for grandchild in child:
-                    key = util._get_key_from_tag(grandchild)
+                    key = self._get_tag(grandchild)
                     if key == "verticalPositioningDate":
                         setattr(self, key, self._read_date(grandchild))
                     elif key == "offset":
@@ -54,7 +54,7 @@ class _BoreholeResearch(bro.FileOrUrl):
                         setattr(self, key, grandchild.text)
             elif key == "boring":
                 for grandchild in child:
-                    key = util._get_key_from_tag(grandchild)
+                    key = self._get_tag(grandchild)
                     if len(grandchild) == 0:
                         setattr(self, key, grandchild.text)
                     elif key in ["boringStartDate", "boringEndDate"]:
@@ -74,10 +74,10 @@ class _BoreholeResearch(bro.FileOrUrl):
                     elif key == "boringTool":
                         self._read_boring_tool(grandchild)
                     else:
-                        util._warn_unknown_key(key, self)
+                        self._warn_unknown_tag(key)
             elif key == "boreholeSampleDescription":
                 for grandchild in child:
-                    key = util._get_key_from_tag(grandchild)
+                    key = self._get_tag(grandchild)
                     if key == "descriptiveBoreholeLog":
                         self._read_descriptive_borehole_log(grandchild)
                     elif key == "descriptionReportDate":
@@ -87,7 +87,7 @@ class _BoreholeResearch(bro.FileOrUrl):
                     else:
                         setattr(self, key, grandchild.text)
             else:
-                util._warn_unknown_key(key, self)
+                self._warn_unknown_tag(key)
         if hasattr(self, "sampledInterval"):
             self.sampledInterval = pd.DataFrame(self.sampledInterval)
 
@@ -110,7 +110,7 @@ class _BoreholeResearch(bro.FileOrUrl):
         d = {}
         to_float = ["upperBoundary", "lowerBoundary"]
         for child in node:
-            key = util._get_key_from_tag(child)
+            key = self._get_tag(child)
             if len(child) == 0:
                 d[key] = child.text
             elif key == "layer":
@@ -120,7 +120,7 @@ class _BoreholeResearch(bro.FileOrUrl):
                 self._read_children_of_children(child, d=layer, to_float=to_float)
                 d[key].append(layer)
             else:
-                util._warn_unknown_key(key, self)
+                self._warn_unknown_tag(key)
         if "layer" in d:
             d["layer"] = pd.DataFrame(d["layer"])
 
@@ -129,7 +129,7 @@ class _BoreholeResearch(bro.FileOrUrl):
     def _read_borehole_sample_description_result(self, node):
         boreholeSampleDescription = []
         for child in node:
-            key = util._get_key_from_tag(child)
+            key = self._get_tag(child)
             if len(child) == 0:
                 setattr(self, key, child.text)
             elif key == "soilLayer":
@@ -146,7 +146,7 @@ class _BoreholeResearch(bro.FileOrUrl):
                 )
                 boreholeSampleDescription.append(d)
             else:
-                util._warn_unknown_key(key, self)
+                self._warn_unknown_tag(key)
         df = pd.DataFrame(boreholeSampleDescription)
         setattr(self, "boreholeSampleDescription", df)
 
