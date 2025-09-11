@@ -14,12 +14,12 @@ The "**Basisregistratie Ondergrond**" (BRO) is the Dutch national database for s
 .. image:: _static/logo_bro.jpg
     :width: 200
     :alt: The logo of the BRO
-    :target: none
+    :target: https://basisregistratieondergrond.nl/
 
 .. image:: _static/logo_rijksoverheid.svg
     :width: 200
     :alt: The logo of the Rijksoverheid
-    :target: none
+    :target: https://www.rijksoverheid.nl/ministeries/ministerie-van-volkshuisvesting-en-ruimtelijke-ordening
 
 .. raw:: html
 
