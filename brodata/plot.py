@@ -114,6 +114,7 @@ lithology_colors = {
     "zandsteen": (200, 171, 55),  # checked at B44B0119
     "niet benoemd": (255, 255, 255),
     "geen monster": (255, 255, 255),
+    "slurrie": (144, 144, 144),  # same as slib, checked at B25A3512
 }
 
 sand_class_fine = [
