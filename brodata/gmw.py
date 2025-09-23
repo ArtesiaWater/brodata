@@ -43,35 +43,16 @@ def get_well_code(bro_id):
 
 class GroundwaterMonitoringWell(bro.FileOrUrl):
     """
-    Represents a groundwater monitoring well (GMW) with associated properties.
+    Class to represent a Groundwater Monitoring Well (GMW) from the BRO.
 
     This class parses XML data related to a groundwater monitoring well (GMW).
     It extracts details such as location, monitoring tube data, and well history
     and stores these in attributes.
 
-    Attributes
-    ----------
-    _rest_url : str
-        The base URL for the groundwater monitoring well REST API.
-
-    _xmlns : str
-        The XML namespace used for parsing the GMW XML data.
-
-    _char : str
-        A string used to identify the type of groundwater monitoring well.
-
-    Methods
-    -------
-    _read_contents(tree)
-        Parses the XML tree to extract and store GMW attributes and child elements.
-
-    _read_intermediate_event(node)
-        Parses an intermediate event node to extract event details.
-
     Notes
     -----
-    This class extends `bro.XmlFileOrUrl` and is designed to work with GMW XML
-    data, either from a file or URL. The XML structure must follow the GMW schema.
+    This class extends `bro.XmlFileOrUrl` and is designed to work with GMW XML data,
+    either from a file or URL.
     """
 
     _rest_url = "https://publiek.broservices.nl/gm/gmw/v1"

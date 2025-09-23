@@ -6,12 +6,13 @@ from io import StringIO
 import pandas as pd
 import requests
 
-from . import bro, util
+from . import bro
 
 logger = logging.getLogger(__name__)
 
 
 class ConePenetrationTest(bro.FileOrUrl):
+    """Class to represent a Cone Penetration Test (CPT) from the BRO."""
     _rest_url = "https://publiek.broservices.nl/sr/cpt/v1"
     _xmlns = "http://www.broservices.nl/xsd/dscpt/1.1"
     _char = "CPT_C"

@@ -4,12 +4,13 @@ from functools import partial
 import pandas as pd
 import requests
 
-from . import bro, util
+from . import bro
 
 logger = logging.getLogger(__name__)
 
 
 class GroundwaterAnalysisReport(bro.FileOrUrl):
+    """Class to represent a Groundwater Analysis Report (GAR) from the BRO."""
     _rest_url = "https://publiek.broservices.nl/gm/gar/v1"
     _xmlns = "http://www.broservices.nl/xsd/dsgar/1.0"
 

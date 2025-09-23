@@ -1,12 +1,13 @@
 import logging
 from functools import partial
 
-from . import bro, util
+from . import bro
 
 logger = logging.getLogger(__name__)
 
 
 class SoilFaceResearch(bro.FileOrUrl):
+    """Class to represent a Soil Face Research (SFR) from the BRO."""
     _rest_url = "https://publiek.broservices.nl/sr/sfr/v2"
     _xmlns = "http://www.broservices.nl/xsd/dssfr/2.0"
 

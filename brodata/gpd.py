@@ -8,6 +8,7 @@ logger = logging.getLogger(__name__)
 
 
 class GroundwaterProductionDossier(bro.FileOrUrl):
+    """Class to represent a Groundwater Production Dossier (GPD) from the BRO."""
     _rest_url = "https://publiek.broservices.nl/gu/gpd/v1"
     _xmlns = "http://www.broservices.nl/xsd/dsgpd/1.0"
 

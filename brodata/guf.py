@@ -9,6 +9,20 @@ logger = logging.getLogger(__name__)
 
 
 class GroundwaterUtilisationFacility(bro.FileOrUrl):
+    """Class to represent a Groundwater Utilisation Facility (GUF) from the BRO.
+
+    Attributes
+    ----------
+    broId : str
+        The BRO identifier of the GroundwaterUtilisationFacility object.
+    objectHistory : pd.DataFrame
+        DataFrame with the history of changes to the GUF object.
+    licence : dict
+        Dictionary with information about the groundwater usage licence.
+    realisedInstallation : dict
+        Dictionary with information about the realised installation.
+    """
+
     _rest_url = "https://publiek.broservices.nl/gu/guf/v1"
     _xmlns = "http://www.broservices.nl/xsd/dsguf/1.0"
     _char = "GUF_C"
@@ -18,7 +32,7 @@ class GroundwaterUtilisationFacility(bro.FileOrUrl):
         "gufcommon": "http://www.broservices.nl/xsd/gufcommon/1.0",
         "xmlns": _xmlns,
     }
-
+    
     def _read_contents(self, tree):
         ns = self._namespace
         gufs = tree.findall(".//xmlns:GUF_PO", ns)

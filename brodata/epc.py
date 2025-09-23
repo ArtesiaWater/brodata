@@ -7,6 +7,7 @@ logger = logging.getLogger(__name__)
 
 
 class ExplorationProductionConstruction(bro.FileOrUrl):
+    """Class to represent an Exploration Production Construction (EPC) from the BRO."""
     _rest_url = "https://publiek.broservices.nl/ep/epc/v1/"
 
     def _read_contents(self, tree):

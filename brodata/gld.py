@@ -6,7 +6,7 @@ import numpy as np
 import pandas as pd
 import requests
 
-from . import bro, util
+from . import bro
 
 logger = logging.getLogger(__name__)
 
@@ -285,14 +285,10 @@ def get_observations_summary(bro_id):
 
 class GroundwaterLevelDossier(bro.FileOrUrl):
     """
-    Represents a Groundwater Level Dossier (GLD) containing groundwater monitoring
-    information and observation data.
+    Class to represent a Groundwater Level Dossier (GLD) from the BRO.
 
     Attributes
     ----------
-    _rest_url : str
-        The REST URL used to fetch data for this class.
-
     observation : pd.DataFrame
         DataFrame containing groundwater level observations with time and value
         columns. The data is processed and filtered based on the provided arguments.
@@ -302,12 +298,6 @@ class GroundwaterLevelDossier(bro.FileOrUrl):
 
     groundwaterMonitoringWell : str
         The BRO-ID of the groundwater monitoring well.
-
-    Methods
-    -------
-    _read_contents(tree, **kwargs)
-        Reads the XML content from the given tree and populates the attributes of
-        the instance with the parsed data.
     """
 
     _rest_url = "https://publiek.broservices.nl/gm/gld/v1"

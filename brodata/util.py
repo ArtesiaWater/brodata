@@ -15,6 +15,38 @@ except ImportError:
 
 
 def read_zipfile(fname, pathnames=None, override_ext=None):
+    """
+    Read and parse files from a ZIP archive downloaded from BROloket.
+
+    Parameters
+    ----------
+    fname : str
+        Path to the ZIP file to read.
+    pathnames : list of str or str, optional
+        List of folder names within the ZIP archive to process. If None, all unique
+        non-root directories are processed.
+    override_ext : str, optional
+        File extension to override the default extension for the selected folder(s).
+
+    Returns
+    -------
+    dict
+        Nested dictionary where the first-level keys are folder names, and the
+        second-level keys are file base names.
+        The values are either parsed objects (from corresponding classes) or file
+        objects (e.g., PIL.Image for .tif files).
+
+    Notes
+    -----
+    - The function supports specific folder names and file types, mapping them to
+    corresponding classes for parsing.
+    - Unsupported folders are logged with a warning and skipped.
+    - If no files with the expected extension are found in a folder, a warning is
+    logged.
+    - For .tif files, PIL.Image objects are returned.
+    - For other supported types, the corresponding class is instantiated with the file
+    and the ZipFile object.
+    """
     with ZipFile(fname) as zf:
         namelist = np.array(zf.namelist())
         extensions = np.array([os.path.splitext(x)[1] for x in namelist])
@@ -126,7 +158,8 @@ def _save_data_to_zip(to_zip, files, remove_path_again, to_path):
         import zlib
 
         compression = ZIP_DEFLATED
-    except:
+    except ImportError:
+        logger.warning("Could not import zlib, saving zipfile without compression")
         compression = ZIP_STORED
     with ZipFile(to_zip, "w", compression=compression) as zf:
         for file in files:
@@ -149,6 +182,7 @@ def _format_repr(self, props):
     # generate name
     name = f"{self.__class__.__name__}({props_str})"
     return name
+
 
 def _get_tag(node):
     return node.tag.split("}", 1)[1]

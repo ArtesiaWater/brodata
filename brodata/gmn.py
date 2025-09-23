@@ -3,12 +3,13 @@ from functools import partial
 
 import pandas as pd
 
-from . import bro, util
+from . import bro
 
 logger = logging.getLogger(__name__)
 
 
 class GroundwaterMonitoringNetwork(bro.FileOrUrl):
+    """Class to represent a Groundwater Monitoring Network (GMN) from the BRO."""
     _rest_url = "https://publiek.broservices.nl/gm/gmn/v1"
     _xmlns = "http://www.broservices.nl/xsd/dsgmn/1.0"
 

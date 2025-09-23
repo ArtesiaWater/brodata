@@ -5,12 +5,13 @@ import tempfile
 import pandas as pd
 import requests
 
-from . import bro, util
+from . import bro
 
 logger = logging.getLogger(__name__)
 
 
 class _BoreholeResearch(bro.FileOrUrl):
+    """Class to represent a Borehole Research (BHR) from the BRO."""
     def _read_contents(self, tree):
         ns = {
             "brocom": "http://www.broservices.nl/xsd/brocommon/3.0",
@@ -152,6 +153,7 @@ class _BoreholeResearch(bro.FileOrUrl):
 
 
 class GeotechnicalBoreholeResearch(_BoreholeResearch):
+    """Class to represent a Geotechnical Borehole Research (BHR_GT) from the BRO."""
     _object_name = "BHR_GT_O"
     _xmlns = "http://www.broservices.nl/xsd/dsbhr-gt/2.1"
     _rest_url = "https://publiek.broservices.nl/sr/bhrgt/v2"
@@ -239,6 +241,7 @@ def bhrgt_graph(
 
 
 class PedologicalBoreholeResearch(_BoreholeResearch):
+    """Class to represent a Pedological Borehole Research (BHR_P) from the BRO."""
     _object_name = "BHR_O"
     _xmlns = "http://www.broservices.nl/xsd/dsbhr/2.0"
     _rest_url = "https://publiek.broservices.nl/sr/bhrp/v2"
@@ -246,6 +249,7 @@ class PedologicalBoreholeResearch(_BoreholeResearch):
 
 
 class GeologicalBoreholeResearch(_BoreholeResearch):
+    """Class to represent a Geological Borehole Research (BHR_G) from the BRO."""
     _object_name = "BHR_O"
     _xmlns = "http://www.broservices.nl/xsd/dsbhrg/2.0"
     _rest_url = "https://publiek.broservices.nl/sr/bhrg/v3"

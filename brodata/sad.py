@@ -1,7 +1,8 @@
-from . import bro, util
+from . import bro
 
 
 class SiteAssessmentData(bro.FileOrUrl):
+    """Class to represent a Site Assessment Data (SAD) from the BRO."""
     _rest_url = "https://publiek.broservices.nl/sq/sad/v1"
     _xmlns = "http://www.broservices.nl/xsd/dssad-internal/1.1"
     _namespace = {
