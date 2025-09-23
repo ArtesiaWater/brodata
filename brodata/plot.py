@@ -10,6 +10,39 @@ logger = logging.getLogger(__name__)
 def cone_penetration_test(
     cpt, figsize=(10, 10), ax=None, linewidth=1.0, ylabel="Sondeertrajectlengte"
 ):
+    """
+    Plot the results of a cone penetration test (CPT).
+
+    This function visualizes multiple CPT parameters (cone resistance, friction ratio,
+    local friction, and inclination resultant) against the test depth or trajectory
+    length. Each parameter is plotted on a separate x-axis, sharing the same y-axis.
+
+    Parameters
+    ----------
+    cpt : pandas.DataFrame or object
+        The CPT data as a DataFrame or an object with a 'conePenetrationTest' attribute
+        containing the DataFrame.
+    figsize : tuple, optional
+        Size of the figure to create if `ax` is not provided. Default is (10, 10).
+    ax : matplotlib.axes.Axes, optional
+        Existing matplotlib Axes to plot on. If None, a new figure and axes are created.
+    linewidth : float, optional
+        Width of the plot lines. Default is 1.0.
+    ylabel : str, optional
+        Label for the y-axis. Default is "Sondeertrajectlengte".
+
+    Returns
+    -------
+    list of matplotlib.axes.Axes
+        List of axes objects for each parameter plotted.
+
+    Notes
+    -----
+    - The y-axis is inverted to represent increasing depth downward.
+    - Each parameter is plotted only if its column in the DataFrame is not entirely NaN.
+    - The function supports plotting up to four parameters: 'coneResistance',
+    'frictionRatio', 'localFriction', and 'inclinationResultant'.
+    """
     if hasattr(cpt, "conePenetrationTest"):
         df = cpt.conePenetrationTest
     else:
@@ -147,6 +180,37 @@ def get_lithology_color(
     drilling=None,
     colors=None,
 ):
+    """
+    Return the RGB color and label for a given lithology (hoofdgrondsoort).
+
+    Parameters
+    ----------
+    hoofdgrondsoort : str or any
+        The main soil type (lithology) to get the color for. If not a string (e.g.,
+        NaN), a default color is used.
+    zandmediaanklasse : str, optional
+        The sand median class, used for further classification if hoofdgrondsoort is
+        "zand".
+    drilling : any, optional
+        Optional drilling identifier, used for logging warnings.
+    colors : dict, optional
+        Dictionary mapping lithology names to RGB color tuples (0-255). If None, uses
+        the default `lithology_colors`.
+
+    Returns
+    -------
+    color : tuple of float
+        The RGB color as a tuple of floats in the range [0, 1].
+    label : str
+        The label for the lithology, possibly more specific for sand classes.
+
+    Notes
+    -----
+    - If the hoofdgrondsoort is not recognized, a warning is logged and a default white
+    color is returned.
+    - For "zand", the zandmediaanklasse determines the specific sand color and label.
+    - If colors is not provided, the function uses a default color mapping.
+    """
     if colors is None:
         colors = lithology_colors
     label = None
@@ -206,6 +270,52 @@ def lithology(
     colors=None,
     **kwargs,
 ):
+    """
+    Plot lithology intervals from a DataFrame as vertical lines or filled spans.
+
+    Parameters
+    ----------
+    df : pandas.DataFrame
+        DataFrame containing lithology data.
+    top : str
+        Column name in `df` representing the top depth of each interval.
+    bot : str
+        Column name in `df` representing the bottom depth of each interval.
+    kind : str
+        Column name in `df` specifying the lithology type for color mapping.
+    sand_class : str, optional
+        Column name in `df` specifying sand class for color mapping (default: None).
+    ax : matplotlib.axes.Axes, optional
+        Matplotlib axis to plot on. If None, uses current axis (default: None).
+    x : float, optional
+        X-coordinate for vertical lines (default: 0.5). If None or not finite, uses
+        filled spans.
+    z : float, optional
+        Reference depth for vertical positioning (default: 0.0).
+    solid_capstyle : str, optional
+        Cap style for vertical lines (default: "butt").
+    linewidth : float, optional
+        Line width for plotting (default: 6).
+    drilling : any, optional
+        Additional drilling information for color mapping (default: None).
+    colors : dict, optional
+        Custom color mapping for lithologies (default: None).
+    **kwargs
+        Additional keyword arguments passed to matplotlib plotting functions.
+
+    Returns
+    -------
+    list
+        List of matplotlib artist objects corresponding to the plotted lithology
+        intervals.
+
+    Notes
+    -----
+    - If `x` is provided and finite, plots vertical lines at `x`.
+    - If `x` is None or not finite, plots filled horizontal spans between `z_top` and
+    `z_bot`.
+    - Uses `get_lithology_color` to determine color and label for each interval.
+    """
     h = []
     if not isinstance(df, pd.DataFrame):
         return h
@@ -274,7 +384,8 @@ def lithology_along_line(
         Maximum distance (in the same units as the GeoDataFrame's CRS) from the line
         within which boreholes are included in the cross-section. If None, includes all.
     **kwargs :
-        Additional keyword arguments passed to either `dino_lithology` or `bro_lithology`.
+        Additional keyword arguments passed to either `dino_lithology` or
+        `bro_lithology`.
 
     Returns
     -------
@@ -327,6 +438,30 @@ def lithology_along_line(
 
 
 def add_lithology_legend(ax, **kwargs):
+    """
+    Add a custom legend to a matplotlib Axes for lithology categories.
+
+    ax : matplotlib.axes.Axes
+        The matplotlib Axes object to which the legend will be added.
+    **kwargs : dict, optional
+        Additional keyword arguments passed to `ax.legend()` (e.g., loc, fontsize).
+
+    Returns
+    -------
+    matplotlib.legend.Legend
+        The legend object added to the axes.
+
+    Notes
+    -----
+    The function reorders legend entries so that common lithology categories appear in a
+    preferred order:
+    - "Veen", "Klei", "Leem", "Zand fijne categorie", "Zand midden categorie",
+    "Zand grove categorie", "Zand", "Grind"
+    These are placed at the top of the legend, while "Niet benoemd" and "Geen monster"
+    are placed at the bottom.
+    Duplicate labels are removed, keeping only the first occurrence.
+
+    """
     handles, labels = ax.get_legend_handles_labels()
     labels, index = np.unique(np.array(labels), return_index=True)
     boven = np.array(
@@ -356,6 +491,31 @@ def add_lithology_legend(ax, **kwargs):
 
 
 def dino_lithology(df, **kwargs):
+    """
+    Plot lithology information from a DataFrame containing lithology data from DINO.
+
+    Parameters
+    ----------
+    df : pandas.DataFrame
+        The input DataFrame containing lithology data.
+    **kwargs
+        Additional keyword arguments passed to the underlying `lithology` function.
+
+    Returns
+    -------
+    list
+        List of matplotlib artist objects corresponding to the plotted lithology
+        intervals.
+
+    Notes
+    -----
+    This function is a wrapper around the `lithology` function, mapping the DataFrame
+    columns:
+    - 'Bovenkant laag (m beneden maaiveld)' as top
+    - 'Onderkant laag (m beneden maaiveld)' as bot
+    - 'Hoofdgrondsoort' as kind
+    - 'Zandmediaanklasse' as sand_class
+    """
     return lithology(
         df,
         top="Bovenkant laag (m beneden maaiveld)",
@@ -367,6 +527,30 @@ def dino_lithology(df, **kwargs):
 
 
 def bro_lithology(df, **kwargs):
+    """
+    Plot lithology information from a DataFrame containing lithology data from BRO.
+
+    Parameters
+    ----------
+    df : pandas.DataFrame
+        The input DataFrame containing lithology data.
+    **kwargs
+        Additional keyword arguments passed to the underlying `lithology` function.
+
+    Returns
+    -------
+    list
+        List of matplotlib artist objects corresponding to the plotted lithology
+        intervals.
+
+    Notes
+    -----
+    This function is a wrapper around the `lithology` function, mapping the DataFrame
+    columns:
+    - 'upperBoundary' as the top,
+    - 'lowerBoundary' as the bot,
+    - 'geotechnicalSoilName' as kind.
+    """
     return lithology(
         df,
         top="upperBoundary",
