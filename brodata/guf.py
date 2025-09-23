@@ -2,9 +2,8 @@ import logging
 from functools import partial
 
 import pandas as pd
-from shapely.geometry import Point
 
-from . import bro, util
+from . import bro
 
 logger = logging.getLogger(__name__)
 
