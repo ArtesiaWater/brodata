@@ -549,17 +549,16 @@ class FileOrUrl(ABC):
             else:
                 msg = criterionError.find("brocom:specification", ns).text
             raise (ValueError(msg))
-    
+
     @staticmethod
     def _get_tag(node):
         return util._get_tag(node)
 
-
     def _warn_unknown_tag(self, tag):
+        haha
         logger.warning(
             f"Unknown tag {tag} in {self.__class__.__name__} {getattr(self, 'broId', '')}"
         )
-
 
     def _raise_assumed_single(self, key):
         raise ValueError(
@@ -614,6 +613,21 @@ class FileOrUrl(ABC):
                 setattr(self, key, child.text)
             else:
                 self._warn_unknown_tag(key)
+
+    def _read_delivered_vertical_position(self, node, d=None):
+        for child in node:
+            key = self._get_tag(child)
+            if key == "verticalPositioningDate":
+                value = self._read_date(child)
+            elif key == "offset":
+                value = float(child.text)
+            else:
+                value = child.text
+
+            if d is None:
+                setattr(self, key, value)
+            else:
+                d[key] = value
 
     def _read_lifespan(self, node, d=None):
         for child in node:
@@ -679,6 +693,25 @@ class FileOrUrl(ABC):
         time_instant = node.find("gml:TimeInstant", ns)
         time_position = time_instant.find("gml:timePosition", ns)
         return pd.to_datetime(time_position.text)
+
+    def _read_descriptive_borehole_log(self, node):
+        d = {}
+        to_float = ["upperBoundary", "lowerBoundary"]
+        for child in node:
+            key = self._get_tag(child)
+            if len(child) == 0:
+                d[key] = child.text
+            elif key == "layer":
+                if key not in d:
+                    d[key] = []
+                layer = {}
+                self._read_children_of_children(child, d=layer, to_float=to_float)
+                d[key].append(layer)
+            else:
+                self._warn_unknown_tag(key)
+        if "layer" in d:
+            d["layer"] = pd.DataFrame(d["layer"])
+        return d
 
 
 def get_bronhouders(index="kvk", **kwargs):

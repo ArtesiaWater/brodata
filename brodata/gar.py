@@ -10,7 +10,14 @@ logger = logging.getLogger(__name__)
 
 
 class GroundwaterAnalysisReport(bro.FileOrUrl):
-    """Class to represent a Groundwater Analysis Report (GAR) from the BRO."""
+    """Class to represent a Groundwater Analysis Report (GAR) from the BRO.
+
+    Attributes
+    ----------
+    laboratoryAnalysis : pd.DataFrame
+        DataFrame containing groundwater quality observations.
+    """
+
     _rest_url = "https://publiek.broservices.nl/gm/gar/v1"
     _xmlns = "http://www.broservices.nl/xsd/dsgar/1.0"
 

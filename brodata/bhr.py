@@ -12,6 +12,7 @@ logger = logging.getLogger(__name__)
 
 class _BoreholeResearch(bro.FileOrUrl):
     """Class to represent a Borehole Research (BHR) from the BRO."""
+
     def _read_contents(self, tree):
         ns = {
             "brocom": "http://www.broservices.nl/xsd/brocommon/3.0",
@@ -45,14 +46,7 @@ class _BoreholeResearch(bro.FileOrUrl):
                     key = self._get_tag(grandchild)
                     setattr(self, key, grandchild.text)
             elif key == "deliveredVerticalPosition":
-                for grandchild in child:
-                    key = self._get_tag(grandchild)
-                    if key == "verticalPositioningDate":
-                        setattr(self, key, self._read_date(grandchild))
-                    elif key == "offset":
-                        setattr(self, key, float(grandchild.text))
-                    else:
-                        setattr(self, key, grandchild.text)
+                self._read_delivered_vertical_position(child)
             elif key == "boring":
                 for grandchild in child:
                     key = self._get_tag(grandchild)
@@ -77,16 +71,7 @@ class _BoreholeResearch(bro.FileOrUrl):
                     else:
                         self._warn_unknown_tag(key)
             elif key == "boreholeSampleDescription":
-                for grandchild in child:
-                    key = self._get_tag(grandchild)
-                    if key == "descriptiveBoreholeLog":
-                        self._read_descriptive_borehole_log(grandchild)
-                    elif key == "descriptionReportDate":
-                        setattr(self, key, self._read_date(grandchild))
-                    elif key == "result":
-                        self._read_borehole_sample_description_result(grandchild)
-                    else:
-                        setattr(self, key, grandchild.text)
+                self._read_borehole_sample_description(child)
             else:
                 self._warn_unknown_tag(key)
         if hasattr(self, "sampledInterval"):
@@ -105,27 +90,20 @@ class _BoreholeResearch(bro.FileOrUrl):
         self._read_children_of_children(node, d, to_float=to_float)
         self.boringTool = d
 
-    def _read_descriptive_borehole_log(self, node):
-        if not hasattr(self, "descriptiveBoreholeLog"):
-            self.descriptiveBoreholeLog = []
-        d = {}
-        to_float = ["upperBoundary", "lowerBoundary"]
+    def _read_borehole_sample_description(self, node):
         for child in node:
             key = self._get_tag(child)
-            if len(child) == 0:
-                d[key] = child.text
-            elif key == "layer":
-                if key not in d:
-                    d[key] = []
-                layer = {}
-                self._read_children_of_children(child, d=layer, to_float=to_float)
-                d[key].append(layer)
+            if key == "descriptiveBoreholeLog":
+                if not hasattr(self, "descriptiveBoreholeLog"):
+                    self.descriptiveBoreholeLog = []
+                dbl = self._read_descriptive_borehole_log(child)
+                self.descriptiveBoreholeLog.append(dbl)
+            elif key == "descriptionReportDate":
+                setattr(self, key, self._read_date(child))
+            elif key == "result":
+                self._read_borehole_sample_description_result(child)
             else:
-                self._warn_unknown_tag(key)
-        if "layer" in d:
-            d["layer"] = pd.DataFrame(d["layer"])
-
-        self.descriptiveBoreholeLog.append(d)
+                setattr(self, key, child.text)
 
     def _read_borehole_sample_description_result(self, node):
         boreholeSampleDescription = []
@@ -154,6 +132,7 @@ class _BoreholeResearch(bro.FileOrUrl):
 
 class GeotechnicalBoreholeResearch(_BoreholeResearch):
     """Class to represent a Geotechnical Borehole Research (BHR_GT) from the BRO."""
+
     _object_name = "BHR_GT_O"
     _xmlns = "http://www.broservices.nl/xsd/dsbhr-gt/2.1"
     _rest_url = "https://publiek.broservices.nl/sr/bhrgt/v2"
@@ -242,6 +221,7 @@ def bhrgt_graph(
 
 class PedologicalBoreholeResearch(_BoreholeResearch):
     """Class to represent a Pedological Borehole Research (BHR_P) from the BRO."""
+
     _object_name = "BHR_O"
     _xmlns = "http://www.broservices.nl/xsd/dsbhr/2.0"
     _rest_url = "https://publiek.broservices.nl/sr/bhrp/v2"
@@ -250,6 +230,7 @@ class PedologicalBoreholeResearch(_BoreholeResearch):
 
 class GeologicalBoreholeResearch(_BoreholeResearch):
     """Class to represent a Geological Borehole Research (BHR_G) from the BRO."""
+
     _object_name = "BHR_O"
     _xmlns = "http://www.broservices.nl/xsd/dsbhrg/2.0"
     _rest_url = "https://publiek.broservices.nl/sr/bhrg/v3"

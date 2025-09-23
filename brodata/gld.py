@@ -304,8 +304,7 @@ class GroundwaterLevelDossier(bro.FileOrUrl):
 
     def _read_contents(self, tree, status=None, observation_type=None, **kwargs):
         """
-        Parse and extract data from the XML tree to populate the Groundwater Level
-        Dossier attributes.
+        Parse data to populate the Groundwater Level Dossier attributes.
 
         This method reads and processes the XML contents, extracting relevant
         groundwater monitoring information such as the groundwater monitoring well,
