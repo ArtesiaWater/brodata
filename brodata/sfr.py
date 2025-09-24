@@ -29,6 +29,10 @@ class SoilFaceResearch(bro.FileOrUrl):
             key = self._get_tag(child)
             if len(child) == 0:
                 setattr(self, key, child.text)
+            elif key in ["researchReportDate", "fieldworkDate"]:
+                setattr(self, key, self._read_date(child))
+            elif key == "registrationHistory":
+                self._read_children_of_children(child)
             else:
                 self._warn_unknown_tag(key)
 

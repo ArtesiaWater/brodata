@@ -555,9 +555,8 @@ class FileOrUrl(ABC):
         return util._get_tag(node)
 
     def _warn_unknown_tag(self, tag):
-        haha
         logger.warning(
-            f"Unknown tag {tag} in {self.__class__.__name__} {getattr(self, 'broId', '')}"
+            f"Tag {tag} not supported in {self.__class__.__name__} {getattr(self, 'broId', '')}"
         )
 
     def _raise_assumed_single(self, key):
