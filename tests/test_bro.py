@@ -107,6 +107,12 @@ def test_pedological_borehole_research():
     brodata.bhr.PedologicalBoreholeResearch(fname)
 
 
+def test_pedological_borehole_research_with_borehole_sample_analysis():
+    fname = os.path.join("tests", "data", "BHR000000343841.xml")
+    bhr = brodata.bhr.PedologicalBoreholeResearch(fname)
+    assert hasattr(bhr, "investigatedInterval")
+
+
 def test_gar_report_from_xml_file_multiple_analysis_processes():
     fname = os.path.join("tests", "data", "GAR000000019636.xml")
     brodata.gar.GroundwaterAnalysisReport(fname)
@@ -166,6 +172,11 @@ def test_get_cpt_test_with_dissipation_test():
 def test_groundwater_utilisation_facility():
     fname = os.path.join("tests", "data", "GUF000000016723.xml")
     brodata.guf.GroundwaterUtilisationFacility(fname)
+
+
+def test_groundwater_production_dossier():
+    fname = os.path.join("tests", "data", "GPD000000017250.xml")
+    brodata.gpd.GroundwaterProductionDossier(fname)
 
 
 def test_gm_gar():

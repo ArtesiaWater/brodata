@@ -39,7 +39,7 @@ class _BoreholeResearch(bro.FileOrUrl):
             elif key in ["siteCharacteristic"]:
                 for grandchild in child:
                     key = self._get_tag(grandchild)
-                    if key in ["landUse", "drained"]:
+                    if key in ["landUse", "drained", "soilUse"]:
                         setattr(self, key, grandchild.text)
                     elif key in [
                         "meanHighestGroundwaterTable",
@@ -202,6 +202,7 @@ class _BoreholeResearch(bro.FileOrUrl):
             elif key in ["phenomenonTime", "resultTime"]:
                 setattr(self, key, self._read_time_instant(child))
             elif key in [
+                "descriptionProcedure",
                 "procedure",
                 "observedProperty",
                 "featureOfInterest",
