@@ -41,6 +41,11 @@ class _BoreholeResearch(bro.FileOrUrl):
                     key = self._get_tag(grandchild)
                     if key in ["landUse", "drained"]:
                         setattr(self, key, grandchild.text)
+                    elif key in [
+                        "meanHighestGroundwaterTable",
+                        "meanLowestGroundwaterTable",
+                    ]:
+                        setattr(self, key, float(grandchild.text))
                     else:
                         self._warn_unknown_tag(key)
             elif key in [
@@ -77,10 +82,97 @@ class _BoreholeResearch(bro.FileOrUrl):
                         self._warn_unknown_tag(key)
             elif key == "boreholeSampleDescription":
                 self._read_borehole_sample_description(child)
+            elif key == "boreholeSampleAnalysis":
+                for grandchild in child:
+                    key = self._get_tag(grandchild)
+                    if key == "BoreholeSampleAnalysis":
+                        self._read_borehole_sample_analysis(grandchild)
+                    else:
+                        self._warn_unknown_tag(key)
             else:
                 self._warn_unknown_tag(key)
         if hasattr(self, "sampledInterval"):
             self.sampledInterval = pd.DataFrame(self.sampledInterval)
+        if hasattr(self, "investigatedInterval"):
+            self.investigatedInterval = pd.DataFrame(self.investigatedInterval)
+
+    def _read_borehole_sample_analysis(self, node):
+        for child in node:
+            key = self._get_tag(child)
+            if key == "analysisReportDate":
+                setattr(self, key, self._read_date(child))
+            elif key in ["analysisType", "locationSpecific"]:
+                setattr(self, key, child.text)
+            elif key == "investigatedInterval":
+                if not hasattr(self, key):
+                    setattr(self, key, [])
+                for grandchild in child:
+                    key2 = self._get_tag(grandchild)
+                    if key2 == "InvestigatedInterval":
+                        ii = self._read_investigated_interval(grandchild)
+                        self.investigatedInterval.append(ii)
+                    else:
+                        self._warn_unknown_tag(key2)
+            else:
+                self._warn_unknown_tag(key)
+
+    def _read_investigated_interval(self, node):
+        d = {}
+        for child in node:
+            key = self._get_tag(child)
+            if key in ["beginDepth", "endDepth"]:
+                d[key] = float(child.text)
+            elif key == "locationSpecific":
+                d[key] = child.text
+            elif key == "particleSizeDistributionDetermination":
+                if key not in d:
+                    d[key] = []
+                for grandchild in child:
+                    key2 = self._get_tag(grandchild)
+                    if key2 == "ParticleSizeDistributionDetermination":
+                        psdd = self._read_particle_size_distribution_determination(
+                            grandchild
+                        )
+                        d[key].append(psdd)
+                    else:
+                        self._warn_unknown_tag(key2)
+            else:
+                self._warn_unknown_tag(key)
+        if "particleSizeDistributionDetermination" in d:
+            d["particleSizeDistributionDetermination"] = pd.DataFrame(
+                d["particleSizeDistributionDetermination"]
+            )
+        return d
+
+    def _read_particle_size_distribution_determination(self, node):
+        d = {}
+        for child in node:
+            key = self._get_tag(child)
+            if key in [
+                "determinationProcedure",
+                "determinationMethod",
+                "particleSizeDistributionStandardised",
+                "dispersionMethod",
+            ]:
+                d[key] = child.text
+            elif key == "nonStandardisedFraction":
+                if key not in d:
+                    d[key] = []
+                d2 = {}
+                for grandchild in child:
+                    key2 = self._get_tag(grandchild)
+                    if key2 in ["lowerBoundary", "upperBoundary"]:
+                        d2[key2] = int(grandchild.text)
+                    elif key2 in ["proportion"]:
+                        d2[key2] = float(grandchild.text)
+                    else:
+                        self._warn_unknown_tag(key2)
+                d[key].append(d2)
+            else:
+                self._warn_unknown_tag(key)
+        if "nonStandardisedFraction" in d:
+            d["nonStandardisedFraction"] = pd.DataFrame(d["nonStandardisedFraction"])
+        return d
 
     def _read_sampled_interval(self, node):
         if not hasattr(self, "sampledInterval"):
@@ -136,8 +228,11 @@ class _BoreholeResearch(bro.FileOrUrl):
                 "classificationCode",
                 "featureTop",
                 "soilClass",
+                "subsoilPeat",
+                "lowerBoundaryPeat",
                 "textureClass",
                 "textureProfile",
+                "subsoilDuinVagueSoil",
                 "carbonateProfile",
                 "peatClass",
                 "reworkingClass",
@@ -177,6 +272,23 @@ class _BoreholeResearch(bro.FileOrUrl):
                     child, d=d, to_float=to_float, to_int=to_int
                 )
                 boreholeSampleDescription.append(d)
+            elif key == "litterLayer":
+                if hasattr(self, key):
+                    self._raise_assumed_single(key)
+                setattr(self, key, {})
+                for grandchild in child:
+                    key = self._get_tag(grandchild)
+                    if key in [
+                        "upperBoundary",
+                        "lowerBoundary",
+                        "organicMatterContent",
+                    ]:
+                        self.litterLayer[key] = float(grandchild.text)
+                    elif key in ["horizonCode", "litterType"]:
+                        self.litterLayer[key] = grandchild.text
+                    else:
+                        self._warn_unknown_tag(key)
+
             else:
                 self._warn_unknown_tag(key)
         df = pd.DataFrame(boreholeSampleDescription)

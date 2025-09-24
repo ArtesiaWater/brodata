@@ -619,7 +619,10 @@ class FileOrUrl(ABC):
             if key == "verticalPositioningDate":
                 value = self._read_date(child)
             elif key == "offset":
-                value = float(child.text)
+                if child.text is None:
+                    value = np.nan
+                else:
+                    value = float(child.text)
             else:
                 value = child.text
 
