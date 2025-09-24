@@ -37,7 +37,12 @@ class _BoreholeResearch(bro.FileOrUrl):
             elif key in ["researchReportDate"]:
                 setattr(self, key, self._read_date(child))
             elif key in ["siteCharacteristic"]:
-                setattr(self, key, child[0].text)
+                for grandchild in child:
+                    key = self._get_tag(grandchild)
+                    if key in ["landUse", "drained"]:
+                        setattr(self, key, grandchild.text)
+                    else:
+                        self._warn_unknown_tag(key)
             elif key in [
                 "registrationHistory",
                 "reportHistory",
@@ -102,8 +107,56 @@ class _BoreholeResearch(bro.FileOrUrl):
                 setattr(self, key, self._read_date(child))
             elif key == "result":
                 self._read_borehole_sample_description_result(child)
-            else:
+            elif key in ["phenomenonTime", "resultTime"]:
+                setattr(self, key, self._read_time_instant(child))
+            elif key in [
+                "procedure",
+                "observedProperty",
+                "featureOfInterest",
+                "descriptionMethod",
+                "descriptionLocation",
+                "fractionDistributionDetermined",
+            ]:
                 setattr(self, key, child.text)
+            elif key in ["lowerBoundarySandFraction"]:
+                setattr(self, key, int(child.text))
+            elif key == "soilClassification":
+                if hasattr(self, key):
+                    self._raise_assumed_single(key)
+                setattr(self, key, self._read_soil_classification(child))
+            else:
+                self._warn_unknown_tag(key)
+
+    def _read_soil_classification(self, node):
+        d = {}
+        for child in node:
+            key = self._get_tag(child)
+            if key in [
+                "codeGroup",
+                "classificationCode",
+                "featureTop",
+                "soilClass",
+                "textureClass",
+                "textureProfile",
+                "carbonateProfile",
+                "peatClass",
+                "reworkingClass",
+                "groundwaterTableClass",
+                "featureSite",
+            ]:
+                d[key] = child.text
+            elif key == "featureBottom":
+                for grandchild in child:
+                    key = self._get_tag(grandchild)
+                    if key == "feature":
+                        d[key] = grandchild.text
+                    elif key == "beginDepth":
+                        d[key] = float(grandchild.text)
+                    else:
+                        self._warn_unknown_tag(key)
+            else:
+                self._warn_unknown_tag(key)
+        return d
 
     def _read_borehole_sample_description_result(self, node):
         boreholeSampleDescription = []
@@ -127,6 +180,8 @@ class _BoreholeResearch(bro.FileOrUrl):
             else:
                 self._warn_unknown_tag(key)
         df = pd.DataFrame(boreholeSampleDescription)
+        if hasattr(self, "boreholeSampleDescription"):
+            self._raise_assumed_single("boreholeSampleDescription")
         setattr(self, "boreholeSampleDescription", df)
 
 

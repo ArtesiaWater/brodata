@@ -11,6 +11,7 @@ class SoilFaceResearch(bro.FileOrUrl):
 
     _rest_url = "https://publiek.broservices.nl/sr/sfr/v2"
     _xmlns = "http://www.broservices.nl/xsd/dssfr/2.0"
+    _char = "SFR_C"
 
     def _read_contents(self, tree):
         ns = {

@@ -32,7 +32,7 @@ class GroundwaterUtilisationFacility(bro.FileOrUrl):
         "gufcommon": "http://www.broservices.nl/xsd/gufcommon/1.0",
         "xmlns": _xmlns,
     }
-    
+
     def _read_contents(self, tree):
         ns = self._namespace
         gufs = tree.findall(".//xmlns:GUF_PO", ns)
@@ -84,7 +84,11 @@ class GroundwaterUtilisationFacility(bro.FileOrUrl):
                 for grandchild in child:
                     key = self._get_tag(grandchild)
                     if key == "RealisedInstallation":
-                        setattr(self, key, self._read_realised_installation(grandchild))
+                        setattr(
+                            self,
+                            "realisedInstallation",
+                            self._read_realised_installation(grandchild),
+                        )
                     else:
                         self._warn_unknown_tag(key)
             else:
@@ -99,8 +103,8 @@ class GroundwaterUtilisationFacility(bro.FileOrUrl):
             self.realisedWell = pd.DataFrame(self.realisedWell)
         if hasattr(self, "licensedQuantity"):
             self.licensedQuantity = pd.DataFrame(self.licensedQuantity)
-        if hasattr(self, "DesignInstallation"):
-            self.DesignInstallation = pd.DataFrame(self.DesignInstallation)
+        if hasattr(self, "designInstallation"):
+            self.designInstallation = pd.DataFrame(self.designInstallation)
 
     def _read_licence_groundwater_usage(self, node):
         d = {}
