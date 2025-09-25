@@ -1,6 +1,7 @@
 import logging
 
 import matplotlib.pyplot as plt
+from matplotlib.patches import Rectangle
 import numpy as np
 import pandas as pd
 
@@ -558,3 +559,152 @@ def bro_lithology(df, **kwargs):
         kind="geotechnicalSoilName",
         **kwargs,
     )
+
+
+def get_bro_lithology_properties():
+    legend = {
+        "veen": {"color": (153 / 255, 76 / 255, 58 / 255), "hatch": "-"},
+        "klei": {"color": (0, 150 / 255, 8 / 255), "hatch": "/"},
+        "leem": {"color": (219 / 255, 219 / 255, 219 / 255), "hatch": "\\"},
+        "zand": {"color": (254 / 255, 254 / 255, 8 / 255), "hatch": "."},
+        "grind": {"color": (243 / 255, 192 / 255, 39 / 255), "hatch": "o"},
+        "silt": {"color": (219 / 255, 219 / 255, 219 / 255), "hatch": "|"},
+        "nietBepaald": {"color": (112 / 255, 48 / 255, 160 / 255)},
+        "grondNietGespecificeerd": {"color": (1, 1, 1)},
+    }
+
+    legend = legend | {
+        "mineraalarmVeen": legend["veen"],
+        "zwakZandigVeen": [
+            {"width": 50 / 60} | legend["veen"],
+            {"width": 10 / 60} | legend["zand"],
+        ],
+        "sterkZandigVeen": [
+            {"width": 41 / 60} | legend["veen"],
+            {"width": 19 / 60} | legend["zand"],
+        ],
+        "zwakKleiigVeen": [  # not checked at broloket
+            {"width": 50 / 60} | legend["veen"],
+            {"width": 10 / 60} | legend["klei"],
+        ],
+        "sterkKleiigVeen": [
+            {"width": 41 / 60} | legend["veen"],
+            {"width": 19 / 60} | legend["klei"],
+        ],
+        "kleiigVeen": [
+            {"width": 42 / 60} | legend["veen"],
+            {"width": 18 / 60} | legend["klei"],
+        ],
+        "zwakZandigeKlei": [
+            {"width": 48 / 60} | legend["klei"],
+            {"width": 12 / 60} | legend["zand"],
+        ],
+        "matigZandigeKlei": [
+            {"width": 41 / 60} | legend["klei"],
+            {"width": 19 / 60} | legend["zand"],
+        ],
+        "sterkZandigeKlei": [
+            {"width": 30 / 60} | legend["klei"],
+            {"width": 30 / 60} | legend["zand"],
+        ],
+        "zwakSiltigeKlei": [
+            {"width": 50 / 60} | legend["klei"],
+            {"width": 10 / 60} | legend["leem"],  # with a hatch
+        ],
+        "matigSiltigeKlei": [
+            {"width": 41 / 60} | legend["klei"],
+            {"width": 19 / 60} | legend["leem"],  # with a hatch
+        ],
+        "sterkSiltigeKlei": [
+            {"width": 30 / 60} | legend["klei"],
+            {"width": 30 / 60} | legend["leem"],  # with a hatch
+        ],
+        "uiterstSiltigeKlei": [
+            {"width": 26 / 60} | legend["klei"],
+            {"width": 34 / 60} | {"color": legend["silt"]["color"]},  # without a hatch
+        ],
+        "zwakZandigeLeem": [
+            {"width": 50 / 60} | legend["leem"],
+            {"width": 10 / 60} | legend["zand"],
+        ],
+        "sterkZandigeLeem": [
+            {"width": 30 / 60} | legend["leem"],
+            {"width": 30 / 60} | legend["zand"],
+        ],
+        "sterkGrindigZand": [
+            {"width": 36 / 60} | legend["zand"],
+            {"width": 24 / 60} | legend["grind"],
+        ],
+        "zwakSiltigZand": [
+            {"width": 50 / 60} | legend["zand"],
+            {"width": 10 / 60} | legend["leem"],
+        ],
+        "matigSiltigZand": [
+            {"width": 41 / 60} | legend["zand"],
+            {"width": 19 / 60} | legend["leem"],
+        ],
+        "sterkSiltigZand": [
+            {"width": 30 / 60} | legend["zand"],
+            {"width": 30 / 60} | legend["leem"],
+        ],
+        "kleiigZand": [
+            {"width": 50 / 60} | legend["zand"],
+            {"width": 10 / 60} | legend["klei"],
+        ],
+        "siltigZand": [
+            {"width": 42 / 60} | legend["zand"],
+            {"width": 18 / 60} | legend["silt"],
+        ],
+    }
+    return legend
+
+
+def bro_lithology_advanced(
+    df,
+    soil_name_column="geotechnicalSoilName",
+    z=0.0,
+    x=0.5,
+    width=0.1,
+    lithology_properties=None,
+    ax=None,
+    hatch_factor=2,
+    hatch_color=(0.0, 0.0, 0.0, 0.2),
+    hatch_linewidth=2,
+    bro_id=None,
+):
+    ax = plt.gca() if ax is None else ax
+
+    if lithology_properties is None:
+        lithology_properties = get_bro_lithology_properties()
+
+    if soil_name_column not in df.columns:
+        raise (ValueError(f"Column {soil_name_column} not present in df"))
+
+    handles = []
+    for index in df.index:
+        # soil_name_column = "geotechnicalSoilName" for GeotechnicalBoreholeResearch
+        # soil_name_column = "standardSoilName" for PedologicalBoreholeResearch
+        sn = df.at[index, soil_name_column]
+        left = x - width / 2
+        if sn not in lithology_properties:
+            msg = f"SoilName {sn} not supported"
+            if bro_id is not None:
+                msg = f"{msg} (found at broId {bro_id})"
+            logger.warning(f"{msg}. Please add {sn} to lithology_properties")
+            continue
+        ps = lithology_properties[sn]
+        if isinstance(ps, dict):
+            ps = [ps]
+        for p in ps:
+            xy = (left, z - df.at[index, "upperBoundary"])
+            w = p["width"] * width if "width" in p else width
+            h = df.at[index, "upperBoundary"] - df.at[index, "lowerBoundary"]
+            hatch = p["hatch"] * hatch_factor if "hatch" in p else None
+            h = ax.add_patch(
+                Rectangle(xy, w, h, facecolor=p["color"], hatch=hatch, edgecolor="k")
+            )
+            h._hatch_color = hatch_color
+            h._hatch_linewidth = hatch_linewidth
+            left = left + w
+            handles.append(h)
+    return handles

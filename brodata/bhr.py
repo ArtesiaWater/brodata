@@ -58,28 +58,10 @@ class _BoreholeResearch(bro.FileOrUrl):
             elif key == "deliveredVerticalPosition":
                 self._read_delivered_vertical_position(child)
             elif key == "boring":
-                for grandchild in child:
-                    key = self._get_tag(grandchild)
-                    if len(grandchild) == 0:
-                        setattr(self, key, grandchild.text)
-                    elif key in ["boringStartDate", "boringEndDate"]:
-                        setattr(self, key, self._read_date(grandchild))
-                    elif key in [
-                        "boredInterval",
-                        "completedInterval",
-                        "boringProcedure",
-                        "boredTrajectory",
-                    ]:
-                        to_float = None
-                        if key == "boredTrajectory":
-                            to_float = ["beginDepth", "endDepth"]
-                        self._read_children_of_children(grandchild, to_float=to_float)
-                    elif key == "sampledInterval":
-                        self._read_sampled_interval(grandchild)
-                    elif key == "boringTool":
-                        self._read_boring_tool(grandchild)
-                    else:
-                        self._warn_unknown_tag(key)
+                if len(child) == 1 and self._get_tag(child[0]) == "Boring":
+                    self._read_boring(child[0])
+                else:
+                    self._read_boring(child)
             elif key == "boreholeSampleDescription":
                 self._read_borehole_sample_description(child)
             elif key == "boreholeSampleAnalysis":
@@ -91,10 +73,48 @@ class _BoreholeResearch(bro.FileOrUrl):
                         self._warn_unknown_tag(key)
             else:
                 self._warn_unknown_tag(key)
-        if hasattr(self, "sampledInterval"):
-            self.sampledInterval = pd.DataFrame(self.sampledInterval)
-        if hasattr(self, "investigatedInterval"):
-            self.investigatedInterval = pd.DataFrame(self.investigatedInterval)
+        for key in [
+            "completedInterval",
+            "boredInterval",
+            "sampledInterval",
+            "investigatedInterval",
+        ]:
+            if hasattr(self, key):
+                setattr(self, key, pd.DataFrame(getattr(self, key)))
+
+    def _read_boring(self, node):
+
+        for child in node:
+            key = self._get_tag(child)
+            if key in ["boringStartDate", "boringEndDate"]:
+                setattr(self, key, self._read_date(child))
+            elif key in [
+                "preparation",
+                "trajectoryExcavated",
+                "rockReached",
+                "boringProcedure",
+                "casingUsed",
+                "flushingMedium",
+                "stopCriterion",
+                "trajectoryRemoved",
+                "samplingProcedure",
+                "subsurfaceContaminated",
+                "boreholeCompleted",
+            ]:
+                setattr(self, key, child.text)
+            elif key in ["finalDepthBoring", "groundwaterLevel", "finalDepthSampling"]:
+                setattr(self, key, self._parse_float(child))
+            elif key == "boredTrajectory":
+                for grandchild in child:
+                    key = self._get_tag(grandchild)
+                    if key in ["beginDepth", "endDepth"]:
+                        setattr(self, key, self._parse_float(grandchild))
+            elif key in ["boredInterval", "sampledInterval", "completedInterval"]:
+                self._read_interval(child, key)
+            elif key == "boringTool":
+                self._read_boring_tool(child)
+            else:
+                self._warn_unknown_tag(key)
 
     def _read_borehole_sample_analysis(self, node):
         for child in node:
@@ -121,7 +141,7 @@ class _BoreholeResearch(bro.FileOrUrl):
         for child in node:
             key = self._get_tag(child)
             if key in ["beginDepth", "endDepth"]:
-                d[key] = float(child.text)
+                d[key] = self._parse_float(child)
             elif key == "locationSpecific":
                 d[key] = child.text
             elif key == "particleSizeDistributionDetermination":
@@ -164,7 +184,7 @@ class _BoreholeResearch(bro.FileOrUrl):
                     if key2 in ["lowerBoundary", "upperBoundary"]:
                         d2[key2] = int(grandchild.text)
                     elif key2 in ["proportion"]:
-                        d2[key2] = float(grandchild.text)
+                        d2[key2] = self._parse_float(grandchild)
                     else:
                         self._warn_unknown_tag(key2)
                 d[key].append(d2)
@@ -174,12 +194,13 @@ class _BoreholeResearch(bro.FileOrUrl):
             d["nonStandardisedFraction"] = pd.DataFrame(d["nonStandardisedFraction"])
         return d
 
-    def _read_sampled_interval(self, node):
-        if not hasattr(self, "sampledInterval"):
-            self.sampledInterval = []
+    def _read_interval(self, node, key):
+        if not hasattr(self, key):
+            setattr(self, key, [])
         d = {}
-        self._read_children_of_children(node, d)
-        self.sampledInterval.append(d)
+        to_float = ["beginDepth", "endDepth"]
+        self._read_children_of_children(node, d, to_float=to_float)
+        getattr(self, key).append(d)
 
     def _read_boring_tool(self, node):
         d = {}
@@ -190,10 +211,18 @@ class _BoreholeResearch(bro.FileOrUrl):
     def _read_borehole_sample_description(self, node):
         for child in node:
             key = self._get_tag(child)
-            if key == "descriptiveBoreholeLog":
+            if key == "BoreholeSampleDescription":
+                self._read_borehole_sample_description(child)
+            elif key == "descriptiveBoreholeLog":
                 if not hasattr(self, "descriptiveBoreholeLog"):
                     self.descriptiveBoreholeLog = []
-                dbl = self._read_descriptive_borehole_log(child)
+                if (
+                    len(child) == 1
+                    and self._get_tag(child[0]) == "DescriptiveBoreholeLog"
+                ):
+                    dbl = self._read_descriptive_borehole_log(child[0])
+                else:
+                    dbl = self._read_descriptive_borehole_log(child)
                 self.descriptiveBoreholeLog.append(dbl)
             elif key == "descriptionReportDate":
                 setattr(self, key, self._read_date(child))
@@ -399,8 +428,8 @@ class PedologicalBoreholeResearch(_BoreholeResearch):
 class GeologicalBoreholeResearch(_BoreholeResearch):
     """Class to represent a Geological Borehole Research (BHR_G) from the BRO."""
 
-    _object_name = "BHR_O"
-    _xmlns = "http://www.broservices.nl/xsd/dsbhrg/2.0"
+    _object_name = "BHR_G_O"
+    _xmlns = "http://www.broservices.nl/xsd/dsbhrg/3.1"
     _rest_url = "https://publiek.broservices.nl/sr/bhrg/v3"
     _char = "BHR_C"
 

@@ -584,12 +584,16 @@ class FileOrUrl(ABC):
     @staticmethod
     def _parse_text(node, key, to_float=None, to_int=None):
         if to_float is not None and key in to_float:
-            if node.text is None:
-                return np.nan
-            return float(node.text)
+            return FileOrUrl._parse_float(node)
         if to_int is not None and key in to_int:
             return int(node.text)
         return node.text
+
+    @staticmethod
+    def _parse_float(node):
+        if node.text is None:
+            return np.nan
+        return float(node.text)
 
     def _read_delivered_location(self, node):
         for child in node:
