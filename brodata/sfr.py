@@ -7,8 +7,11 @@ logger = logging.getLogger(__name__)
 
 
 class SoilFaceResearch(bro.FileOrUrl):
+    """Class to represent a Soil Face Research (SFR) from the BRO."""
+
     _rest_url = "https://publiek.broservices.nl/sr/sfr/v2"
     _xmlns = "http://www.broservices.nl/xsd/dssfr/2.0"
+    _char = "SFR_C"
 
     def _read_contents(self, tree):
         ns = {
@@ -24,11 +27,15 @@ class SoilFaceResearch(bro.FileOrUrl):
         for key in sfr.attrib:
             setattr(self, key.split("}", 1)[1], sfr.attrib[key])
         for child in sfr:
-            key = child.tag.split("}", 1)[1]
+            key = self._get_tag(child)
             if len(child) == 0:
                 setattr(self, key, child.text)
+            elif key in ["researchReportDate", "fieldworkDate"]:
+                setattr(self, key, self._read_date(child))
+            elif key == "registrationHistory":
+                self._read_children_of_children(child)
             else:
-                logger.warning(f"Unknown key: {key}")
+                self._warn_unknown_tag(key)
 
 
 cl = SoilFaceResearch

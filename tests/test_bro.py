@@ -107,6 +107,16 @@ def test_pedological_borehole_research():
     brodata.bhr.PedologicalBoreholeResearch(fname)
 
 
+def test_pedological_borehole_research_with_borehole_sample_analysis():
+    fname = os.path.join("tests", "data", "BHR000000343841.xml")
+    bhr = brodata.bhr.PedologicalBoreholeResearch(fname)
+    assert hasattr(bhr, "investigatedInterval")
+
+
+def test_geological_borehole_research():
+    bhr = brodata.bhr.GeologicalBoreholeResearch.from_bro_id("BHR000000429481")
+
+
 def test_gar_report_from_xml_file_multiple_analysis_processes():
     fname = os.path.join("tests", "data", "GAR000000019636.xml")
     brodata.gar.GroundwaterAnalysisReport(fname)
@@ -166,6 +176,11 @@ def test_get_cpt_test_with_dissipation_test():
 def test_groundwater_utilisation_facility():
     fname = os.path.join("tests", "data", "GUF000000016723.xml")
     brodata.guf.GroundwaterUtilisationFacility(fname)
+
+
+def test_groundwater_production_dossier():
+    fname = os.path.join("tests", "data", "GPD000000017250.xml")
+    brodata.gpd.GroundwaterProductionDossier(fname)
 
 
 def test_gm_gar():
@@ -232,3 +247,13 @@ def test_unknwon_gmw_raises_value_error():
     # make sure a not existant bro-id of a gmw returns a ValueError
     with pytest.raises(ValueError):
         brodata.gmw.GroundwaterMonitoringWell.from_bro_id("GMW000000000000")
+
+
+def test_get_gpd():
+    fname = os.path.join("tests", "data", "GPD000000017250.xml")
+    brodata.gpd.GroundwaterProductionDossier(fname)
+
+
+def test_site_assessment_data():
+    fname = os.path.join("tests", "data", "SAD000000011742.xml")
+    brodata.sad.SiteAssessmentData(fname)

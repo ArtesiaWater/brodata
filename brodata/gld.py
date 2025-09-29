@@ -285,14 +285,10 @@ def get_observations_summary(bro_id):
 
 class GroundwaterLevelDossier(bro.FileOrUrl):
     """
-    Represents a Groundwater Level Dossier (GLD) containing groundwater monitoring
-    information and observation data.
+    Class to represent a Groundwater Level Dossier (GLD) from the BRO.
 
     Attributes
     ----------
-    _rest_url : str
-        The REST URL used to fetch data for this class.
-
     observation : pd.DataFrame
         DataFrame containing groundwater level observations with time and value
         columns. The data is processed and filtered based on the provided arguments.
@@ -302,20 +298,13 @@ class GroundwaterLevelDossier(bro.FileOrUrl):
 
     groundwaterMonitoringWell : str
         The BRO-ID of the groundwater monitoring well.
-
-    Methods
-    -------
-    _read_contents(tree, **kwargs)
-        Reads the XML content from the given tree and populates the attributes of
-        the instance with the parsed data.
     """
 
     _rest_url = "https://publiek.broservices.nl/gm/gld/v1"
 
     def _read_contents(self, tree, status=None, observation_type=None, **kwargs):
         """
-        Parse and extract data from the XML tree to populate the Groundwater Level
-        Dossier attributes.
+        Parse data to populate the Groundwater Level Dossier attributes.
 
         This method reads and processes the XML contents, extracting relevant
         groundwater monitoring information such as the groundwater monitoring well,
@@ -360,7 +349,7 @@ class GroundwaterLevelDossier(bro.FileOrUrl):
         for key in gld.attrib:
             setattr(self, key.split("}", 1)[1], gld.attrib[key])
         for child in gld:
-            key = child.tag.split("}", 1)[1]
+            key = self._get_tag(child)
             if len(child) == 0:
                 setattr(self, key, child.text)
             elif key == "monitoringPoint":
@@ -441,7 +430,7 @@ class GroundwaterLevelDossier(bro.FileOrUrl):
                     self.observation = []
                 self.observation.append(observation)
             else:
-                logger.warning(f"Unknown key: {key}")
+                self._warn_unknown_tag(key)
         if hasattr(self, "observation"):
             self.observation = pd.concat(self.observation)
             self.observation = process_observations(

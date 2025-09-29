@@ -11,6 +11,8 @@ logger = logging.getLogger(__name__)
 
 
 class _BoreholeResearch(bro.FileOrUrl):
+    """Class to represent a Borehole Research (BHR) from the BRO."""
+
     def _read_contents(self, tree):
         ns = {
             "brocom": "http://www.broservices.nl/xsd/brocommon/3.0",
@@ -25,7 +27,7 @@ class _BoreholeResearch(bro.FileOrUrl):
         for key in bhr.attrib:
             setattr(self, key.split("}", 1)[1], bhr.attrib[key])
         for child in bhr:
-            key = child.tag.split("}", 1)[1]
+            key = self._get_tag(child)
             if len(child) == 0:
                 setattr(self, key, child.text)
             elif key == "standardizedLocation":
@@ -35,68 +37,170 @@ class _BoreholeResearch(bro.FileOrUrl):
             elif key in ["researchReportDate"]:
                 setattr(self, key, self._read_date(child))
             elif key in ["siteCharacteristic"]:
-                setattr(self, key, child[0].text)
+                for grandchild in child:
+                    key = self._get_tag(grandchild)
+                    if key in ["landUse", "drained", "soilUse"]:
+                        setattr(self, key, grandchild.text)
+                    elif key in [
+                        "meanHighestGroundwaterTable",
+                        "meanLowestGroundwaterTable",
+                    ]:
+                        setattr(self, key, float(grandchild.text))
+                    else:
+                        self._warn_unknown_tag(key)
             elif key in [
                 "registrationHistory",
                 "reportHistory",
             ]:
                 for grandchild in child:
-                    key = grandchild.tag.split("}", 1)[1]
+                    key = self._get_tag(grandchild)
                     setattr(self, key, grandchild.text)
             elif key == "deliveredVerticalPosition":
-                for grandchild in child:
-                    key = grandchild.tag.split("}", 1)[1]
-                    if key == "verticalPositioningDate":
-                        setattr(self, key, self._read_date(grandchild))
-                    elif key == "offset":
-                        setattr(self, key, float(grandchild.text))
-                    else:
-                        setattr(self, key, grandchild.text)
+                self._read_delivered_vertical_position(child)
             elif key == "boring":
-                for grandchild in child:
-                    key = grandchild.tag.split("}", 1)[1]
-                    if len(grandchild) == 0:
-                        setattr(self, key, grandchild.text)
-                    elif key in ["boringStartDate", "boringEndDate"]:
-                        setattr(self, key, self._read_date(grandchild))
-                    elif key in [
-                        "boredInterval",
-                        "completedInterval",
-                        "boringProcedure",
-                        "boredTrajectory",
-                    ]:
-                        to_float = None
-                        if key == "boredTrajectory":
-                            to_float = ["beginDepth", "endDepth"]
-                        self._read_children_of_children(grandchild, to_float=to_float)
-                    elif key == "sampledInterval":
-                        self._read_sampled_interval(grandchild)
-                    elif key == "boringTool":
-                        self._read_boring_tool(grandchild)
-                    else:
-                        logger.warning(f"Unknown key: {key}")
+                if len(child) == 1 and self._get_tag(child[0]) == "Boring":
+                    self._read_boring(child[0])
+                else:
+                    self._read_boring(child)
             elif key == "boreholeSampleDescription":
+                self._read_borehole_sample_description(child)
+            elif key == "boreholeSampleAnalysis":
                 for grandchild in child:
-                    key = grandchild.tag.split("}", 1)[1]
-                    if key == "descriptiveBoreholeLog":
-                        self._read_descriptive_borehole_log(grandchild)
-                    elif key == "descriptionReportDate":
-                        setattr(self, key, self._read_date(grandchild))
-                    elif key == "result":
-                        self._read_borehole_sample_description_result(grandchild)
+                    key = self._get_tag(grandchild)
+                    if key == "BoreholeSampleAnalysis":
+                        self._read_borehole_sample_analysis(grandchild)
                     else:
-                        setattr(self, key, grandchild.text)
+                        self._warn_unknown_tag(key)
             else:
-                logger.warning(f"Unknown key: {key}")
-        if hasattr(self, "sampledInterval"):
-            self.sampledInterval = pd.DataFrame(self.sampledInterval)
+                self._warn_unknown_tag(key)
+        for key in [
+            "completedInterval",
+            "boredInterval",
+            "sampledInterval",
+            "investigatedInterval",
+        ]:
+            if hasattr(self, key):
+                setattr(self, key, pd.DataFrame(getattr(self, key)))
 
-    def _read_sampled_interval(self, node):
-        if not hasattr(self, "sampledInterval"):
-            self.sampledInterval = []
+    def _read_boring(self, node):
+
+        for child in node:
+            key = self._get_tag(child)
+            if key in ["boringStartDate", "boringEndDate"]:
+                setattr(self, key, self._read_date(child))
+            elif key in [
+                "preparation",
+                "trajectoryExcavated",
+                "rockReached",
+                "boringProcedure",
+                "casingUsed",
+                "flushingMedium",
+                "stopCriterion",
+                "trajectoryRemoved",
+                "samplingProcedure",
+                "subsurfaceContaminated",
+                "boreholeCompleted",
+            ]:
+                setattr(self, key, child.text)
+            elif key in ["finalDepthBoring", "groundwaterLevel", "finalDepthSampling"]:
+                setattr(self, key, self._parse_float(child))
+            elif key == "boredTrajectory":
+                for grandchild in child:
+                    key = self._get_tag(grandchild)
+                    if key in ["beginDepth", "endDepth"]:
+                        setattr(self, key, self._parse_float(grandchild))
+            elif key in ["boredInterval", "sampledInterval", "completedInterval"]:
+                self._read_interval(child, key)
+            elif key == "boringTool":
+                self._read_boring_tool(child)
+            else:
+                self._warn_unknown_tag(key)
+
+    def _read_borehole_sample_analysis(self, node):
+        for child in node:
+            key = self._get_tag(child)
+            if key == "analysisReportDate":
+                setattr(self, key, self._read_date(child))
+            elif key in ["analysisType", "locationSpecific"]:
+                setattr(self, key, child.text)
+            elif key == "investigatedInterval":
+                if not hasattr(self, key):
+                    setattr(self, key, [])
+                for grandchild in child:
+                    key2 = self._get_tag(grandchild)
+                    if key2 == "InvestigatedInterval":
+                        ii = self._read_investigated_interval(grandchild)
+                        self.investigatedInterval.append(ii)
+                    else:
+                        self._warn_unknown_tag(key2)
+            else:
+                self._warn_unknown_tag(key)
+
+    def _read_investigated_interval(self, node):
         d = {}
-        self._read_children_of_children(node, d)
-        self.sampledInterval.append(d)
+        for child in node:
+            key = self._get_tag(child)
+            if key in ["beginDepth", "endDepth"]:
+                d[key] = self._parse_float(child)
+            elif key == "locationSpecific":
+                d[key] = child.text
+            elif key == "particleSizeDistributionDetermination":
+                if key not in d:
+                    d[key] = []
+                for grandchild in child:
+                    key2 = self._get_tag(grandchild)
+                    if key2 == "ParticleSizeDistributionDetermination":
+                        psdd = self._read_particle_size_distribution_determination(
+                            grandchild
+                        )
+                        d[key].append(psdd)
+                    else:
+                        self._warn_unknown_tag(key2)
+            else:
+                self._warn_unknown_tag(key)
+        if "particleSizeDistributionDetermination" in d:
+            d["particleSizeDistributionDetermination"] = pd.DataFrame(
+                d["particleSizeDistributionDetermination"]
+            )
+        return d
+
+    def _read_particle_size_distribution_determination(self, node):
+        d = {}
+        for child in node:
+            key = self._get_tag(child)
+            if key in [
+                "determinationProcedure",
+                "determinationMethod",
+                "particleSizeDistributionStandardised",
+                "dispersionMethod",
+            ]:
+                d[key] = child.text
+            elif key == "nonStandardisedFraction":
+                if key not in d:
+                    d[key] = []
+                d2 = {}
+                for grandchild in child:
+                    key2 = self._get_tag(grandchild)
+                    if key2 in ["lowerBoundary", "upperBoundary"]:
+                        d2[key2] = int(grandchild.text)
+                    elif key2 in ["proportion"]:
+                        d2[key2] = self._parse_float(grandchild)
+                    else:
+                        self._warn_unknown_tag(key2)
+                d[key].append(d2)
+            else:
+                self._warn_unknown_tag(key)
+        if "nonStandardisedFraction" in d:
+            d["nonStandardisedFraction"] = pd.DataFrame(d["nonStandardisedFraction"])
+        return d
+
+    def _read_interval(self, node, key):
+        if not hasattr(self, key):
+            setattr(self, key, [])
+        d = {}
+        to_float = ["beginDepth", "endDepth"]
+        self._read_children_of_children(node, d, to_float=to_float)
+        getattr(self, key).append(d)
 
     def _read_boring_tool(self, node):
         d = {}
@@ -104,32 +208,85 @@ class _BoreholeResearch(bro.FileOrUrl):
         self._read_children_of_children(node, d, to_float=to_float)
         self.boringTool = d
 
-    def _read_descriptive_borehole_log(self, node):
-        if not hasattr(self, "descriptiveBoreholeLog"):
-            self.descriptiveBoreholeLog = []
-        d = {}
-        to_float = ["upperBoundary", "lowerBoundary"]
+    def _read_borehole_sample_description(self, node):
         for child in node:
-            key = child.tag.split("}", 1)[1]
-            if len(child) == 0:
-                d[key] = child.text
-            elif key == "layer":
-                if key not in d:
-                    d[key] = []
-                layer = {}
-                self._read_children_of_children(child, d=layer, to_float=to_float)
-                d[key].append(layer)
+            key = self._get_tag(child)
+            if key == "BoreholeSampleDescription":
+                self._read_borehole_sample_description(child)
+            elif key == "descriptiveBoreholeLog":
+                if not hasattr(self, "descriptiveBoreholeLog"):
+                    self.descriptiveBoreholeLog = []
+                if (
+                    len(child) == 1
+                    and self._get_tag(child[0]) == "DescriptiveBoreholeLog"
+                ):
+                    dbl = self._read_descriptive_borehole_log(child[0])
+                else:
+                    dbl = self._read_descriptive_borehole_log(child)
+                self.descriptiveBoreholeLog.append(dbl)
+            elif key == "descriptionReportDate":
+                setattr(self, key, self._read_date(child))
+            elif key == "result":
+                self._read_borehole_sample_description_result(child)
+            elif key in ["phenomenonTime", "resultTime"]:
+                setattr(self, key, self._read_time_instant(child))
+            elif key in [
+                "descriptionProcedure",
+                "procedure",
+                "observedProperty",
+                "featureOfInterest",
+                "descriptionMethod",
+                "descriptionLocation",
+                "fractionDistributionDetermined",
+            ]:
+                setattr(self, key, child.text)
+            elif key in ["lowerBoundarySandFraction"]:
+                setattr(self, key, int(child.text))
+            elif key == "soilClassification":
+                if hasattr(self, key):
+                    self._raise_assumed_single(key)
+                setattr(self, key, self._read_soil_classification(child))
             else:
-                logger.warning(f"Unknown key: {key}")
-        if "layer" in d:
-            d["layer"] = pd.DataFrame(d["layer"])
+                self._warn_unknown_tag(key)
 
-        self.descriptiveBoreholeLog.append(d)
+    def _read_soil_classification(self, node):
+        d = {}
+        for child in node:
+            key = self._get_tag(child)
+            if key in [
+                "codeGroup",
+                "classificationCode",
+                "featureTop",
+                "soilClass",
+                "subsoilPeat",
+                "lowerBoundaryPeat",
+                "textureClass",
+                "textureProfile",
+                "subsoilDuinVagueSoil",
+                "carbonateProfile",
+                "peatClass",
+                "reworkingClass",
+                "groundwaterTableClass",
+                "featureSite",
+            ]:
+                d[key] = child.text
+            elif key == "featureBottom":
+                for grandchild in child:
+                    key = self._get_tag(grandchild)
+                    if key == "feature":
+                        d[key] = grandchild.text
+                    elif key == "beginDepth":
+                        d[key] = float(grandchild.text)
+                    else:
+                        self._warn_unknown_tag(key)
+            else:
+                self._warn_unknown_tag(key)
+        return d
 
     def _read_borehole_sample_description_result(self, node):
         boreholeSampleDescription = []
         for child in node:
-            key = child.tag.split("}", 1)[1]
+            key = self._get_tag(child)
             if len(child) == 0:
                 setattr(self, key, child.text)
             elif key == "soilLayer":
@@ -145,13 +302,34 @@ class _BoreholeResearch(bro.FileOrUrl):
                     child, d=d, to_float=to_float, to_int=to_int
                 )
                 boreholeSampleDescription.append(d)
+            elif key == "litterLayer":
+                if hasattr(self, key):
+                    self._raise_assumed_single(key)
+                setattr(self, key, {})
+                for grandchild in child:
+                    key = self._get_tag(grandchild)
+                    if key in [
+                        "upperBoundary",
+                        "lowerBoundary",
+                        "organicMatterContent",
+                    ]:
+                        self.litterLayer[key] = float(grandchild.text)
+                    elif key in ["horizonCode", "litterType"]:
+                        self.litterLayer[key] = grandchild.text
+                    else:
+                        self._warn_unknown_tag(key)
+
             else:
-                logger.warning(f"Unknown key: {key}")
+                self._warn_unknown_tag(key)
         df = pd.DataFrame(boreholeSampleDescription)
+        if hasattr(self, "boreholeSampleDescription"):
+            self._raise_assumed_single("boreholeSampleDescription")
         setattr(self, "boreholeSampleDescription", df)
 
 
 class GeotechnicalBoreholeResearch(_BoreholeResearch):
+    """Class to represent a Geotechnical Borehole Research (BHR_GT) from the BRO."""
+
     _object_name = "BHR_GT_O"
     _xmlns = "http://www.broservices.nl/xsd/dsbhr-gt/2.1"
     _rest_url = "https://publiek.broservices.nl/sr/bhrgt/v2"
@@ -239,6 +417,8 @@ def bhrgt_graph(
 
 
 class PedologicalBoreholeResearch(_BoreholeResearch):
+    """Class to represent a Pedological Borehole Research (BHR_P) from the BRO."""
+
     _object_name = "BHR_O"
     _xmlns = "http://www.broservices.nl/xsd/dsbhr/2.0"
     _rest_url = "https://publiek.broservices.nl/sr/bhrp/v2"
@@ -246,8 +426,10 @@ class PedologicalBoreholeResearch(_BoreholeResearch):
 
 
 class GeologicalBoreholeResearch(_BoreholeResearch):
-    _object_name = "BHR_O"
-    _xmlns = "http://www.broservices.nl/xsd/dsbhrg/2.0"
+    """Class to represent a Geological Borehole Research (BHR_G) from the BRO."""
+
+    _object_name = "BHR_G_O"
+    _xmlns = "http://www.broservices.nl/xsd/dsbhrg/3.1"
     _rest_url = "https://publiek.broservices.nl/sr/bhrg/v3"
     _char = "BHR_C"
 

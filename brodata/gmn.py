@@ -9,6 +9,7 @@ logger = logging.getLogger(__name__)
 
 
 class GroundwaterMonitoringNetwork(bro.FileOrUrl):
+    """Class to represent a Groundwater Monitoring Network (GMN) from the BRO."""
     _rest_url = "https://publiek.broservices.nl/gm/gmn/v1"
     _xmlns = "http://www.broservices.nl/xsd/dsgmn/1.0"
 
@@ -26,16 +27,16 @@ class GroundwaterMonitoringNetwork(bro.FileOrUrl):
         for key in gmn.attrib:
             setattr(self, key.split("}", 1)[1], gmn.attrib[key])
         for child in gmn:
-            key = child.tag.split("}", 1)[1]
+            key = self._get_tag(child)
             if len(child) == 0:
                 setattr(self, key, child.text)
             elif key == "monitoringNetHistory":
                 for grandchild in child:
-                    key = grandchild.tag.split("}", 1)[1]
+                    key = self._get_tag(grandchild)
                     if key == "startDateMonitoring":
                         setattr(self, key, self._read_date(grandchild))
                     else:
-                        logger.warning(f"Unknown key: {key}")
+                        self._warn_unknown_tag(key)
             elif key == "registrationHistory":
                 self._read_children_of_children(child)
             elif key == "measuringPoint":
@@ -45,7 +46,7 @@ class GroundwaterMonitoringNetwork(bro.FileOrUrl):
                 self._read_children_of_children(child, point)
                 self.measuringPoint.append(point)
             else:
-                logger.warning(f"Unknown key: {key}")
+                self._warn_unknown_tag(key)
 
         if hasattr(self, "measuringPoint"):
             self.measuringPoint = pd.DataFrame(self.measuringPoint)
