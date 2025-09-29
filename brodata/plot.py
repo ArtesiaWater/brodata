@@ -120,34 +120,42 @@ def cone_penetration_test(
 
 
 lithology_colors = {
-    "ballast": (200, 200, 200),  # checked at B38D4055
-    "bruinkool": (140, 92, 54),  # checked at B51G2426
-    "detritus": (157, 78, 64),  # checked at B44A0733
-    "glauconietzand": (204, 255, 153),  # checked at B49E1446
-    "grind": (216, 163, 32),
-    "hout": (157, 78, 64),
-    "ijzeroer": (242, 128, 13),  # checked at B49E1446
-    "kalksteen": (140, 180, 255),  # checked at B44B0062
-    "klei": (0, 146, 0),
-    "leem": (194, 207, 92),
-    "oer": (200, 200, 200),
-    "puin": (200, 200, 200),
-    "stenen": (216, 163, 32),
-    "veen": (157, 78, 64),
-    "zand": (255, 255, 0),
-    "zand fijn": (255, 255, 0),  # same as zand
-    "zand midden": (243, 225, 6),
-    "zand grof": (231, 195, 22),
-    "sideriet": (242, 128, 13),  # checked at B51D2864
-    "slib": (144, 144, 144),
-    "schelpen": (95, 95, 255),
-    "sterkGrindigZand": (231, 195, 22),  # same as zand grove categorie
-    "wegverhardingsmateriaal": (200, 200, 200),  # same as puin, checked at B25D3298
-    "zwakZandigeKlei": (0, 146, 0),  # same as klei
-    "gyttja": (157, 78, 64),  # same as hout, checked at B02G0307
-    "zandsteen": (200, 171, 55),  # checked at B44B0119
-    "niet benoemd": (255, 255, 255),
-    "geen monster": (255, 255, 255),
+    "ballast": (200 / 255, 200 / 255, 200 / 255),  # checked at B38D4055
+    "bruinkool": (140 / 255, 92 / 255, 54 / 255),  # checked at B51G2426
+    "detritus": (157 / 255, 78 / 255, 64 / 255),  # checked at B44A0733
+    "glauconietzand": (204 / 255, 1, 153 / 255),  # checked at B49E1446
+    "grind": (216 / 255, 163 / 255, 32 / 255),
+    "hout": (157 / 255, 78 / 255, 64 / 255),
+    "ijzeroer": (242 / 255, 128 / 255, 13 / 255),  # checked at B49E1446
+    "kalksteen": (140 / 255, 180 / 255, 1),  # checked at B44B0062
+    "klei": (0, 146 / 255, 0),
+    "leem": (194 / 255, 207 / 255, 92 / 255),
+    "oer": (200 / 255, 200 / 255, 200 / 255),
+    "puin": (200 / 255, 200 / 255, 200 / 255),
+    "stenen": (216 / 255, 163 / 255, 32 / 255),
+    "veen": (157 / 255, 78 / 255, 64 / 255),
+    "zand": (1, 1, 0),
+    "zand fijn": (1, 1, 0),  # same as zand
+    "zand midden": (243 / 255, 225 / 255, 6 / 255),
+    "zand grof": (231 / 255, 195 / 255, 22 / 255),
+    "sideriet": (242 / 255, 128 / 255, 13 / 255),  # checked at B51D2864
+    "slib": (144 / 255, 144 / 255, 144 / 255),
+    "schelpen": (95 / 255, 95 / 255, 1),
+    "sterkGrindigZand": (
+        231 / 255,
+        195 / 255,
+        22 / 255,
+    ),  # same as zand grove categorie
+    "wegverhardingsmateriaal": (
+        200 / 255,
+        200 / 255,
+        200 / 255,
+    ),  # same as puin, checked at B25D3298
+    "zwakZandigeKlei": (0, 146 / 255, 0),  # same as klei
+    "gyttja": (157 / 255, 78 / 255, 64 / 255),  # same as hout, checked at B02G0307
+    "zandsteen": (200 / 255, 171 / 255, 55 / 255),  # checked at B44B0119
+    "niet benoemd": (1, 1, 1),
+    "geen monster": (1, 1, 1),
 }
 
 sand_class_fine = [
@@ -195,7 +203,7 @@ def get_lithology_color(
     drilling : any, optional
         Optional drilling identifier, used for logging warnings.
     colors : dict, optional
-        Dictionary mapping lithology names to RGB color tuples (0-255). If None, uses
+        Dictionary mapping lithology names to RGB color tuples (0-1). If None, uses
         the default `lithology_colors`.
 
     Returns
@@ -217,7 +225,7 @@ def get_lithology_color(
     label = None
     if not isinstance(hoofdgrondsoort, str):
         # hoofdgrondsoort is nan
-        color = tuple(x / 255 for x in colors["niet benoemd"])
+        color = colors["niet benoemd"]
         label = str(hoofdgrondsoort)
     elif hoofdgrondsoort in colors:
         if hoofdgrondsoort == "zand":
@@ -243,13 +251,19 @@ def get_lithology_color(
                 color = colors[hoofdgrondsoort]
         else:
             color = colors[hoofdgrondsoort]
-        color = tuple(x / 255 for x in color)
     else:
         msg = f"No color defined for hoofdgrondsoort {hoofdgrondsoort}"
         if drilling is not None:
             msg = f"{msg} in drilling {drilling}"
         logger.warning(msg)
         color = (1.0, 1.0, 1.0)
+
+    if isinstance(color, (tuple, list, np.ndarray)) and np.any([x > 1 for x in color]):
+        logger.warning(
+            f"Color {color} specified as as integers between 0 and 255. "
+            "Please specify rgb-values as floats between 0 and 1."
+        )
+        color = tuple(x / 255 for x in color)
 
     if label is None:
         label = hoofdgrondsoort.capitalize()
@@ -561,6 +575,10 @@ def bro_lithology(df, **kwargs):
     )
 
 
+def get_dino_lithology_colors():
+    return lithology_colors
+
+
 def get_bro_lithology_properties():
     legend = {
         "veen": {"color": (153 / 255, 76 / 255, 58 / 255), "hatch": "-"},
@@ -672,6 +690,7 @@ def bro_lithology_advanced(
     hatch_linewidth=2,
     bro_id=None,
 ):
+    # TODO: create a legend. See https://stackoverflow.com/questions/55501860/how-to-put-multiple-colormap-patches-in-a-matplotlib-legend
     ax = plt.gca() if ax is None else ax
 
     if lithology_properties is None:
