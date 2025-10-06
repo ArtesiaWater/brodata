@@ -83,7 +83,6 @@ class _BoreholeResearch(bro.FileOrUrl):
                 setattr(self, key, pd.DataFrame(getattr(self, key)))
 
     def _read_boring(self, node):
-
         for child in node:
             key = self._get_tag(child)
             if key in ["boringStartDate", "boringEndDate"]:
@@ -520,8 +519,22 @@ def get_characteristics(bhr_class=GeotechnicalBoreholeResearch, **kwargs):
     gewenste registratie objecten. Het resultaat van deze operatie is gemaximaliseerd op
     2000.
     """
+    if not isinstance(bhr_class, type):
+        raise TypeError(
+            "First argument must be a class (a subclass of _BoreholeResearch), "
+            "for example GeotechnicalBoreholeResearch. "
+            "If you passed other arguments positionally, use keyword arguments "
+            "instead, e.g. extent=[xmin, xmax, ymin, ymax]."
+        )
     return bro._get_characteristics(bhr_class, **kwargs)
 
 
 def get_data_in_extent(bhr_class=GeotechnicalBoreholeResearch, **kwargs):
+    if not isinstance(bhr_class, type):
+        raise TypeError(
+            "First argument must be a class (a subclass of _BoreholeResearch), "
+            "for example GeotechnicalBoreholeResearch. "
+            "If you passed other arguments positionally, use keyword arguments "
+            "instead, e.g. extent=[xmin, xmax, ymin, ymax]."
+        )
     return bro._get_data_in_extent(bhr_class, **kwargs)
