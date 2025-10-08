@@ -8,14 +8,11 @@ import numpy as np
 import pandas as pd
 import geopandas as gpd
 import requests
+import json
 from shapely.geometry import LineString
 import matplotlib.pyplot as plt
 
-from .util import (
-    _format_repr,
-    _save_data_to_zip,
-    tqdm
-)
+from . import util
 from .webservices import get_configuration, get_gdf
 
 logger = logging.getLogger(__name__)
@@ -143,7 +140,7 @@ def _get_data_within_extent(
     to_file = None
 
     data = {}
-    for dino_nr in tqdm(gdf.index, disable=silent):
+    for dino_nr in util.tqdm(gdf.index, disable=silent):
         if to_path is not None:
             to_file = os.path.join(to_path, f"{dino_nr}.csv")
             if to_zip is not None:
@@ -155,7 +152,7 @@ def _get_data_within_extent(
             dino_nr, timeout=timeout, to_file=to_file, max_retries=max_retries
         )
     if to_zip is not None:
-        _save_data_to_zip(to_zip, files, remove_path_again, to_path)
+        util._save_data_to_zip(to_zip, files, remove_path_again, to_path)
 
     return objects_to_gdf(data, x, y, geometry, index, to_gdf)
 
@@ -166,7 +163,7 @@ def _get_data_from_path(from_path, dino_class, silent=False, ext=".csv"):
     files = os.listdir(from_path)
     files = [file for file in files if file.endswith(ext)]
     data = {}
-    for file in tqdm(files, disable=silent):
+    for file in util.tqdm(files, disable=silent):
         fname = os.path.join(from_path, file)
         data[os.path.splitext(file)[0]] = dino_class(fname)
     return data
@@ -186,7 +183,7 @@ def _get_data_from_zip(to_zip, dino_class, silent=False, extent=None):
             gdf = gdf.set_index("DINO_NR")
             gdf = gdf.cx[extent[0] : extent[1], extent[2] : extent[3]]
             names = [f"{name}.csv" for name in gdf.index]
-        for name in tqdm(names, disable=silent):
+        for name in util.tqdm(names, disable=silent):
             data[name] = dino_class(name, zipfile=zf)
     return data
 
@@ -240,7 +237,7 @@ def get_grondwaterstand(
     if to_path is not None and not os.path.isdir(to_path):
         os.makedirs(to_path)
     data = {}
-    for name in tqdm(gdf.index, disable=silent):
+    for name in util.tqdm(gdf.index, disable=silent):
         for i_st in range(1, gdf.at[name, "ST_CNT"] + 1):
             piezometer_nr = f"{i_st:03d}"
             url = f"{download_url}/{name}/{piezometer_nr}"
@@ -255,7 +252,7 @@ def get_grondwaterstand(
                 url, timeout=timeout, to_file=to_file
             )
     if to_zip is not None:
-        _save_data_to_zip(to_zip, files, remove_path_again, to_path)
+        util._save_data_to_zip(to_zip, files, remove_path_again, to_path)
     return objects_to_gdf(
         data, index=index, to_gdf=to_gdf, x="X-coordinaat", y="Y-coordinaat"
     )
@@ -363,7 +360,7 @@ class CsvFileOrUrl:
         for key in propdict:
             if hasattr(self, key):
                 props[propdict[key]] = getattr(self, key)
-        name = _format_repr(self, props)
+        name = util._format_repr(self, props)
         return name
 
     @classmethod
@@ -435,7 +432,7 @@ class Oppervlaktewaterstand(CsvFileOrUrl):
             for key in propdict:
                 if key in s:
                     props[propdict[key]] = s[key]
-        name = _format_repr(self, props)
+        name = util._format_repr(self, props)
         return name
 
     def _read_contents(self, f):
@@ -483,7 +480,7 @@ class Grondwaterstand(CsvFileOrUrl):
             for key in propdict:
                 if key in s:
                     props[propdict[key]] = s[key]
-        name = _format_repr(self, props)
+        name = util._format_repr(self, props)
         return name
 
     def _read_contents(self, f):
@@ -586,6 +583,106 @@ class Boormonsterprofiel(CsvFileOrUrl):
         return d
 
 
+def get_drilling_from_dinoloket(
+    name,
+    column_type=None,
+    depthReference="NAP",
+    language="nl",
+    return_response=False,
+    ignore_exceptions=False,
+):
+    """
+    Get a drilling from dinoloket.
+
+    This method uses the information from the webservice used by dinoloket for
+    displaying the drilling. In this way, also lithostratigraphy-data can be returned,
+    which is not present in the data downloaded as a csv-file by `Boormonsterprofiel`.
+
+    Parameters
+    ----------
+    name : str
+        The name of the drilling.
+    column_type : str, optional
+        The type of data that is returned. Possible options are "LITHOLOGY" and
+        "LITHOSTRATIGRAPHY" and None. If column_type is None, return a dictionary with
+        all data.  The default is None.
+    depthReference : str, optional
+        Possible values are "NAP" and "MV". The default is "NAP".
+    language : str of length 2, optional
+        Possible values are "nl" for Ducth and "en" for English. When language is not
+        'nl' or 'en', english is returned. The default is "nl".
+    return_response : bool, optional
+        Return the json-respons of the web-service without any interpretation. The
+        default is False.
+    ignore_exceptions : bool, optional
+        When True, ignore exceptions when things go wrong. This is usefull when
+        requesting multiple drillings. The default is False.
+
+    Returns
+    -------
+    df or dict
+        A dictionary or a DataFarme (when column_type is set) containing the drilling
+        data.
+    """
+    # columnType is 'LITHOSTRATIGRAPHY' or 'LITHOLOGY'
+    url = "https://www.dinoloket.nl/javascriptmapviewer-web/rest/brh/profile"
+    payload = {"dinoId": name, "depthReference": depthReference, "language": language}
+    req = requests.post(
+        url, data=json.dumps(payload), headers={"content-type": "application/json"}
+    )
+    if not req.ok:
+        msg = f"Retieving data from {url} failed"
+        if ignore_exceptions:
+            logger.error(msg)
+            return None
+        else:
+            raise (Exception(msg))
+    data = json.loads(req.content)
+    if return_response:
+        return data
+    if "status" in data.keys():
+        if data["status"] == 500:
+            msg = "Drilling {} could not be downloaded ".format(name)
+            if ignore_exceptions:
+                logger.error(msg)
+                return None
+            else:
+                raise Exception(msg)
+
+    for column in data["columns"]:
+        if column_type is None or column["columnType"] == column_type:
+            ls = []
+            for meta in column["profileMetadata"]:
+                di = {}
+                for layerInfo in meta["layerInfos"]:
+                    di[layerInfo["code"]] = layerInfo["value"]
+                ls.append(di)
+            df = pd.DataFrame(ls)
+            top = []
+            botm = []
+            for depth in df["DEPTH"]:
+                depths = depth.replace("m", "").split(" - ")
+                top.append(float(depths[0]))
+                botm.append(float(depths[1]))
+            df.insert(loc=0, column="top", value=top)
+            df.insert(loc=1, column="botm", value=botm)
+            df = df.drop("DEPTH", axis=1)
+            if column_type is None:
+                data[column["columnType"]] = df
+            else:
+                return df
+    if column_type is None:
+        data.pop("columns")
+        return data
+    else:
+        msg = "Column {} not present -> {}".format(column_type, name)
+        if ignore_exceptions:
+            logger.error(msg)
+            return None
+        else:
+            raise Exception(msg)
+
+
 class GeologischBooronderzoek(Boormonsterprofiel):
     # In brodata, Boormonsterprofiel used to be called GeologischBooronderzoek.
     # Therefore, this is a copy of GeologischBooronderzoek, for backwards compatibility
@@ -603,7 +700,7 @@ class Boorgatmeting(CsvFileOrUrl):
             items = self.las.header["Well"]
             for item in items:
                 props[item.descr] = item.value
-        name = _format_repr(self, props)
+        name = util._format_repr(self, props)
         return name
 
     def _read_contents(self, f):

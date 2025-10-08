@@ -6,14 +6,15 @@ from abc import ABC, abstractmethod
 from io import StringIO
 from zipfile import ZipFile
 
-from shapely.geometry import Point, MultiPoint
+from shapely.geometry import Point
+import shapely
 import numpy as np
 import geopandas as gpd
 import pandas as pd
 import requests
 from pyproj import Transformer
 
-from .util import _format_repr, _save_data_to_zip, tqdm
+from . import util, gml
 
 logger = logging.getLogger(__name__)
 
@@ -194,13 +195,13 @@ def _get_characteristics(
         for key in gmw.attrib:
             d[key.split("}", 1)[1]] = gmw.attrib[key]
         for child in gmw:
-            key = child.tag.split("}", 1)[1]
+            key = util._get_tag(child)
             if len(child) == 0:
                 d[key] = child.text
             elif key == "standardizedLocation":
-                d[key] = FileOrUrl._read_pos(child)
+                d[key] = FileOrUrl._read_geometry(child)
             elif key == "deliveredLocation":
-                d[key] = FileOrUrl._read_pos(child)
+                d[key] = FileOrUrl._read_geometry(child)
             elif (
                 key.endswith("Date")
                 or key.endswith("Overview")
@@ -209,7 +210,7 @@ def _get_characteristics(
                 d[key] = child[0].text
             elif key in ["diameterRange", "screenPositionRange"]:
                 for grandchild in child:
-                    key = grandchild.tag.split("}", 1)[1]
+                    key = util._get_tag(grandchild)
                     d[key] = grandchild.text
             elif key == "licence":
                 for grandchild in child:
@@ -243,7 +244,6 @@ def _get_characteristics(
 def _get_data_in_extent(
     bro_cl,
     extent=None,
-    epsg=28992,
     timeout=5,
     silent=False,
     to_path=None,
@@ -252,7 +252,56 @@ def _get_data_in_extent(
     geometry=None,
     to_gdf=True,
     index="broId",
+    continue_on_error=False,
 ):
+    """
+    Retrieve data within a specified extent from a BRO client.
+
+    Parameters
+    ----------
+    bro_cl : class
+        brodata class.
+    extent : str or object, optional
+        Spatial extent to query. If a string, interpreted as a zip file path.
+    timeout : int, default=5
+        Timeout in seconds for data retrieval requests.
+    silent : bool, default=False
+        If True, disables progress bars and reduces logging output.
+    to_path : str, optional
+        Directory path to save downloaded files.
+    to_zip : str, optional
+        Path to a zip file to read from or save data to.
+    redownload : bool, default=False
+        If True, forces redownload of data even if files exist.
+    geometry : str or object, optional
+        Geometry specification for the output GeoDataFrame.
+    to_gdf : bool, default=True
+        If True, converts the output to a GeoDataFrame.
+    index : str, default="broId"
+        Column name to use as index in the output GeoDataFrame.
+    continue_on_error : bool, default=False
+        If True, continues processing other items if an error occurs.
+
+    Returns
+    -------
+    gdf : GeoDataFrame
+        GeoDataFrame containing the retrieved data objects, indexed by the specified
+        column.
+
+    Raises
+    ------
+    Exception
+        If invalid arguments are provided or data retrieval fails (unless
+       continue_on_error is True).
+
+    Notes
+    -----
+    - If `extent` is a string, it is treated as a zip file path and `to_zip` must not
+        be provided.
+    - Data can be read from or saved to zip archives or directories, depending on the
+        provided arguments.
+    - Progress is displayed unless `silent` is True.
+    """
     if isinstance(extent, str):
         if to_zip is not None:
             raise (Exception("When extent is a string, do not supply to_zip"))
@@ -288,7 +337,7 @@ def _get_data_in_extent(
     )
 
     data = {}
-    for bro_id in tqdm(char.index, disable=silent):
+    for bro_id in util.tqdm(char.index, disable=silent):
         if zipfile is not None:
             fname = f"{bro_id}.xml"
             data[bro_id] = bro_cl(fname, zipfile=zipfile)
@@ -300,11 +349,18 @@ def _get_data_in_extent(
             if not redownload and os.path.isfile(to_file):
                 data[bro_id] = bro_cl(to_file)
                 continue
-        data[bro_id] = bro_cl.from_bro_id(bro_id, to_file=to_file, timeout=timeout)
+        kwargs = {"to_file": to_file, "timeout": timeout}
+        if continue_on_error:
+            try:
+                data[bro_id] = bro_cl.from_bro_id(bro_id, **kwargs)
+            except Exception as e:
+                logger.error(f"Error retrieving {bro_id}: {e}")
+        else:
+            data[bro_id] = bro_cl.from_bro_id(bro_id, **kwargs)
     if zipfile is not None:
         zipfile.close()
     if zipfile is None and to_zip is not None:
-        _save_data_to_zip(to_zip, _files, remove_path_again, to_path)
+        util._save_data_to_zip(to_zip, _files, remove_path_again, to_path)
 
     gdf = objects_to_gdf(data, geometry, to_gdf, index)
 
@@ -381,9 +437,6 @@ class FileOrUrl(ABC):
         _read_delivered_location(node):
             Extracts geographic location and date information from the XML node.
 
-        _read_pos(node):
-            Extracts geometry from a GML-compliant position element.
-
         _read_date(node):
             Extracts date information from the XML, handling multiple formats.
 
@@ -455,7 +508,7 @@ class FileOrUrl(ABC):
         for key in propdict:
             if hasattr(self, key):
                 props[propdict[key]] = getattr(self, key)
-        name = _format_repr(self, props)
+        name = util._format_repr(self, props)
         return name
 
     @abstractmethod
@@ -497,6 +550,20 @@ class FileOrUrl(ABC):
                 msg = criterionError.find("brocom:specification", ns).text
             raise (ValueError(msg))
 
+    @staticmethod
+    def _get_tag(node):
+        return util._get_tag(node)
+
+    def _warn_unknown_tag(self, tag):
+        logger.warning(
+            f"Tag {tag} not supported in {self.__class__.__name__} {getattr(self, 'broId', '')}"
+        )
+
+    def _raise_assumed_single(self, key):
+        raise ValueError(
+            f"Assumed there is only one {key} in {self.__class__.__name__} {getattr(self, 'broId', '')}"
+        )
+
     def _read_children_of_children(self, node, d=None, to_float=None, to_int=None):
         if to_float is not None and isinstance(to_float, str):
             to_float = [to_float]
@@ -517,51 +584,102 @@ class FileOrUrl(ABC):
     @staticmethod
     def _parse_text(node, key, to_float=None, to_int=None):
         if to_float is not None and key in to_float:
-            return float(node.text)
+            return FileOrUrl._parse_float(node)
         if to_int is not None and key in to_int:
             return int(node.text)
         return node.text
 
+    @staticmethod
+    def _parse_float(node):
+        if node.text is None:
+            return np.nan
+        return float(node.text)
+
     def _read_delivered_location(self, node):
         for child in node:
-            key = child.tag.split("}", 1)[1]
+            key = self._get_tag(child)
             if key == "location":
-                setattr(self, "deliveredLocation", self._read_pos(child))
+                setattr(self, "deliveredLocation", self._read_geometry(child))
             elif key == "horizontalPositioningDate":
                 setattr(self, key, self._read_date(child))
             elif key == "horizontalPositioningMethod":
                 setattr(self, key, child.text)
             else:
-                logger.warning(f"Unknown key: {key}")
+                self._warn_unknown_tag(key)
 
     def _read_standardized_location(self, node):
         for child in node:
-            key = child.tag.split("}", 1)[1]
+            key = self._get_tag(child)
             if key == "location":
-                setattr(self, "standardizedLocation", self._read_pos(child))
+                setattr(self, "standardizedLocation", self._read_geometry(child))
             elif key == "coordinateTransformation":
                 setattr(self, key, child.text)
             else:
-                logger.warning(f"Unknown key: {key}")
+                self._warn_unknown_tag(key)
+
+    def _read_delivered_vertical_position(self, node, d=None):
+        for child in node:
+            key = self._get_tag(child)
+            if key == "verticalPositioningDate":
+                value = self._read_date(child)
+            elif key == "offset":
+                if child.text is None:
+                    value = np.nan
+                else:
+                    value = float(child.text)
+            else:
+                value = child.text
+
+            if d is None:
+                setattr(self, key, value)
+            else:
+                d[key] = value
+
+    def _read_lifespan(self, node, d=None):
+        for child in node:
+            key = self._get_tag(child)
+            if key in ["startTime", "endTime"]:
+                if d is None:
+                    setattr(self, key, self._read_date(child))
+                else:
+                    d[key] = self._read_date(child)
+            else:
+                self._warn_unknown_tag(key)
+
+    def _read_validity_period(self, node, d=None):
+        for child in node:
+            key = self._get_tag(child)
+            if key == "startValidity":
+                if d is None:
+                    setattr(self, key, self._read_date(child))
+                else:
+                    d[key] = self._read_date(child)
+            elif key == "endValidity":
+                if d is None:
+                    setattr(self, key, self._read_date(child))
+                else:
+                    d[key] = self._read_date(child)
+            else:
+                self._warn_unknown_tag(key)
 
     @staticmethod
-    def _read_pos(node):
-        ns = {"gml": "http://www.opengis.net/gml/3.2"}
-        multipoint = node.find("gml:MultiPoint", ns)
-        if multipoint is not None:
-            xy = []
-            for pointmember in multipoint.findall("gml:pointMember", ns):
-                xy.append(FileOrUrl._read_pos(pointmember))
-            return MultiPoint(xy)
-        point = node.find("gml:Point", ns)
-        if point is not None:
-            node = point
-        pos = node.find("gml:pos", ns)
-        x, y = [float(x) for x in pos.text.split()]
-        if "srsName" in node.attrib:
-            if node.attrib["srsName"] == "urn:ogc:def:crs:EPSG::4258":
+    def _read_geometry(node):
+        assert len(node) == 1
+        tag = node[0].tag.split("}")[-1]
+        if tag == "pos":
+            x, y = tuple(map(float, node[0].text.strip().split()))
+            if FileOrUrl._is_epsg_4258(node):
                 x, y = y, x
-        return Point(x, y)
+            return Point(x, y)
+        geometry = gml.parse_geometry(node[0])
+        if FileOrUrl._is_epsg_4258(node[0]):
+            geometry = shapely.ops.transform(lambda x, y: (y, x), geometry)
+        return geometry
+
+    @staticmethod
+    def _is_epsg_4258(node):
+        srsName = "urn:ogc:def:crs:EPSG::4258"
+        return "srsName" in node.attrib and node.attrib["srsName"] == srsName
 
     @staticmethod
     def _read_date(node):
@@ -581,6 +699,25 @@ class FileOrUrl(ABC):
         time_instant = node.find("gml:TimeInstant", ns)
         time_position = time_instant.find("gml:timePosition", ns)
         return pd.to_datetime(time_position.text)
+
+    def _read_descriptive_borehole_log(self, node):
+        d = {}
+        to_float = ["upperBoundary", "lowerBoundary"]
+        for child in node:
+            key = self._get_tag(child)
+            if len(child) == 0:
+                d[key] = child.text
+            elif key == "layer":
+                if key not in d:
+                    d[key] = []
+                layer = {}
+                self._read_children_of_children(child, d=layer, to_float=to_float)
+                d[key].append(layer)
+            else:
+                self._warn_unknown_tag(key)
+        if "layer" in d:
+            d["layer"] = pd.DataFrame(d["layer"])
+        return d
 
 
 def get_bronhouders(index="kvk", **kwargs):
