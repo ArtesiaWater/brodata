@@ -8,6 +8,7 @@ import numpy as np
 import pandas as pd
 import geopandas as gpd
 import requests
+import json
 from shapely.geometry import LineString
 import matplotlib.pyplot as plt
 
@@ -580,6 +581,106 @@ class Boormonsterprofiel(CsvFileOrUrl):
         if hasattr(self, "lithologie_sublagen"):
             d["lithologie_sublagen"] = self.lithologie_sublagen
         return d
+
+
+def get_drilling_from_dinoloket(
+    name,
+    column_type=None,
+    depthReference="NAP",
+    language="nl",
+    return_response=False,
+    ignore_exceptions=False,
+):
+    """
+    Get a drilling from dinoloket.
+
+    This method uses the information from the webservice used by dinoloket for
+    displaying the drilling. In this way, also lithostratigraphy-data can be returned,
+    which is not present in the data downloaded as a csv-file by `Boormonsterprofiel`.
+
+    Parameters
+    ----------
+    name : str
+        The name of the drilling.
+    column_type : str, optional
+        The type of data that is returned. Possible options are "LITHOLOGY" and
+        "LITHOSTRATIGRAPHY" and None. If column_type is None, return a dictionary with
+        all data.  The default is None.
+    depthReference : str, optional
+        Possible values are "NAP" and "MV". The default is "NAP".
+    language : str of length 2, optional
+        Possible values are "nl" for Ducth and "en" for English. When language is not
+        'nl' or 'en', english is returned. The default is "nl".
+    return_response : bool, optional
+        Return the json-respons of the web-service without any interpretation. The
+        default is False.
+    ignore_exceptions : bool, optional
+        When True, ignore exceptions when things go wrong. This is usefull when
+        requesting multiple drillings. The default is False.
+
+    Returns
+    -------
+    df or dict
+        A dictionary or a DataFarme (when column_type is set) containing the drilling
+        data.
+    """
+    # columnType is 'LITHOSTRATIGRAPHY' or 'LITHOLOGY'
+    url = "https://www.dinoloket.nl/javascriptmapviewer-web/rest/brh/profile"
+    payload = {"dinoId": name, "depthReference": depthReference, "language": language}
+    req = requests.post(
+        url, data=json.dumps(payload), headers={"content-type": "application/json"}
+    )
+    if not req.ok:
+        msg = f"Retieving data from {url} failed"
+        if ignore_exceptions:
+            logger.error(msg)
+            return None
+        else:
+            raise (Exception(msg))
+    data = json.loads(req.content)
+    if return_response:
+        return data
+    if "status" in data.keys():
+        if data["status"] == 500:
+            msg = "Drilling {} could not be downloaded ".format(name)
+            if ignore_exceptions:
+                logger.error(msg)
+                return None
+            else:
+                raise Exception(msg)
+
+    for column in data["columns"]:
+        if column_type is None or column["columnType"] == column_type:
+            ls = []
+            for meta in column["profileMetadata"]:
+                di = {}
+                for layerInfo in meta["layerInfos"]:
+                    di[layerInfo["code"]] = layerInfo["value"]
+                ls.append(di)
+            df = pd.DataFrame(ls)
+            top = []
+            botm = []
+            for depth in df["DEPTH"]:
+                depths = depth.replace("m", "").split(" - ")
+                top.append(float(depths[0]))
+                botm.append(float(depths[1]))
+            df.insert(loc=0, column="top", value=top)
+            df.insert(loc=1, column="botm", value=botm)
+            df = df.drop("DEPTH", axis=1)
+            if column_type is None:
+                data[column["columnType"]] = df
+            else:
+                return df
+    if column_type is None:
+        data.pop("columns")
+        return data
+    else:
+        msg = "Column {} not present -> {}".format(column_type, name)
+        if ignore_exceptions:
+            logger.error(msg)
+            return None
+        else:
+            raise Exception(msg)
 
 
 class GeologischBooronderzoek(Boormonsterprofiel):

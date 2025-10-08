@@ -114,7 +114,7 @@ def test_pedological_borehole_research_with_borehole_sample_analysis():
 
 
 def test_geological_borehole_research():
-    bhr = brodata.bhr.GeologicalBoreholeResearch.from_bro_id("BHR000000429481")
+    brodata.bhr.GeologicalBoreholeResearch.from_bro_id("BHR000000429481")
 
 
 def test_gar_report_from_xml_file_multiple_analysis_processes():

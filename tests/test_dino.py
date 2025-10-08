@@ -1,4 +1,5 @@
 import os
+import pandas as pd
 import tempfile
 
 import brodata
@@ -53,6 +54,25 @@ def test_grondwatersamenstelling_from_file():
 
 def test_geologisch_booronderzoek():
     brodata.dino.Boormonsterprofiel.from_dino_nr("B42E0199")
+
+
+def test_get_drilling_from_dinoloket():
+    bhr = brodata.dino.get_drilling_from_dinoloket("B42E0199", column_type=None)
+    assert isinstance(bhr, dict)
+
+
+def test_get_drilling_from_dinoloket_lithology():
+    bhr_df = brodata.dino.get_drilling_from_dinoloket(
+        "B42E0199", column_type="LITHOLOGY"
+    )
+    assert isinstance(bhr_df, pd.DataFrame)
+
+
+def test_get_drilling_from_dinoloket_lithostratigraphy():
+    bhr_df = brodata.dino.get_drilling_from_dinoloket(
+        "B42E0199", column_type="LITHOSTRATIGRAPHY"
+    )
+    assert isinstance(bhr_df, pd.DataFrame)
 
 
 def test_geologisch_booronderzoek_from_file():
