@@ -115,6 +115,8 @@ class GroundwaterAnalysisReport(bro.FileOrUrl):
                 field_research.append(d2)
             # field_research.append(d)
         df = pd.DataFrame(field_research)
+        if "samplingDateTime" in df.columns:
+            df = df.set_index("samplingDateTime")
         return df
 
     def _read_laboratory_analysis(self, node):

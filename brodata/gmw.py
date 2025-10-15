@@ -105,7 +105,14 @@ class GroundwaterMonitoringWell(bro.FileOrUrl):
                 if not hasattr(self, key):
                     self.monitoringTube = []
                 tube = {}
-                self._read_children_of_children(child, tube)
+                to_float = [
+                    "tubeTopPosition",
+                    "screenLength",
+                    "screenTopPosition",
+                    "screenBottomPosition",
+                    "plainTubePartLength",
+                ]
+                self._read_children_of_children(child, tube, to_float=to_float)
                 self.monitoringTube.append(tube)
             else:
                 self._warn_unknown_tag(key)
@@ -445,11 +452,6 @@ def get_tube_gdf(gmws, index=None):
         "offset",
         "groundLevelPosition",
         "tubeTopDiameter",
-        "tubeTopPosition",
-        "screenLength",
-        "screenTopPosition",
-        "screenBottomPosition",
-        "plainTubePartLength",
     ]
     columns = [column for column in columns if column in gdf.columns]
     gdf[columns] = gdf[columns].astype(float)
