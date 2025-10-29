@@ -207,6 +207,52 @@ def get_grondwaterstand(
     to_gdf=True,
     skip=None,
 ):
+    """
+    Get groundwater level (Grondwaterstand) data as a GeoDataFrame or raw objects.
+
+    Fetch Grondwaterstand data for a given geographical extent or load it from local
+    files. Data are retrieved per monitoring location and per piezometer. Results can
+    be returned as a GeoDataFrame or as a dictionary of Grondwaterstand objects.
+
+    Parameters
+    ----------
+    extent : str or sequence
+        The spatial extent ([xmin, xmax, ymin, ymax]) to filter the data.
+    config : dict, optional
+        Configuration mapping for available DINO data kinds. If None, a default
+        configuration is used.
+    timeout : int or float, optional
+        Timeout in seconds for network requests when downloading data. The default is 5.
+    silent : bool, optional
+        If True, suppress progress output.
+    to_path : str, optional
+        If not None, save the downloaded files in the directory named to_path. The
+        default is None.
+    to_zip : str, optional
+        If not None, save the downloaded files in a zip-file named to_zip. The default
+        is None.
+    redownload : bool, optional
+        When downloaded files exist in to_path or to_zip, read from these files when
+        redownload is False. If redownload is True, download the data again from the
+        DINO-server. The default is False.
+    to_gdf : bool, optional
+        If True (default), convert the loaded Grondwaterstand objects into a
+        geopandas.GeoDataFrame. If False, return the raw mapping of objects.
+    skip : str or iterable, optional
+        Name or iterable of location names to skip during download or processing.
+
+    Returns
+    -------
+    geopandas.GeoDataFrame or dict
+        If `to_gdf` is True, returns a GeoDataFrame indexed by ['Locatie',
+        'Filternummer']. If False, returns a dictionary with Grondwaterstand objects.
+
+    Notes
+    -----
+    - When `extent` is a path string, this function loads local data.
+    - When `to_zip` is provided, the function will create a temporary directory and
+      archive files into the supplied ZIP.
+    """
     dino_class = Grondwaterstand
     index = ["Locatie", "Filternummer"]
     if skip is not None and isinstance(skip, str):

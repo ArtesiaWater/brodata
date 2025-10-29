@@ -481,7 +481,7 @@ def get_data_in_extent(
 
     Parameters
     ----------
-    extent : object
+    extent : str or sequence
         The spatial extent ([xmin, xmax, ymin, ymax]) to filter the data.
     kind : str, optional
         The type of observations to retrieve. Valid values are {'gld', 'gar'} for
@@ -511,7 +511,7 @@ def get_data_in_extent(
     redownload : bool, optional
         When downloaded files exist in to_path or to_zip, read from these files when
         redownload is False. If redownload is True, download the data again from the
-        BRO-servers. The default is False.
+        BRO-server. The default is False.
 
     Returns
     -------
