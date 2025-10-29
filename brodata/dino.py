@@ -495,7 +495,8 @@ class Grondwaterstand(CsvFileOrUrl):
             '"Van deze put zijn geen standen opgenomen in de DINO-database"'
         ):
             return
-        self.meta, line = self._read_csv_part(f)
+        if "Peildatum" not in line:
+            self.meta, line = self._read_csv_part(f)
         self.data, line = self._read_csv_part(f)
         for column in ["Peildatum"]:
             if column in self.data.columns:
