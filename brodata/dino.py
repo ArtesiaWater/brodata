@@ -205,9 +205,12 @@ def get_grondwaterstand(
     to_zip=None,
     redownload=False,
     to_gdf=True,
+    skip=None,
 ):
     dino_class = Grondwaterstand
     index = ["Locatie", "Filternummer"]
+    if skip is not None and isinstance(skip, str):
+        skip = [skip]
 
     if isinstance(extent, str):
         data = _get_data_from_path(extent, dino_class, silent=silent)
@@ -238,6 +241,8 @@ def get_grondwaterstand(
         os.makedirs(to_path)
     data = {}
     for name in util.tqdm(gdf.index, disable=silent):
+        if skip is not None and name in skip:
+            continue
         for i_st in range(1, gdf.at[name, "ST_CNT"] + 1):
             piezometer_nr = f"{i_st:03d}"
             url = f"{download_url}/{name}/{piezometer_nr}"
