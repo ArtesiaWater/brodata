@@ -98,6 +98,53 @@ def _get_data_within_extent(
     to_gdf=True,
     max_retries=2,
 ):
+    """Retrieve DINO data within a specified geographical extent or from local files.
+
+    This is a core function used by various data retrieval methods in the DINO system.
+    It can either load data from local files/archives or fetch it from the DINO server
+    based on geographical extent.
+
+    Parameters
+    ----------
+    dino_cl : class
+        The DINO data class to instantiate for each location (e.g., Grondwaterstand).
+    kind : str
+        The type of DINO data to retrieve (e.g., "Grondwaterstand", "Boorgatmeting").
+    extent : str, Path, or sequence
+        Either a path to local data, or a sequence of [xmin, xmax, ymin, ymax]
+        coordinates.
+    config : dict, optional
+        Configuration mapping for DINO data kinds. Uses default if None.
+    timeout : int or float, optional.
+        Timeout in seconds for network requests when downloading data. The default is 5.
+    silent : bool, default=False
+        If True, suppress progress output.
+    to_path : str, optional
+        Directory to save downloaded files. Created if it doesn't exist.
+    to_zip : str, optional
+        Path to save downloaded files in a zip archive.
+    redownload : bool, optional
+        If True, redownload data even if local files exist. The default is False.
+    x : str, optional
+        Name of the x-coordinate column. The default is "X-coordinaat".
+    y : str, optional
+        Name of the y-coordinate column. The default is "Y-coordinaat".
+    geometry : str, optional
+        Name of the geometry column if different from creating from x,y coordinates.
+    index : str, optional
+        Column(s) to use as index in the output GeoDataFrame. The default is "NITG-nr".
+    to_gdf : bool, optional
+        If True, return a GeoDataFrame; if False, return raw dictionary of objects. The
+        default is True
+    max_retries : int, optional
+        Maximum number of retries for failed network requests. The default is 2.
+
+    Returns
+    -------
+    geopandas.GeoDataFrame or dict
+        If to_gdf is True, returns a GeoDataFrame with the requested data.
+        If to_gdf is False, returns a dictionary of DINO objects.
+    """
     if isinstance(extent, (str, Path)):
         data = _get_data_from_path(extent, dino_cl, silent=silent)
         return objects_to_gdf(data, x, y, geometry, index, to_gdf)
