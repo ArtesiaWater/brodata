@@ -149,6 +149,7 @@ class GroundwaterAnalysisReport(bro.FileOrUrl):
 
 
 def get_parameter_list(url=None, timeout=5, to_file=None, **kwargs):
+    """Download a DataFrame with gar-parameters from the BRO"""
     if url is None:
         url = "https://publiek.broservices.nl/bro/refcodes/v1/attribute_values?domain=urn:bro:gar:ParameterList&version=latest"
     r = requests.get(url, timeout=timeout, **kwargs)
@@ -165,6 +166,21 @@ def get_parameter_list(url=None, timeout=5, to_file=None, **kwargs):
 
     df = pd.json_normalize(data).set_index("code")
     return df
+
+
+def get_parameter_code(description, parameter_list=None):
+    """Get a parameter code from a parameter description"""
+    if parameter_list is None:
+        parameter_list = get_parameter_list()
+    code = parameter_list.index[parameter_list["description"] == description]
+    if len(code) == 0:
+        raise ValueError(f"Description {description} not found in Parameter List")
+    elif len(code) > 1:
+        raise ValueError(
+            f"Description {description} found more than once in Parameter List"
+        )
+
+    return code[0]
 
 
 def _get_empty_observation_df():
