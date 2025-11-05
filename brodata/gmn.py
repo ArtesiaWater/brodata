@@ -10,6 +10,7 @@ logger = logging.getLogger(__name__)
 
 class GroundwaterMonitoringNetwork(bro.FileOrUrl):
     """Class to represent a Groundwater Monitoring Network (GMN) from the BRO."""
+
     _rest_url = "https://publiek.broservices.nl/gm/gmn/v1"
     _xmlns = "http://www.broservices.nl/xsd/dsgmn/1.0"
 
@@ -67,3 +68,6 @@ cl = GroundwaterMonitoringNetwork
 
 get_bro_ids_of_bronhouder = partial(bro._get_bro_ids_of_bronhouder, cl)
 get_bro_ids_of_bronhouder.__doc__ = bro._get_bro_ids_of_bronhouder.__doc__
+
+get_data_for_bro_ids = partial(bro._get_data_for_bro_ids, cl)
+get_data_for_bro_ids.__doc__ = bro._get_data_for_bro_ids.__doc__

@@ -458,6 +458,11 @@ def get_bro_ids_of_bronhouder(bronhouder, bhr_class=GeotechnicalBoreholeResearch
     return bro._get_bro_ids_of_bronhouder(bhr_class, bronhouder)
 
 
+def get_data_for_bro_ids(bhr_class=GeotechnicalBoreholeResearch, **kwargs):
+    _check_first_argument(bhr_class)
+    return bro._get_data_for_bro_ids(bhr_class, **kwargs)
+
+
 def get_characteristics(bhr_class=GeotechnicalBoreholeResearch, **kwargs):
     """
     Get characteristics of a set of registered objects for a given object class.
@@ -530,6 +535,11 @@ def get_characteristics(bhr_class=GeotechnicalBoreholeResearch, **kwargs):
 
 
 def get_data_in_extent(bhr_class=GeotechnicalBoreholeResearch, **kwargs):
+    _check_first_argument(bhr_class)
+    return bro._get_data_in_extent(bhr_class, **kwargs)
+
+
+def _check_first_argument(bhr_class):
     if not isinstance(bhr_class, type):
         raise TypeError(
             "First argument must be a class (a subclass of _BoreholeResearch), "
@@ -537,4 +547,3 @@ def get_data_in_extent(bhr_class=GeotechnicalBoreholeResearch, **kwargs):
             "If you passed other arguments positionally, use keyword arguments "
             "instead, e.g. extent=[xmin, xmax, ymin, ymax]."
         )
-    return bro._get_data_in_extent(bhr_class, **kwargs)

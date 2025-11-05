@@ -219,6 +219,9 @@ cl = ConePenetrationTest
 get_bro_ids_of_bronhouder = partial(bro._get_bro_ids_of_bronhouder, cl=cl)
 get_bro_ids_of_bronhouder.__doc__ = bro._get_bro_ids_of_bronhouder.__doc__
 
+get_data_for_bro_ids = partial(bro._get_data_for_bro_ids, cl)
+get_data_for_bro_ids.__doc__ = bro._get_data_for_bro_ids.__doc__
+
 get_characteristics = partial(bro._get_characteristics, cl)
 get_characteristics.__doc__ = bro._get_characteristics.__doc__
 

@@ -69,6 +69,8 @@ class GroundwaterMonitoringWell(bro.FileOrUrl):
         if len(gmws) == 0:
             gmws = tree.findall(".//xmlns:GMW_PPO", ns)
         if len(gmws) == 0:
+            gmws = tree.findall(".//brocom:BRO_DO", ns)
+        if len(gmws) == 0:
             raise (ValueError("No gmw found"))
         elif len(gmws) > 1:
             raise (Exception("Only one gmw supported"))
@@ -87,7 +89,7 @@ class GroundwaterMonitoringWell(bro.FileOrUrl):
             elif key == "wellHistory":
                 for grandchild in child:
                     key = self._get_tag(grandchild)
-                    if key == "wellConstructionDate":
+                    if key in ["wellConstructionDate", "wellRemovalDate"]:
                         setattr(self, key, self._read_date(grandchild))
                     elif key == "intermediateEvent":
                         if not hasattr(self, key):
@@ -428,12 +430,15 @@ def get_tube_gdf(gmws, index=None):
             gmws = gmws.set_index("broId")
     tubes = []
     for bro_id in gmws.index:
-        for tube_number in gmws.loc[bro_id, "monitoringTube"].index:
+        tube_df = gmws.loc[bro_id, "monitoringTube"]
+        if not isinstance(tube_df, pd.DataFrame):
+            continue
+        for tube_number in tube_df.index:
             # combine properties of well and tube
             tube = pd.concat(
                 (
                     gmws.loc[bro_id].drop("monitoringTube"),
-                    gmws.loc[bro_id, "monitoringTube"].loc[tube_number],
+                    tube_df.loc[tube_number],
                 )
             )
             tube["groundwaterMonitoringWell"] = bro_id
@@ -470,6 +475,7 @@ def get_data_in_extent(
     to_zip=None,
     to_path=None,
     redownload=False,
+    silent=False,
 ):
     """
     Retrieve metadata and observations within a specified spatial extent.
@@ -512,6 +518,8 @@ def get_data_in_extent(
         When downloaded files exist in to_path or to_zip, read from these files when
         redownload is False. If redownload is True, download the data again from the
         BRO-server. The default is False.
+    silent : bool, optional
+        If True, suppresses progress logging. Defaults to False.
 
     Returns
     -------
@@ -574,6 +582,7 @@ def get_data_in_extent(
             redownload=redownload,
             zipfile=zipfile,
             _files=_files,
+            silent=silent,
         )
 
         # only keep wells with observations
@@ -590,6 +599,7 @@ def get_data_in_extent(
         redownload=redownload,
         zipfile=zipfile,
         _files=_files,
+        silent=silent,
     )
 
     if zipfile is not None:
@@ -658,14 +668,7 @@ def _combine_observations(observations, kind):
         return pd.concat(obslist).sort_index()
 
 
-def get_tube_gdf_from_characteristics(
-    characteristics_gdf,
-    index=None,
-    to_path=None,
-    redownload=False,
-    zipfile=None,
-    _files=None,
-):
+def get_tube_gdf_from_characteristics(characteristics_gdf, **kwargs):
     """
     Generate a GeoDataFrame of tube properties based on well characteristics.
 
@@ -688,22 +691,41 @@ def get_tube_gdf_from_characteristics(
     gpd.GeoDataFrame
         GeoDataFrame of combined well and tube properties
     """
-    bids = characteristics_gdf.index.unique()
-    gmws = []
-    for bid in bids:
-        if zipfile is not None:
-            fname = f"{bid}.xml"
-            gmw = GroundwaterMonitoringWell(fname, zipfile=zipfile)
-        else:
-            to_file = None
-            if to_path is not None:
-                to_file = os.path.join(to_path, f"{bid}.xml")
-                if _files is not None:
-                    _files.append(to_file)
-            gmw = GroundwaterMonitoringWell.from_bro_id(
-                bid, to_file=to_file, redownload=redownload
-            )
-        gmws.append(gmw)
+    bro_ids = characteristics_gdf.index.unique()
+    return get_tube_gdf_from_bro_ids(bro_ids, **kwargs)
+
+
+def get_tube_gdf_from_bro_ids(
+    bro_ids,
+    index=None,
+    **kwargs,
+):
+    """
+    Generate a GeoDataFrame of tube properties based on an iterable of gmw bro-ids.
+
+    This function downloads the GroundwaterMonitoringWell-objects to retreive data about
+    the groundwater monitoring tubes, and combined this information in a new
+    GeoDataFrame.
+
+    Parameters
+    ----------
+    bro_ids : gpd.GeoDataFrame
+        GeoDataFrame of well characteristics with bro-ids of the
+        GroundwaterMonitoringWells as the index, retreived with
+        `brodata.gmw.get_characteristics`.
+    index : str or list of str, optional
+        Column(s) to use as the index for the resulting GeoDataFrame. Defaults
+        to ['groundwaterMonitoringWell', 'tubeNumber'] if not provided.
+
+    Returns
+    -------
+    gpd.GeoDataFrame
+        GeoDataFrame of combined well and tube properties
+    """
+    desc = "Downloading Groundwater Monitoring Wells"
+    gmws = bro._get_data_for_bro_ids(
+        GroundwaterMonitoringWell, bro_ids, desc=desc, **kwargs
+    )
     gdf = get_tube_gdf(gmws, index=index)
     return gdf
 
@@ -712,6 +734,9 @@ cl = GroundwaterMonitoringWell
 
 get_bro_ids_of_bronhouder = partial(bro._get_bro_ids_of_bronhouder, cl)
 get_bro_ids_of_bronhouder.__doc__ = bro._get_bro_ids_of_bronhouder.__doc__
+
+get_data_for_bro_ids = partial(bro._get_data_for_bro_ids, cl)
+get_data_for_bro_ids.__doc__ = bro._get_data_for_bro_ids.__doc__
 
 get_characteristics = partial(bro._get_characteristics, cl)
 get_characteristics.__doc__ = bro._get_characteristics.__doc__

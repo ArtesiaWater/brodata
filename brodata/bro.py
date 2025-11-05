@@ -255,7 +255,7 @@ def _get_data_in_extent(
     continue_on_error=False,
 ):
     """
-    Retrieve data within a specified extent from a BRO client.
+    Retrieve data within a specified extent for a certain bro-class.
 
     Parameters
     ----------
@@ -336,15 +336,90 @@ def _get_data_in_extent(
         bro_cl, extent=extent, to_file=to_file, redownload=redownload, zipfile=zipfile
     )
 
+    data = _get_data_for_bro_ids(
+        char.index,
+        timeout=timeout,
+        silent=silent,
+        to_path=to_path,
+        zipfile=zipfile,
+        redownload=redownload,
+        continue_on_error=continue_on_error,
+        _files=_files,
+    )
+    if zipfile is not None:
+        zipfile.close()
+    if zipfile is None and to_zip is not None:
+        util._save_data_to_zip(to_zip, _files, remove_path_again, to_path)
+
+    gdf = objects_to_gdf(data, geometry, to_gdf, index)
+
+    return gdf
+
+
+def _get_data_for_bro_ids(
+    bro_cl,
+    bro_ids,
+    timeout=5,
+    silent=False,
+    to_path=None,
+    zipfile=None,
+    redownload=False,
+    continue_on_error=False,
+    desc=None,
+    _files=None,
+):
+    """
+    Retrieve data for a list of specified bro_ids for a certain bro-class.
+
+    Parameters
+    ----------
+    bro_cl : class
+        brodata class.
+    bro_ids : list of strings
+        A list of bro-ids to donnload data for.
+    timeout : int, default=5
+        Timeout in seconds for data retrieval requests.
+    silent : bool, default=False
+        If True, disables progress bars and reduces logging output.
+    to_path : str, optional
+        Directory path to save downloaded files.
+    zipfile : zipfile.ZipFile, optional
+        A zipfile-object. When not None, zipfile is used to read previously downloaded
+        data from. The default is None.
+    redownload : bool, default=False
+        If True, forces redownload of data even if files exist.
+    continue_on_error : bool, default=False
+        If True, continues processing other items if an error occurs.
+
+    Returns
+    -------
+    data : dictionary
+        A dictionary with the bro-ids as keys, and the data as values.
+
+    Raises
+    ------
+    Exception
+        If invalid arguments are provided or data retrieval fails (unless
+       continue_on_error is True).
+
+    Notes
+    -----
+    - Data can be read from or saved to zip archives or directories, depending on the
+        provided arguments.
+    - Progress is displayed unless `silent` is True.
+    """
     data = {}
-    for bro_id in util.tqdm(char.index, disable=silent):
+    if isinstance(bro_ids, str):
+        bro_ids = [bro_ids]
+    for bro_id in util.tqdm(bro_ids, disable=silent, desc=desc):
         if zipfile is not None:
             fname = f"{bro_id}.xml"
             data[bro_id] = bro_cl(fname, zipfile=zipfile)
             continue
+        to_file = None
         if to_path is not None:
             to_file = os.path.join(to_path, f"{bro_id}.xml")
-            if to_zip is not None:
+            if _files is not None:
                 _files.append(to_file)
             if not redownload and os.path.isfile(to_file):
                 data[bro_id] = bro_cl(to_file)
@@ -357,14 +432,7 @@ def _get_data_in_extent(
                 logger.error(f"Error retrieving {bro_id}: {e}")
         else:
             data[bro_id] = bro_cl.from_bro_id(bro_id, **kwargs)
-    if zipfile is not None:
-        zipfile.close()
-    if zipfile is None and to_zip is not None:
-        util._save_data_to_zip(to_zip, _files, remove_path_again, to_path)
-
-    gdf = objects_to_gdf(data, geometry, to_gdf, index)
-
-    return gdf
+    return data
 
 
 def objects_to_gdf(
