@@ -337,6 +337,7 @@ def _get_data_in_extent(
     )
 
     data = _get_data_for_bro_ids(
+        bro_cl,
         char.index,
         timeout=timeout,
         silent=silent,
