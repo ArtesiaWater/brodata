@@ -439,7 +439,7 @@ def get_data_in_extent(
         return tubes, obs_df
 
 
-def get_kenset_geopackage(to_file=None, layer=None, redownload=False):
+def get_kenset_geopackage(to_file=None, layer=None, redownload=False, index="bro_id"):
     """
     Download or read data from a geopackage-file for the whole of the Netherlands.
 
@@ -456,6 +456,9 @@ def get_kenset_geopackage(to_file=None, layer=None, redownload=False):
     redownload : bool, optional
         If True, forces redownload of the data even if `to_file` exists. The default is
         False.
+    index : str, optional
+        The column to use for indexing in the resulting GeoDataFrame. The default is
+        "bro_id".
 
     Returns
     -------
@@ -469,4 +472,6 @@ def get_kenset_geopackage(to_file=None, layer=None, redownload=False):
             urllib.request.urlretrieve(url, to_file)
         url = to_file
     gdf = gpd.read_file(url, layer=layer)
+    if index in gdf.columns:
+        gdf = gdf.set_index(index)
     return gdf
