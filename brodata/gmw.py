@@ -366,7 +366,7 @@ def get_tube_observations(gwm_id, tube_number, kind="gld", **kwargs):
 
     Parameters
     ----------
-    gwm_id : TYPE
+    gwm_id : str
         The bro_id of the groundwater monitoring well.
     tube_number : int
         The tube number.
@@ -384,7 +384,9 @@ def get_tube_observations(gwm_id, tube_number, kind="gld", **kwargs):
         return _get_empty_observation_df(kind)
     else:
         data_column = _get_data_column(kind)
-        return _combine_observations(df[data_column], kind=kind)
+        return _combine_observations(
+            df[data_column], kind=kind, bro_id=f"{gwm_id}_{tube_number}"
+        )
 
 
 def get_tube_gdf(gmws, index=None):
@@ -626,7 +628,10 @@ def get_data_in_extent(
         for index in gdf.index:
             if index not in obs_df.index:
                 continue
-            data[index] = _combine_observations(obs_df.loc[[index], datcol], kind=kind)
+
+            data[index] = _combine_observations(
+                obs_df.loc[[index], datcol], kind=kind, bro_id=f"{index[0]}_{index[1]}"
+            )
             ids[index] = list(obs_df.loc[[index], "broId"])
         gdf[datcol] = data
         gdf[idcol] = ids
@@ -656,7 +661,7 @@ def _get_empty_observation_df(kind):
         raise (NotImplementedError(f"Measurement-kind {kind} not supported yet"))
 
 
-def _combine_observations(observations, kind):
+def _combine_observations(observations, kind, bro_id=None):
     obslist = []
     for observation in observations:
         if not isinstance(observation, pd.DataFrame) or observation.empty:
@@ -665,7 +670,11 @@ def _combine_observations(observations, kind):
     if len(obslist) == 0:
         return _get_empty_observation_df(kind)
     else:
-        return pd.concat(obslist).sort_index()
+        df = pd.concat(obslist).sort_index()
+        if kind == "gld":
+            df = gld._sort_observations(df)
+            df = gld._drop_duplicate_observations(df, bro_id=bro_id)
+        return df
 
 
 def get_tube_gdf_from_characteristics(characteristics_gdf, **kwargs):

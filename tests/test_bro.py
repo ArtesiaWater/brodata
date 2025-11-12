@@ -4,7 +4,7 @@ import tempfile
 import urllib
 import requests
 import pytest
-from pandas.testing import assert_frame_equal
+import pandas as pd
 
 import brodata
 
@@ -63,8 +63,8 @@ def test_gmw_get_gld_data_in_extent():
     )
     gdf3 = brodata.gmw.get_data_in_extent(fname_zip, combine=True)
 
-    assert_frame_equal(gdf1, gdf2)
-    assert_frame_equal(gdf1, gdf3)
+    pd.testing.assert_frame_equal(gdf1, gdf2)
+    pd.testing.assert_frame_equal(gdf1, gdf3)
 
 
 def test_gmw_get_gld_data_in_extent_as_csv():
@@ -110,6 +110,50 @@ def test_gld_get_objects_as_csv():
 
 def test_gld_get_series_as_csv():
     brodata.gld.get_series_as_csv("GLD000000012893")
+
+
+def test_gld_sort_measurements():
+    # this test checks that, from duplicate timestamps, the resulting measurements from
+    # `brodata.gld.process_observations` are the most important ones (volledigBeoordeeld
+    # and reguliereMeting)
+    time = "2020-7-1"
+    df = pd.DataFrame(
+        [
+            {
+                "time": time,
+                "value": 1.0,
+                "qualifier": "goedgekeurd",
+                "status": "voorlopig",
+                "observation_type": "reguliereMeting",
+            },
+            {
+                "time": time,
+                "value": 2.0,
+                "qualifier": "goedgekeurd",
+                "status": "volledigBeoordeeld",
+                "observation_type": "controleMeting",
+            },
+            {
+                "time": time,
+                "value": 3.0,
+                "qualifier": "goedgekeurd",
+                "status": "volledigBeoordeeld",
+                "observation_type": "reguliereMeting",
+            },
+            {
+                "time": time,
+                "value": 1.0,
+                "qualifier": "goedgekeurd",
+                "status": "voorlopig",
+                "observation_type": "reguliereMeting",
+            },
+        ]
+    ).set_index("time")
+
+    df_proc = brodata.gld.process_observations(df, "test")
+    assert len(df_proc.index) == 1
+    assert df_proc.iloc[0]["status"] == "volledigBeoordeeld"
+    assert df_proc.iloc[0]["observation_type"] == "reguliereMeting"
 
 
 def test_geotechnical_borehole_research():
