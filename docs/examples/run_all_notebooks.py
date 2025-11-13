@@ -1,5 +1,4 @@
 # %%
-import os
 import time
 from glob import glob
 
@@ -38,13 +37,5 @@ for notebook in notebook_list:
     # save results in notebook
     with open(notebook, "w", encoding="utf-8") as f:
         nbformat.write(nb, f)
-
-
-# %% clear output and metadata of all notebooks
-for notebook in notebook_list:
-    logger.info(f"Clearing output of notebook {notebook}")
-    os.system(
-        f"jupyter nbconvert --clear-output --inplace --ClearMetadataPreprocessor.enabled=True {notebook}"
-    )
 
 # %%
