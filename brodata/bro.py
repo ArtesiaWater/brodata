@@ -580,7 +580,7 @@ class FileOrUrl(ABC):
         if hasattr(self, "deliveredLocation"):
             if isinstance(self.deliveredLocation, Point):
                 props["x"] = self.deliveredLocation.x
-                props["y"] = self.deliveredLocation.ygmw
+                props["y"] = self.deliveredLocation.y
         name = util._format_repr(self, props)
         return name
 
