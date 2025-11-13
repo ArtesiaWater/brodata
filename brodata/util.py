@@ -131,7 +131,10 @@ def read_zipfile(fname, pathnames=None, override_ext=None):
                     if ext != ".csv":
                         logger.info(f"Skipping file: {file}")
                         continue
-                elif pathname == "DINO_VerticaalElektrischSondeeronderzoek":
+                elif pathname in [
+                    "DINO_VerticaalElektrischSondeeronderzoek",
+                    "DINO_GeoElectrischOnderzoek",
+                ]:
                     from .dino import VerticaalElektrischSondeeronderzoek as cl
 
                     if ext != ".csv":
