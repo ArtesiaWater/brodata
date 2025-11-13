@@ -572,11 +572,15 @@ class FileOrUrl(ABC):
 
     def __repr__(self):
         # retrieve properties if they exist
-        propdict = {"broId": "broId", "x": "x", "y": "y"}
+        propdict = {"broId": "broId"}
         props = {}
         for key in propdict:
             if hasattr(self, key):
                 props[propdict[key]] = getattr(self, key)
+        if hasattr(self, "deliveredLocation"):
+            if isinstance(self.deliveredLocation, Point):
+                props["x"] = self.deliveredLocation.x
+                props["y"] = self.deliveredLocation.ygmw
         name = util._format_repr(self, props)
         return name
 

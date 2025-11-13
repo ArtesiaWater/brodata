@@ -44,7 +44,7 @@ class GroundwaterMonitoringNetwork(bro.FileOrUrl):
                 if not hasattr(self, key):
                     self.measuringPoint = []
                 point = {}
-                self._read_children_of_children(child, point)
+                self._read_children_of_children(child, point, to_int="tubeNumber")
                 self.measuringPoint.append(point)
             else:
                 self._warn_unknown_tag(key)

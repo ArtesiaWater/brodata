@@ -100,14 +100,14 @@ class GroundwaterMonitoringWell(bro.FileOrUrl):
                         self._warn_unknown_tag(key)
 
             elif key in ["deliveredVerticalPosition", "registrationHistory"]:
-                for grandchild in child:
-                    key = self._get_tag(grandchild)
-                    setattr(self, key, grandchild.text)
+                to_float = ["offset", "groundLevelPosition"]
+                self._read_children_of_children(child, to_float=to_float)
             elif key in ["monitoringTube"]:
                 if not hasattr(self, key):
                     self.monitoringTube = []
                 tube = {}
                 to_float = [
+                    "tubeTopDiameter",
                     "tubeTopPosition",
                     "screenLength",
                     "screenTopPosition",
@@ -453,15 +453,6 @@ def get_tube_gdf(gmws, index=None):
     gdf = bro.objects_to_gdf(tubes, index=index)
 
     gdf = gdf.sort_index()
-
-    # makes sure some columns consist of floats
-    columns = [
-        "offset",
-        "groundLevelPosition",
-        "tubeTopDiameter",
-    ]
-    columns = [column for column in columns if column in gdf.columns]
-    gdf[columns] = gdf[columns].astype(float)
     return gdf
 
 

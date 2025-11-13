@@ -312,6 +312,11 @@ def get_data_in_extent(
     tubes = gmw_monitoringtube_items(
         extent, to_file=to_file, redownload=redownload, zipfile=zipfile
     )
+
+    if index is None:
+        index = ["gmw_bro_id", "tube_number"]
+    tubes = tubes.set_index(index)
+
     if kind is None:
         return tubes
 
@@ -410,10 +415,6 @@ def get_data_in_extent(
     # only keep tubes with active measurements
     mask = tubes["gm_gmw_monitoringtube_pk"].isin(meas_gdf["gm_gmw_monitoringtube_fk"])
     tubes = tubes[mask]
-
-    if index is None:
-        index = ["gmw_bro_id", "tube_number"]
-    tubes = tubes.set_index(index)
 
     if combine and kind in ["gld", "gar"]:
         logger.info("Adding observations to tube-properties")
