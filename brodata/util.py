@@ -26,120 +26,131 @@ def read_zipfile(fname, pathnames=None, override_ext=None):
         List of folder names within the ZIP archive to process. If None, all unique
         non-root directories are processed.
     override_ext : str, optional
-        File extension to override the default extension for the selected folder(s).
+        Removed argument from `read_zipfile`
 
     Returns
     -------
     dict
-        Nested dictionary where the first-level keys are folder names, and the
-        second-level keys are file base names.
+        Nested dictionary where the first-level keys are data-cathegories, and the
+        second-level keys are file base names (bro-id or nitg-nr).
         The values are either parsed objects (from corresponding classes) or file
         objects (e.g., PIL.Image for .tif files).
 
     Notes
     -----
-    - The function supports specific folder names and file types, mapping them to
-    corresponding classes for parsing.
-    - Unsupported folders are logged with a warning and skipped.
-    - If no files with the expected extension are found in a folder, a warning is
-    logged.
     - For .tif files, PIL.Image objects are returned.
     - For other supported types, the corresponding class is instantiated with the file
     and the ZipFile object.
     """
+    if override_ext is not None:
+        raise (Exception("The parameter `override_ext` is removed from `read_zipfile`"))
+
+    data = {}
     with ZipFile(fname) as zf:
         namelist = np.array(zf.namelist())
-        extensions = np.array([os.path.splitext(x)[1] for x in namelist])
-        dirnames = np.array([os.path.dirname(x) for x in namelist])
-        if pathnames is None:
-            pathnames = np.unique(dirnames)
-            pathnames = pathnames[pathnames != ""]
-        elif isinstance(pathnames, str):
-            pathnames = [pathnames]
-
-        data = {}
-        for pathname in pathnames:
-            data[pathname] = {}
-            logger.info(f"Reading {pathname} from {fname}")
-            if pathname == "BRO_Grondwatermonitoringput":
-                from .gmw import GroundwaterMonitoringWell
-
-                cl = GroundwaterMonitoringWell
-                ext = ".xml" if override_ext is None else override_ext
-            elif pathname == "BRO_Grondwatergebruiksysteem":
-                from .guf import GroundwaterUtilisationFacility
-
-                cl = GroundwaterUtilisationFacility
-                ext = ".xml" if override_ext is None else override_ext
-            elif pathname == "BRO_Grondwatermonitoringnet":
-                from .gmn import GroundwaterMonitoringNetwork
-
-                cl = GroundwaterMonitoringNetwork
-                ext = ".xml" if override_ext is None else override_ext
-            elif pathname == "BRO_Grondwaterstandonderzoek":
-                from .gld import GroundwaterLevelDossier
-
-                cl = GroundwaterLevelDossier
-                ext = ".xml" if override_ext is None else override_ext
-            elif pathname == "BRO_GeotechnischSondeeronderzoek":
-                from .cpt import ConePenetrationTest
-
-                cl = ConePenetrationTest
-                ext = ".xml" if override_ext is None else override_ext
-            elif pathname == "BRO_GeotechnischBooronderzoek":
-                from .bhr import GeotechnicalBoreholeResearch
-
-                cl = GeotechnicalBoreholeResearch
-                ext = ".xml" if override_ext is None else override_ext
-            elif pathname == "DINO_GeologischBooronderzoekBoormonsterprofiel":
-                from .dino import GeologischBooronderzoek
-
-                cl = GeologischBooronderzoek
-                ext = ".csv" if override_ext is None else override_ext
-            elif pathname == "DINO_GeotechnischSondeeronderzoek":
-                cl = None
-                ext = ".tif" if override_ext is None else override_ext
-            elif pathname == "DINO_GeologischBooronderzoekKorrelgrootteAnalyse":
-                logger.warning(f"Folder {pathname} not supported yet")
-                cl = None
-                ext = None
-            elif pathname == "DINO_GeologischBooronderzoekChemischeAnalyse":
-                logger.warning(f"Folder {pathname} not supported yet")
-                cl = None
-                ext = None
-            elif pathname == "DINO_Grondwatersamenstelling":
-                from .dino import Grondwatersamenstelling
-
-                cl = Grondwatersamenstelling
-                ext = ".csv"
-            elif pathname == "DINO_Grondwaterstanden":
-                from .dino import Grondwaterstand
-
-                cl = Grondwaterstand
-                ext = ".csv"
-            elif pathname == "DINO_VerticaalElektrischSondeeronderzoek":
-                from .dino import VerticaalElektrischSondeeronderzoek
-
-                cl = VerticaalElektrischSondeeronderzoek
-                ext = ".csv"
-            else:
-                logger.warning(f"Folder {pathname} not supported yet")
-                cl = None
-                ext = None
-
-            if cl is not None or ext == ".tif":
-                mask = (dirnames == pathname) & (extensions == ext)
-                if not mask.any():
-                    logger.warning(f"No {ext} files found in {pathname}.")
-                for file in namelist[mask]:
-                    name = os.path.splitext(os.path.basename(file))[0]
-                    if ext == ".tif":
-                        from PIL import Image
-
-                        data[pathname][name] = Image.open(zf.open(file))
+        for file in namelist:
+            name, ext = os.path.splitext(os.path.basename(file))
+            if name == "":
+                # this is a directory
+                continue
+            pathname = os.path.dirname(file)
+            if pathname == "":
+                # skip file in the root path (usually the file 'locatie_levering.kml')
+                continue
+            if pathnames is not None:
+                if pathname not in pathnames:
+                    continue
+            if pathname.startswith("BRO"):
+                if ext != ".xml":
+                    logger.info(f"Skipping file: {file}")
+                    continue
+                key = name[:3]
+                if name.startswith("BHR"):
+                    if pathname == "BRO_GeotechnischBooronderzoek":
+                        from .bhr import GeotechnicalBoreholeResearch as cl
+                    elif pathname == "BRO_GeologischBooronderzoek":
+                        from .bhr import GeologicalBoreholeResearch as cl
+                    elif pathname == "BodemkundigBooronderzoek":
+                        from .bhr import PedologicalBoreholeResearch as cl
                     else:
-                        data[pathname][name] = cl(file, zipfile=zf)
-        return data
+                        logger.warning(f"Unknown BHR-type: {pathname}")
+                elif name.startswith("CPT"):
+                    from .cpt import ConePenetrationTest as cl
+                elif name.startswith("EPC"):
+                    from .epc import ExplorationProductionConstruction as cl
+                elif name.startswith("FRD"):
+                    from .frd import FormationResistanceDossier as cl
+                elif name.startswith("GAR"):
+                    from .gar import GroundwaterAnalysisReport as cl
+                elif name.startswith("GLD"):
+                    from .gld import GroundwaterLevelDossier as cl
+                elif name.startswith("GMN"):
+                    from .gmn import GroundwaterMonitoringNetwork as cl
+                elif name.startswith("GMW"):
+                    from .gmw import GroundwaterMonitoringWell as cl
+                elif name.startswith("GPD"):
+                    from .gpd import GroundwaterProductionDossier as cl
+                elif name.startswith("GUF"):
+                    from .guf import GroundwaterUtilisationFacility as cl
+                elif name.startswith("SAD"):
+                    from .sad import SiteAssessmentData as cl
+                elif name.startswith("SFR"):
+                    from .sfr import SoilFaceResearch as cl
+                else:
+                    logger.warning("Unknown file-type: {file}")
+                    continue
+
+            elif pathname.startswith("DINO"):
+                key = pathname
+                if pathname == "DINO_GeologischBooronderzoekBoormonsterprofiel":
+                    from .dino import GeologischBooronderzoek as cl
+
+                    if ext != ".csv":
+                        logger.info(f"Skipping file: {file}")
+                        continue
+                elif pathname == "DINO_GeotechnischSondeeronderzoek":
+                    cl = None
+                    if ext != ".tif":
+                        logger.info(f"Skipping file: {file}")
+                        continue
+                elif pathname == "DINO_GeologischBooronderzoekKorrelgrootteAnalyse":
+                    logger.warning(f"Folder {pathname} not supported yet")
+                    continue
+                elif pathname == "DINO_GeologischBooronderzoekChemischeAnalyse":
+                    logger.warning(f"Folder {pathname} not supported yet")
+                    continue
+                elif pathname == "DINO_Grondwatersamenstelling":
+                    from .dino import Grondwatersamenstelling as cl
+
+                    if ext != ".csv":
+                        logger.info(f"Skipping file: {file}")
+                        continue
+                elif pathname == "DINO_Grondwaterstanden":
+                    from .dino import Grondwaterstand as cl
+
+                    if ext != ".csv":
+                        logger.info(f"Skipping file: {file}")
+                        continue
+                elif pathname == "DINO_VerticaalElektrischSondeeronderzoek":
+                    from .dino import VerticaalElektrischSondeeronderzoek as cl
+
+                    if ext != ".csv":
+                        logger.info(f"Skipping file: {file}")
+                        continue
+                else:
+                    logger.warning(f"Folder {pathname} not supported yet")
+                    continue
+
+            if key not in data:
+                data[key] = {}
+            logger.info(f"Reading {file} from {fname}")
+            if ext == ".tif":
+                from PIL import Image
+
+                data[key][name] = Image.open(zf.open(file))
+            else:
+                data[key][name] = cl(file, zipfile=zf)
+    return data
 
 
 def _get_to_file(fname, zipfile, to_path, _files):
