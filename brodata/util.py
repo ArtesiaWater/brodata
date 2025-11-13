@@ -14,7 +14,7 @@ except ImportError:
         return iterable if iterable is not None else []
 
 
-def read_zipfile(fname, pathnames=None, override_ext=None):
+def read_zipfile(fname, pathnames=None, use_bro_abbreviation=False, override_ext=None):
     """
     Read and parse files from a ZIP archive downloaded from BROloket.
 
@@ -25,13 +25,18 @@ def read_zipfile(fname, pathnames=None, override_ext=None):
     pathnames : list of str or str, optional
         List of folder names within the ZIP archive to process. If None, all unique
         non-root directories are processed.
+    use_bro_abbreviation: bool, optional
+        If True, use the abbreviation of bro-objects (e.g. GMW, GLD, BHR) to store the
+        data in the root of the returned dictionary. If False, use the first level of
+        the folder structure in the zip-file to store the returned objects (e.g.
+        BRO_Grondwatermonitoring, BRO_GeologischBooronderzoek). The default is False.
     override_ext : str, optional
         Removed argument from `read_zipfile`
 
     Returns
     -------
     dict
-        Nested dictionary where the first-level keys are data-cathegories, and the
+        Nested dictionary where the first-level keys are data-categories, and the
         second-level keys are file base names (bro-id or nitg-nr).
         The values are either parsed objects (from corresponding classes) or file
         objects (e.g., PIL.Image for .tif files).
@@ -64,7 +69,10 @@ def read_zipfile(fname, pathnames=None, override_ext=None):
                 if ext != ".xml":
                     logger.info(f"Skipping file: {file}")
                     continue
-                key = name[:3]
+                if use_bro_abbreviation:
+                    key = name[:3]
+                else:
+                    key = os.path.normpath(pathname).split(os.sep)[0]
                 if name.startswith("BHR"):
                     if pathname == "BRO_GeotechnischBooronderzoek":
                         from .bhr import GeotechnicalBoreholeResearch as cl
