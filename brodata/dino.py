@@ -98,6 +98,53 @@ def _get_data_within_extent(
     to_gdf=True,
     max_retries=2,
 ):
+    """Retrieve DINO data within a specified geographical extent or from local files.
+
+    This is a core function used by various data retrieval methods in the DINO system.
+    It can either load data from local files/archives or fetch it from the DINO server
+    based on geographical extent.
+
+    Parameters
+    ----------
+    dino_cl : class
+        The DINO data class to instantiate for each location (e.g., Grondwaterstand).
+    kind : str
+        The type of DINO data to retrieve (e.g., "Grondwaterstand", "Boorgatmeting").
+    extent : str, Path, or sequence
+        Either a path to local data, or a sequence of [xmin, xmax, ymin, ymax]
+        coordinates.
+    config : dict, optional
+        Configuration mapping for DINO data kinds. Uses default if None.
+    timeout : int or float, optional.
+        Timeout in seconds for network requests when downloading data. The default is 5.
+    silent : bool, default=False
+        If True, suppress progress output.
+    to_path : str, optional
+        Directory to save downloaded files. Created if it doesn't exist.
+    to_zip : str, optional
+        Path to save downloaded files in a zip archive.
+    redownload : bool, optional
+        If True, redownload data even if local files exist. The default is False.
+    x : str, optional
+        Name of the x-coordinate column. The default is "X-coordinaat".
+    y : str, optional
+        Name of the y-coordinate column. The default is "Y-coordinaat".
+    geometry : str, optional
+        Name of the geometry column if different from creating from x,y coordinates.
+    index : str, optional
+        Column(s) to use as index in the output GeoDataFrame. The default is "NITG-nr".
+    to_gdf : bool, optional
+        If True, return a GeoDataFrame; if False, return raw dictionary of objects. The
+        default is True
+    max_retries : int, optional
+        Maximum number of retries for failed network requests. The default is 2.
+
+    Returns
+    -------
+    geopandas.GeoDataFrame or dict
+        If to_gdf is True, returns a GeoDataFrame with the requested data.
+        If to_gdf is False, returns a dictionary of DINO objects.
+    """
     if isinstance(extent, (str, Path)):
         data = _get_data_from_path(extent, dino_cl, silent=silent)
         return objects_to_gdf(data, x, y, geometry, index, to_gdf)
@@ -205,9 +252,58 @@ def get_grondwaterstand(
     to_zip=None,
     redownload=False,
     to_gdf=True,
+    skip=None,
 ):
+    """
+    Get groundwater level (Grondwaterstand) data as a GeoDataFrame or raw objects.
+
+    Fetch Grondwaterstand data for a given geographical extent or load it from local
+    files. Data are retrieved per monitoring location and per piezometer. Results can
+    be returned as a GeoDataFrame or as a dictionary of Grondwaterstand objects.
+
+    Parameters
+    ----------
+    extent : str or sequence
+        The spatial extent ([xmin, xmax, ymin, ymax]) to filter the data.
+    config : dict, optional
+        Configuration mapping for available DINO data kinds. If None, a default
+        configuration is used.
+    timeout : int or float, optional
+        Timeout in seconds for network requests when downloading data. The default is 5.
+    silent : bool, optional
+        If True, suppress progress output.
+    to_path : str, optional
+        If not None, save the downloaded files in the directory named to_path. The
+        default is None.
+    to_zip : str, optional
+        If not None, save the downloaded files in a zip-file named to_zip. The default
+        is None.
+    redownload : bool, optional
+        When downloaded files exist in to_path or to_zip, read from these files when
+        redownload is False. If redownload is True, download the data again from the
+        DINO-server. The default is False.
+    to_gdf : bool, optional
+        If True (default), convert the loaded Grondwaterstand objects into a
+        geopandas.GeoDataFrame. If False, return the raw mapping of objects.
+    skip : str or iterable, optional
+        Name or iterable of location names to skip during download or processing.
+
+    Returns
+    -------
+    geopandas.GeoDataFrame or dict
+        If `to_gdf` is True, returns a GeoDataFrame indexed by ['Locatie',
+        'Filternummer']. If False, returns a dictionary with Grondwaterstand objects.
+
+    Notes
+    -----
+    - When `extent` is a path string, this function loads local data.
+    - When `to_zip` is provided, the function will create a temporary directory and
+      archive files into the supplied ZIP.
+    """
     dino_class = Grondwaterstand
     index = ["Locatie", "Filternummer"]
+    if skip is not None and isinstance(skip, str):
+        skip = [skip]
 
     if isinstance(extent, str):
         data = _get_data_from_path(extent, dino_class, silent=silent)
@@ -238,6 +334,8 @@ def get_grondwaterstand(
         os.makedirs(to_path)
     data = {}
     for name in util.tqdm(gdf.index, disable=silent):
+        if skip is not None and name in skip:
+            continue
         for i_st in range(1, gdf.at[name, "ST_CNT"] + 1):
             piezometer_nr = f"{i_st:03d}"
             url = f"{download_url}/{name}/{piezometer_nr}"
@@ -490,7 +588,8 @@ class Grondwaterstand(CsvFileOrUrl):
             '"Van deze put zijn geen standen opgenomen in de DINO-database"'
         ):
             return
-        self.meta, line = self._read_csv_part(f)
+        if "Peildatum" not in line:
+            self.meta, line = self._read_csv_part(f)
         self.data, line = self._read_csv_part(f)
         for column in ["Peildatum"]:
             if column in self.data.columns:

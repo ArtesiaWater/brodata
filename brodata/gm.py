@@ -2,6 +2,7 @@ import os
 from zipfile import ZipFile
 import logging
 import requests
+import urllib.request
 import json
 import pandas as pd
 import geopandas as gpd
@@ -117,7 +118,13 @@ def _gm_items(
     else:
         with open(to_file) as f:
             json_data = json.load(f)
-
+    if len(json_data["features"]) == 0:
+        msg = "No data found"
+        if extent is not None:
+            msg = f"{msg} for extent={extent}"
+        msg = f"{msg} on {url}"
+        logger.warning(msg)
+        return
     gdf = gpd.GeoDataFrame.from_features(json_data["features"], crs=crs)
     url = _get_next_url(json_data)
     if url is not None:
@@ -305,6 +312,11 @@ def get_data_in_extent(
     tubes = gmw_monitoringtube_items(
         extent, to_file=to_file, redownload=redownload, zipfile=zipfile
     )
+
+    if index is None:
+        index = ["gmw_bro_id", "tube_number"]
+    tubes = tubes.set_index(index)
+
     if kind is None:
         return tubes
 
@@ -404,10 +416,6 @@ def get_data_in_extent(
     mask = tubes["gm_gmw_monitoringtube_pk"].isin(meas_gdf["gm_gmw_monitoringtube_fk"])
     tubes = tubes[mask]
 
-    if index is None:
-        index = ["gmw_bro_id", "tube_number"]
-    tubes = tubes.set_index(index)
-
     if combine and kind in ["gld", "gar"]:
         logger.info("Adding observations to tube-properties")
 
@@ -430,3 +438,41 @@ def get_data_in_extent(
         return tubes
     else:
         return tubes, obs_df
+
+
+def get_kenset_geopackage(to_file=None, layer=None, redownload=False, index="bro_id"):
+    """
+    Download or read data from a geopackage-file for the whole of the Netherlands.
+
+    Parameters
+    ----------
+    to_file : str, optional
+        Path to save the downloaded GeoPackage file (with the extension `.gpkg`). If the
+        file exists and `redownload` is False, it will be reused. The default is None.
+    layer : str, optional
+        The layer within the geopackage. Possible values are 'gm_gmw',
+        'gm_gmw_monitoringtube', 'gm_gld', 'gm_gar', 'gm_gmn', 'gm_gmn_measuringpoint'
+        and 'gm_gmn_reference'. The default is None, which read data from the layer
+        "gm_gmw".
+    redownload : bool, optional
+        If True, forces redownload of the data even if `to_file` exists. The default is
+        False.
+    index : str, optional
+        The column to use for indexing in the resulting GeoDataFrame. The default is
+        "bro_id".
+
+    Returns
+    -------
+    gdf : gpd.GeoDataFrame
+        A GeoDataFrame containing the resulting objects.
+
+    """
+    url = "https://service.pdok.nl/bzk/bro-gminsamenhang-karakteristieken/atom/downloads/brogmkenset.gpkg"
+    if to_file is not None:
+        if redownload or not os.path.isfile(to_file):
+            urllib.request.urlretrieve(url, to_file)
+        url = to_file
+    gdf = gpd.read_file(url, layer=layer)
+    if index in gdf.columns:
+        gdf = gdf.set_index(index)
+    return gdf

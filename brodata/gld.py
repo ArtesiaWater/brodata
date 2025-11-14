@@ -419,13 +419,14 @@ class GroundwaterLevelDossier(bro.FileOrUrl):
                     qualifiers.append(value.text)
                 observation = pd.DataFrame(
                     {
-                        "time": pd.to_datetime(times, utc=True),
+                        "time": times,
                         "value": values,
                         "qualifier": qualifiers,
                         "status": status_value,
                         "observation_type": observation_type_value,
                     }
                 ).set_index("time")
+
                 if not hasattr(self, key):
                     self.observation = []
                 self.observation.append(observation)
@@ -442,7 +443,7 @@ class GroundwaterLevelDossier(bro.FileOrUrl):
 
 def process_observations(
     df,
-    bro_id,
+    bro_id="gld",
     to_wintertime=True,
     drop_duplicates=True,
     sort=True,
@@ -466,10 +467,12 @@ def process_observations(
         DataFrame containing the groundwater level observations, with a time
         index and columns such as "value", "qualifier", etc.
     bro_id : str
-        The BRO-ID of the Groundwater Level Dossier being processed.
+        The BRO-ID of the Groundwater Level Dossier being processed. Only used for
+        logging-purposes. The default is "gld".
     to_wintertime : bool, optional
         If True, the observation times are converted to Dutch winter time by
-        removing any time zone information and adding one hour. Default is True.
+        removing any time zone information and adding one hour. If to_wintertime is
+        False, observation times are kept in CET/CEST. Default is True.
     drop_duplicates : bool, optional
         If True, any duplicate observation times will be dropped, keeping only
         the first occurrence. Default is True.
@@ -490,15 +493,13 @@ def process_observations(
         (if any) removed, the time index sorted, and filtered by qualifier if
         applicable.
 
-    Notes
-    -----
-    The function assumes the 'time' index is in UTC if `to_wintertime=True` and
-    will convert it to Dutch winter time (CET/CEST).
     """
+    df.index = pd.to_datetime(df.index, utc=True)
     if to_wintertime:
         # remove time zone information by transforming to dutch winter time
-        one_hour = pd.Timedelta(1, unit="h")
-        df.index = pd.to_datetime(df.index, utc=True).tz_localize(None) + one_hour
+        df.index = df.index.tz_localize(None) + pd.Timedelta(1, unit="h")
+    else:
+        df.index = df.index.tz_convert("CET")
 
     if qualifier is not None:
         if isinstance(qualifier, str):
@@ -512,15 +513,38 @@ def process_observations(
     if tmax is not None:
         df = df.loc[: pd.Timestamp(tmax)]
 
-    if df.index.has_duplicates and drop_duplicates:
-        duplicates = df.index.duplicated(keep="first")
+    if sort:
+        df = _sort_observations(df)
+
+    if drop_duplicates:
+        df = _drop_duplicate_observations(df, bro_id=bro_id)
+
+    return df
+
+
+def _sort_observations(df):
+    if "observation_type" in df.columns:
+        # make sure measurements with observation_type set to reguliereMeting are first
+        sort_dict = {"reguliereMeting": 0, "controleMeting": 1}
+        df = df.sort_values("observation_type", key=lambda x: x.map(sort_dict))
+
+    if "status" in df.columns:
+        # make sure measurements with status set to volledigBeoordeeld are first
+        sort_dict = {"volledigBeoordeeld": 0, "voorlopig": 1, "onbekend": 2}
+        df = df.sort_values("status", key=lambda x: x.map(sort_dict))
+
+    # sort based on DatetimeIndex
+    df = df.sort_index()
+
+    return df
+
+
+def _drop_duplicate_observations(df, bro_id="gld", keep="first"):
+    if df.index.has_duplicates:
+        duplicates = df.index.duplicated(keep=keep)
         message = "{} contains {} duplicates (of {}). Keeping only first values."
         logger.warning(message.format(bro_id, duplicates.sum(), len(df.index)))
         df = df[~duplicates]
-
-    if sort:
-        # sort DataFrame
-        df = df.sort_index()
     return df
 
 
@@ -533,3 +557,6 @@ cl = GroundwaterLevelDossier
 
 get_bro_ids_of_bronhouder = partial(bro._get_bro_ids_of_bronhouder, cl)
 get_bro_ids_of_bronhouder.__doc__ = bro._get_bro_ids_of_bronhouder.__doc__
+
+get_data_for_bro_ids = partial(bro._get_data_for_bro_ids, cl)
+get_data_for_bro_ids.__doc__ = bro._get_data_for_bro_ids.__doc__

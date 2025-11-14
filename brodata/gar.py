@@ -115,6 +115,8 @@ class GroundwaterAnalysisReport(bro.FileOrUrl):
                 field_research.append(d2)
             # field_research.append(d)
         df = pd.DataFrame(field_research)
+        if "samplingDateTime" in df.columns:
+            df = df.set_index("samplingDateTime")
         return df
 
     def _read_laboratory_analysis(self, node):
@@ -147,6 +149,7 @@ class GroundwaterAnalysisReport(bro.FileOrUrl):
 
 
 def get_parameter_list(url=None, timeout=5, to_file=None, **kwargs):
+    """Download a DataFrame with gar-parameters from the BRO"""
     if url is None:
         url = "https://publiek.broservices.nl/bro/refcodes/v1/attribute_values?domain=urn:bro:gar:ParameterList&version=latest"
     r = requests.get(url, timeout=timeout, **kwargs)
@@ -163,6 +166,21 @@ def get_parameter_list(url=None, timeout=5, to_file=None, **kwargs):
 
     df = pd.json_normalize(data).set_index("code")
     return df
+
+
+def get_parameter_code(description, parameter_list=None):
+    """Get a parameter code from a parameter description"""
+    if parameter_list is None:
+        parameter_list = get_parameter_list()
+    code = parameter_list.index[parameter_list["description"] == description]
+    if len(code) == 0:
+        raise ValueError(f"Description {description} not found in Parameter List")
+    elif len(code) > 1:
+        raise ValueError(
+            f"Description {description} found more than once in Parameter List"
+        )
+
+    return code[0]
 
 
 def _get_empty_observation_df():
@@ -183,3 +201,6 @@ cl = GroundwaterAnalysisReport
 
 get_bro_ids_of_bronhouder = partial(bro._get_bro_ids_of_bronhouder, cl=cl)
 get_bro_ids_of_bronhouder.__doc__ = bro._get_bro_ids_of_bronhouder.__doc__
+
+get_data_for_bro_ids = partial(bro._get_data_for_bro_ids, cl)
+get_data_for_bro_ids.__doc__ = bro._get_data_for_bro_ids.__doc__
