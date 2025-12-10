@@ -35,6 +35,7 @@ nb_execution_mode = "auto"
 # Allow errors in notebooks, so we can see the error online
 nb_execution_allow_errors = True
 nb_merge_streams = True
+nb_execution_timeout = None
 
 # add a logo
 html_logo = "_static/logo_brodata_200.png"
