@@ -1,4 +1,4 @@
-nbsphinx
+myst-nb
 sphinx-rtd-theme
 ipykernel
 folium
