@@ -1,28 +1,6 @@
 /* --- Make pandas DataFrames scrollable --- */
-.nboutput table.dataframe, 
-.nboutput table {
+.dataframe {
     max-width: 100%;      /* Prevent table from exceeding container width */
-    width: auto;
     display: block;       /* Enables scrolling */
     overflow-x: auto;     /* Horizontal scroll for wide tables */
-    border-collapse: collapse;
-    margin: 0.5em 0;     /* Optional spacing */
-}
-
-/* Optional: make text slightly smaller so more fits */
-.nboutput table.dataframe td, 
-.nboutput table.dataframe th {
-    font-size: 0.9em;
-    padding: 0.3em 0.5em;
-}
-
-/* Optional: style headers */
-.nboutput table.dataframe th {
-    background-color: #f7f7f7;
-    font-weight: bold;
-}
-
-/* Optional: striped rows for readability */
-.nboutput table.dataframe tr:nth-child(even) {
-    background-color: #fafafa;
 }
