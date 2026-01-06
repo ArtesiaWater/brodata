@@ -694,6 +694,10 @@ def get_bro_lithology_properties():
             {"width": 50 / 60} | legend["zand"],
             {"width": 10 / 60} | legend["klei"],
         ],
+        "kleiigZandMetGrind": [
+            {"width": 42 / 60} | legend["zand"],
+            {"width": 18 / 60} | legend["klei"],
+        ],
         "siltigZand": [
             {"width": 42 / 60} | legend["zand"],
             {"width": 18 / 60} | legend["silt"],
