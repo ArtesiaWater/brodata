@@ -614,7 +614,19 @@ def get_bro_lithology_properties():
             {"width": 42 / 60} | legend["veen"],
             {"width": 18 / 60} | legend["klei"],
         ],
+        "zwakZandigSilt": [
+            {"width": 48 / 60} | legend["silt"],
+            {"width": 12 / 60} | legend["zand"],
+        ],
+        "zwakGrindigeKlei": [
+            {"width": 48 / 60} | legend["klei"],
+            {"width": 12 / 60} | legend["grind"],
+        ],
         "zwakZandigeKlei": [
+            {"width": 48 / 60} | legend["klei"],
+            {"width": 12 / 60} | legend["zand"],
+        ],
+        "zwakZandigeKleiMetGrind" [
             {"width": 48 / 60} | legend["klei"],
             {"width": 12 / 60} | legend["zand"],
         ],
@@ -625,6 +637,10 @@ def get_bro_lithology_properties():
         "sterkZandigeKlei": [
             {"width": 30 / 60} | legend["klei"],
             {"width": 30 / 60} | legend["zand"],
+        ],
+        "sterkZandigeKleiMetGrind": [
+            {"width": 36 / 60} | legend["klei"],
+            {"width": 24 / 60} | legend["leem"],  # with a hatch
         ],
         "zwakSiltigeKlei": [
             {"width": 50 / 60} | legend["klei"],
@@ -650,6 +666,10 @@ def get_bro_lithology_properties():
             {"width": 30 / 60} | legend["leem"],
             {"width": 30 / 60} | legend["zand"],
         ],
+        "zwakGrindigZand": [
+            {"width": 48 / 60} | legend["zand"],
+            {"width": 12 / 60} | legend["grind"],
+        ],
         "sterkGrindigZand": [
             {"width": 36 / 60} | legend["zand"],
             {"width": 24 / 60} | legend["grind"],
@@ -666,6 +686,10 @@ def get_bro_lithology_properties():
             {"width": 30 / 60} | legend["zand"],
             {"width": 30 / 60} | legend["leem"],
         ],
+        "siltigZandMetGrind": [
+            {"width": 42 / 60} | legend["zand"],
+            {"width": 18 / 60} | legend["silt"],
+        ],
         "kleiigZand": [
             {"width": 50 / 60} | legend["zand"],
             {"width": 10 / 60} | legend["klei"],
@@ -673,6 +697,10 @@ def get_bro_lithology_properties():
         "siltigZand": [
             {"width": 42 / 60} | legend["zand"],
             {"width": 18 / 60} | legend["silt"],
+        ],
+        "sterkZandigGrind": [
+            {"width": 36 / 60} | legend["grind"],
+            {"width": 24 / 60} | legend["zand"],
         ],
     }
     return legend
