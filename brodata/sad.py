@@ -1,4 +1,5 @@
 import pandas as pd
+import geopandas as gpd
 from functools import partial
 from . import bro
 
@@ -64,6 +65,12 @@ class SiteAssessmentData(bro.FileOrUrl):
 
         if hasattr(self, "measurementPoint"):
             self.measurementPoint = pd.DataFrame(self.measurementPoint)
+            if "deliveredLocation" in self.measurementPoint.columns:
+                self.measurementPoint = gpd.GeoDataFrame(
+                    self.measurementPoint, geometry="deliveredLocation"
+                )
+            if "name" in self.measurementPoint.columns:
+                self.measurementPoint.set_index("name", inplace=True)
         if hasattr(self, "mixedSampleAnalysis"):
             self.mixedSampleAnalysis = pd.DataFrame(self.mixedSampleAnalysis)
 
@@ -112,7 +119,7 @@ class SiteAssessmentData(bro.FileOrUrl):
         for child in node:
             key = self._get_tag(child)
             if key in ["identification", "name", "date", "finalDepth", "type"]:
-                d[key] = self._parse_text(child, key)
+                d[key] = self._parse_text(child, key, to_float=["finalDepth"])
             elif key == "deliveredLocation":
                 d[key] = self._read_geometry(child)
             elif key == "deliveredVerticalPosition":
@@ -158,7 +165,7 @@ class SiteAssessmentData(bro.FileOrUrl):
         for child in node:
             key = self._get_tag(child)
             if key in ["identification", "name", "upperBoundary", "lowerBoundary"]:
-                d[key] = self._parse_text(child, key)
+                d[key] = self._parse_text(child, key, to_float=["upperBoundary", "lowerBoundary"])
             elif key == "deliveredVerticalPosition":
                 self._read_delivered_vertical_position(child, d=d)
             elif key == "groundwaterSampling":

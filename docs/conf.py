@@ -9,7 +9,7 @@ from brodata import __version__
 # https://www.sphinx-doc.org/en/master/usage/configuration.html#project-information
 
 project = "brodata"
-copyright = "2025, Artesia"
+copyright = "2026, Artesia"
 author = "Artesia"
 release = __version__
 

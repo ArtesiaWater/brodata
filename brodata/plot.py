@@ -132,7 +132,7 @@ lithology_colors = {
     "leem": (194 / 255, 207 / 255, 92 / 255),
     "oer": (200 / 255, 200 / 255, 200 / 255),
     "puin": (200 / 255, 200 / 255, 200 / 255),
-    "slurrie": (144/255, 144/255, 144/255),  # same as slib, checked at B25A3512
+    "slurrie": (144 / 255, 144 / 255, 144 / 255),  # same as slib, checked at B25A3512
     "stenen": (216 / 255, 163 / 255, 32 / 255),
     "veen": (157 / 255, 78 / 255, 64 / 255),
     "zand": (1, 1, 0),
@@ -740,7 +740,11 @@ def bro_lithology_advanced(
     for index in df.index:
         # soil_name_column = "geotechnicalSoilName" for GeotechnicalBoreholeResearch
         # soil_name_column = "standardSoilName" for PedologicalBoreholeResearch
+        # soil_name_column = "soilName" for DescriptiveBoreholeLog in SiteAssessmentData
         sn = df.at[index, soil_name_column]
+        # sn can be nan
+        if pd.isna(sn):
+            sn = "grondNietGespecificeerd"
         left = x - width / 2
         if sn not in lithology_properties:
             msg = f"SoilName {sn} not supported"
