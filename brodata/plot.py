@@ -626,7 +626,7 @@ def get_bro_lithology_properties():
             {"width": 48 / 60} | legend["klei"],
             {"width": 12 / 60} | legend["zand"],
         ],
-        "zwakZandigeKleiMetGrind" [
+        "zwakZandigeKleiMetGrind": [
             {"width": 48 / 60} | legend["klei"],
             {"width": 12 / 60} | legend["zand"],
         ],
