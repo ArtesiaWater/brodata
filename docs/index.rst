@@ -5,7 +5,7 @@ brodata Documentation
 
 The "**Basisregistratie Ondergrond**" (BRO) is the Dutch national database for subsurface data, maintained by **TNO Geological Survey of the Netherlands**, on behalf of the Dutch government. The growing database is accessible via web services that provides data in XML format. The **brodata** package simplifies the process of querying, downloading, and processing this data.
 
-**brodata** is build and maintained by the private company **Artesia**. The source-code is available on `GitHub <https://github.com/ArtesiaWater/brodata>`__, where users can post issues or suggest improvements.
+**brodata** is build and maintained by the private company **Artesia**. The source-code is available on `GitHub <https://github.com/ArtesiaWater/brodata>`__, where users can post issues or suggest improvements. In the summer of 2025, the "**ministerie van Volkshuisvesting en Ruimtelijke Ordening**" (VRO) made a one-time donation to improve the documentation of this package.
 
 .. raw:: html
 
@@ -37,10 +37,11 @@ You can install the package using `pip` from `PyPI <https://pypi.org/project/bro
 About This Documentation
 ------------------------
 
-This website serves as the documentation for the **brodata** package. Use the menu on the left to navigate through the following sections:
+This website serves as the documentation for the **brodata** package. Use the menu below or on the left to navigate through the following sections:
 
 - **Package** – General information about the package setup.
-- **Examples** – Demonstrations of how to use the package, including how to download groundwater time-series and drilling data, and how to visualize them.
+- **BRO-domains** – Demonstrations of how to use the package, splitted into the 4 supported BRO-domains. This section demonstrates for example how to download groundwater time-series and drilling data, and how to visualize them.
+- **DINO Data** – Demonstrations of how to use the package for DINO data.
 - **API Docs** – Detailed documentation of classes and methods available in **brodata**, also accessible via your Python interpreter.
 
 Contents
@@ -51,7 +52,11 @@ Contents
    :caption: Contents:
 
    Package <package>
-   Examples <examples>
+   Groundwater Monitoring <groundwater_monitoring>
+   Subsurface Research <subsurface_research>
+   Groundwater Use <groundwater_use>
+   Site Quality <site_quality>
+   DINO Data <dino_data>
    API Docs <modules>
 
 Indices and Tables
