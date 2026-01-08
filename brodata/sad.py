@@ -165,7 +165,9 @@ class SiteAssessmentData(bro.FileOrUrl):
         for child in node:
             key = self._get_tag(child)
             if key in ["identification", "name", "upperBoundary", "lowerBoundary"]:
-                d[key] = self._parse_text(child, key, to_float=["upperBoundary", "lowerBoundary"])
+                d[key] = self._parse_text(
+                    child, key, to_float=["upperBoundary", "lowerBoundary"]
+                )
             elif key == "deliveredVerticalPosition":
                 self._read_delivered_vertical_position(child, d=d)
             elif key == "groundwaterSampling":
@@ -182,6 +184,42 @@ class SiteAssessmentData(bro.FileOrUrl):
                 self._warn_unknown_tag(key)
         if "groundwaterSampling" in d:
             d["groundwaterSampling"] = pd.DataFrame(d["groundwaterSampling"])
+            # Flatten groundwaterSampleAnalysis from each sampling into a per-filter DataFrame
+            analyses = []
+            for _, samp in d["groundwaterSampling"].iterrows():
+                samp_ident = samp.get("identification", None)
+                samp_name = samp.get("name", None)
+                samp_date = samp.get("date", None)
+                if "groundwaterSampleAnalysis" in samp and isinstance(
+                    samp["groundwaterSampleAnalysis"], pd.DataFrame
+                ):
+                    gsa_df = samp["groundwaterSampleAnalysis"]
+                    for _, gsa in gsa_df.iterrows():
+                        gsa_ident = gsa.get("identification", None)
+                        gsa_name = gsa.get("name", None)
+                        if "analysis" in gsa and isinstance(
+                            gsa["analysis"], pd.DataFrame
+                        ):
+                            for _, row in gsa["analysis"].iterrows():
+                                rowd = dict(row)
+                                # keep reference to the sampling and the sample analysis id
+                                rowd["groundwaterSampling_identification"] = samp_ident
+                                rowd["groundwaterSampling_name"] = samp_name
+                                rowd["groundwaterSampling_date"] = samp_date
+                                rowd["groundwaterSampleAnalysis_identification"] = (
+                                    gsa_ident
+                                )
+                                rowd["groundwaterSampleAnalysis_name"] = gsa_name
+                                analyses.append(rowd)
+            if len(analyses) > 0:
+                d["groundwaterSampleAnalysis"] = pd.DataFrame(analyses)
+            else:
+                d["groundwaterSampleAnalysis"] = pd.DataFrame()
+            # remove analysis results from groundwaterSampling to avoid duplication
+            if "groundwaterSampleAnalysis" in d["groundwaterSampling"].columns:
+                d["groundwaterSampling"] = d["groundwaterSampling"].drop(
+                    columns=["groundwaterSampleAnalysis"]
+                )
         return d
 
     def _read_groundwater_sampling(self, node):

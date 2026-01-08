@@ -710,6 +710,10 @@ def get_bro_lithology_properties():
             {"width": 36 / 60} | legend["grind"],
             {"width": 24 / 60} | legend["zand"],
         ],
+        "zandNietGespecificeerd": [
+            {"width": (24 / 60)} | legend["zand"],
+            {"width": (36 / 60)} | legend["grondNietGespecificeerd"],
+        ],
     }
     return legend
 
