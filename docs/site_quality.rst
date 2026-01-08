@@ -7,5 +7,4 @@ The following examples are available as Jupyter Notebooks.
   :maxdepth: 4
   :glob:
 
-  examples/1_3_1_bro_guf.ipynb
-  examples/1_3_2_bro_gpd.ipynb
+  examples/1_5_1_bro_sad.ipynb

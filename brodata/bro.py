@@ -628,9 +628,7 @@ class FileOrUrl(ABC):
         return util._get_tag(node)
 
     def _warn_unknown_tag(self, tag):
-        logger.warning(
-            f"Tag {tag} not supported in {self.__class__.__name__} {getattr(self, 'broId', '')}"
-        )
+        util._warn_unknown_tag(tag, self.__class__.__name__, getattr(self, "broId", ""))
 
     def _raise_assumed_single(self, key):
         raise ValueError(
@@ -677,8 +675,23 @@ class FileOrUrl(ABC):
                 setattr(self, key, self._read_date(child))
             elif key == "horizontalPositioningMethod":
                 setattr(self, key, child.text)
+            elif key == "horizontalPositioningOperator":
+                setattr(self, key, self._read_operator(child))
             else:
                 self._warn_unknown_tag(key)
+
+    def _read_operator(self, node):
+        d = {}
+        for child in node:
+            key = self._get_tag(child)
+            if key in [
+                "chamberOfCommerceNumber",
+                "europeanCompanyRegistrationNumber",
+            ]:
+                d[key] = child.text
+            else:
+                self._warn_unknown_tag(key)
+        return d
 
     def _read_standardized_location(self, node):
         for child in node:
@@ -700,6 +713,8 @@ class FileOrUrl(ABC):
                     value = np.nan
                 else:
                     value = float(child.text)
+            elif key == "verticalPositioningOperator":
+                value = self._read_operator(child)
             else:
                 value = child.text
 
@@ -773,6 +788,31 @@ class FileOrUrl(ABC):
         time_position = time_instant.find("gml:timePosition", ns)
         return pd.to_datetime(time_position.text)
 
+    def _read_data_array(self, node):
+        values = None
+        for child in node:
+            key = self._get_tag(child)
+            if key == "encoding":
+                ns = {"swe": "http://www.opengis.net/swe/2.0"}
+                text_encoding = child.find("swe:TextEncoding", ns)
+                encoding = text_encoding.attrib.copy()
+            elif key == "elementCount":
+                pass
+            elif key == "elementType":
+                pass
+            elif key == "values":
+                values = pd.read_csv(
+                    StringIO(child.text),
+                    header=None,
+                    decimal=encoding["decimalSeparator"],
+                    sep=encoding["tokenSeparator"],
+                    lineterminator=encoding["blockSeparator"],
+                    na_values=-999999,
+                )
+            else:
+                self._warn_unknown_tag(key)
+        return values
+
     def _read_descriptive_borehole_log(self, node):
         d = {}
         to_float = ["upperBoundary", "lowerBoundary"]
@@ -791,6 +831,155 @@ class FileOrUrl(ABC):
         if "layer" in d:
             d["layer"] = pd.DataFrame(d["layer"])
         return d
+
+    def _read_soil(self, node, d):
+        for child in node:
+            key = self._get_tag(child)
+            if key in [
+                "geotechnicalSoilName",
+                "soilNameNEN5104",
+                "gravelContentClassNEN5104",
+                "organicMatterContentClassNEN5104",
+                "colour",
+                "mottled",
+                "interbedding",
+                "carbonateContentClass",
+                "organicMatterContentClass",
+                "crossBedding",
+                "gradedBedding",
+                "mixed",
+                "mixingType",
+                "gravelMedianClass",
+                "fineGravelContentClass",
+                "mediumCoarseGravelContentClass",
+                "veryCoarseGravelContentClass",
+                "sandMedianClass",
+                "sandSortingNEN5104",
+                "peatType",
+                "organicSoilTexture",
+                "fineSoilConsistency",
+                "organicSoilConsistency",
+                "peatTensileStrength",
+                "geotechnicalDepositionalCharacteristic",
+                "depositionalAge",
+                "classificationLoamBased",
+                "pedologicalSoilName",
+                "structureType",
+                "estimatedDensity",
+                "ripeningClass",
+                "vertic",
+                "containsShellMatter",
+                "containsGravel",
+                "gravelContentClass",
+                "chunk",
+                "moistness",
+            ]:
+                d[key] = child.text
+            elif key in ["estimatedOrganicMatterContent", "estimatedClayContent"]:
+                d[key] = float(child.text)
+            elif key in ["tertiaryConstituent", "dispersedInhomogeneity"]:
+                if key not in d:
+                    d[key] = []
+                d[key].append(child.text)
+            elif key == "grainshape":
+                for grandchild in child:
+                    key = self._get_tag(grandchild)
+                    if key in ["sizeFraction", "angularity", "sphericity"]:
+                        d[key].append(child.text)
+                    else:
+                        self._warn_unknown_tag(key)
+            elif key == "incompleteFractionSpecification":
+                for grandchild in child:
+                    key = self._get_tag(grandchild)
+                    if key in ["estimatedOrganicMatterContent", "estimatedClayContent"]:
+                        d[key] = float(grandchild.text)
+                    else:
+                        self._warn_unknown_tag(key)
+            elif key == "stain":
+                for grandchild in child:
+                    key = self._get_tag(grandchild)
+                    if key in ["stainColour", "mottlingDensity", "evenlyMottled"]:
+                        d[key] = grandchild.text
+                    else:
+                        self._warn_unknown_tag(key)
+            elif key == "soilAggregate":
+                for grandchild in child:
+                    key = self._get_tag(grandchild)
+                    if key in [
+                        "aggregateShape",
+                        "angularity",
+                        "roughness",
+                        "aggregateLengthClass",
+                        "poreAbundanceClass",
+                        "horizontallyAligned",
+                        "disintegrating",
+                    ]:
+                        d[key] = grandchild.text
+                    else:
+                        self._warn_unknown_tag(key)
+            elif key == "fractionDistribution":
+                for grandchild in child:
+                    key = self._get_tag(grandchild)
+                    if key in [
+                        "estimatedGravelContent",
+                        "estimatedShellMatterContent",
+                        "estimatedOrganicMatterContent",
+                        "estimatedFineFractionContent",
+                    ]:
+                        d[key] = float(grandchild.text)
+                    elif key == "fineFractionDistribution":
+                        for greatgrandchild in grandchild:
+                            key = self._get_tag(greatgrandchild)
+                            if key in [
+                                "estimatedClayContent",
+                                "estimatedSiltContent",
+                                "estimatedSandContent",
+                            ]:
+                                d[key] = float(greatgrandchild.text)
+                            else:
+                                self._warn_unknown_tag(key)
+                    else:
+                        self._warn_unknown_tag(key)
+            elif key == "munsellColour":
+                for grandchild in child:
+                    key = self._get_tag(grandchild)
+                    if key in ["munsellHue", "munsellValue", "munsellChroma"]:
+                        d[key] = grandchild.text
+                    else:
+                        self._warn_unknown_tag(key)
+            else:
+                self._warn_unknown_tag(key)
+
+    def _read_rock(self, node, d):
+        for child in node:
+            key = self._get_tag(child)
+            if key in [
+                "rockType",
+                "cementType",
+                "colour",
+                "carbonateContentClass",
+                "crossBedding",
+                "gradedBedding",
+                "voidsPresent",
+                "voidDistribution",
+                "stability",
+                "strengthClass",
+                "weathered",
+            ]:
+                d[key] = child.text
+            elif key in ["tertiaryRockConstituent", "dispersedInhomogeneity"]:
+                if key not in d:
+                    d[key] = []
+                d[key].append(child.text)
+            elif key == "weatheringDegree":
+                for grandchild in child:
+                    key = self._get_tag(grandchild)
+                    if key in ["discolouration", "disintegration", "decomposition"]:
+                        d[key] = grandchild.text
+                    else:
+                        self._warn_unknown_tag(key)
+            else:
+                self._warn_unknown_tag(key)
 
 
 def get_bronhouders(index="kvk", **kwargs):

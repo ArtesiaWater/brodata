@@ -11,7 +11,11 @@ logger = logging.getLogger(__name__)
 
 
 class _BoreholeResearch(bro.FileOrUrl):
-    """Class to represent a Borehole Research (BHR) from the BRO."""
+    """Class to represent a Borehole Research (BHR) from the BRO.
+
+    BHR-GT: https://www.bro-productomgeving.nl/__attachments/1607501782/DO_ResponseBHR_GT_O_DP.xml?inst-v=b22a9e44-fb13-4fb2-8480-df44d20adeb7
+    link found at https://www.bro-productomgeving.nl/bpo/latest/bhr-gt-voorbeeldberichten-uitgifte)
+    """
 
     def _read_contents(self, tree):
         ns = {

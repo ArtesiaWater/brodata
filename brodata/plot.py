@@ -750,7 +750,7 @@ def bro_lithology_advanced(
             msg = f"SoilName {sn} not supported"
             if bro_id is not None:
                 msg = f"{msg} (found at broId {bro_id})"
-            logger.warning(f"{msg}. Please add {sn} to lithology_properties")
+            logger.warning(f"{msg}. Please add {sn} to lithology_properties.")
             continue
         ps = lithology_properties[sn]
         if isinstance(ps, dict):
