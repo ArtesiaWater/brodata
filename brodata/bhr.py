@@ -58,13 +58,8 @@ class _BoreholeResearch(bro.FileOrUrl):
                         setattr(self, key, float(grandchild.text))
                     else:
                         self._warn_unknown_tag(key)
-            elif key in [
-                "registrationHistory",
-                "reportHistory",
-            ]:
-                for grandchild in child:
-                    key = self._get_tag(grandchild)
-                    setattr(self, key, grandchild.text)
+            elif key in ["registrationHistory", "reportHistory"]:
+                self._read_children_of_children(child)
             elif key == "deliveredVerticalPosition":
                 self._read_delivered_vertical_position(child)
             elif key == "boring":

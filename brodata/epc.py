@@ -57,9 +57,7 @@ class ExplorationProductionConstruction(bro.FileOrUrl):
             elif key == "sourceReference":
                 self._read_source_reference(child)
             elif key in ["registrationHistory", "reportHistory"]:
-                for grandchild in child:
-                    key2 = self._get_tag(grandchild)
-                    setattr(self, key2, grandchild.text)
+                self._read_children_of_children(child)
             elif key == "lifespan":
                 self._read_lifespan(child)
             elif key == "constructionHistory":
@@ -123,12 +121,11 @@ class ExplorationProductionConstruction(bro.FileOrUrl):
         for child in node:
             key = self._get_tag(child)
             if key in ["horizontalPositioningDate"]:
+                setattr(self, key, self._read_date(child))
+            elif key == "horizontalPositioningMethod":
                 setattr(self, key, child.text)
-            elif key in [
-                "horizontalPositioningMethod",
-                "horizontalPositioningOperator",
-            ]:
-                setattr(self, key, child.text)
+            elif key == "horizontalPositioningOperator":
+                self._read_operator(child)
             else:
                 self._warn_unknown_tag(key)
 

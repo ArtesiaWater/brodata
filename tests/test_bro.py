@@ -332,6 +332,6 @@ def test_site_assessment_data():
     fname = os.path.join("tests", "data", "SAD000000011742.xml")
     brodata.sad.SiteAssessmentData(fname)
 
-def test_exploration_production_construction()
+def test_exploration_production_construction():
     fname = os.path.join("tests", "data", "EPC000000000140.xml")
     brodata.epc.ExplorationProductionConstruction(fname)
