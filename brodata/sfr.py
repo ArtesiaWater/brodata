@@ -3,7 +3,6 @@ from functools import partial
 import pandas as pd
 
 from . import bro
-from .bhr import GeotechnicalBoreholeResearch
 
 logger = logging.getLogger(__name__)
 
@@ -51,33 +50,21 @@ class SoilFaceResearch(bro.FileOrUrl):
             elif key in ["researchOperator"]:
                 setattr(self, key, self._read_operator(child))
             elif key == "siteCharacteristic":
-                for grandchild in child:
-                    key = self._get_tag(grandchild)
-                    if key == "SiteCharacteristic":
-                        self._read_children_of_children(grandchild)
-                    else:
-                        self._warn_unknown_tag(key)
+                if self._check_single_child_with_tag(child, "SiteCharacteristic"):
+                    child = child[0]
+                self._read_children_of_children(child)
             elif key == "soilUncovering":
-                for grandchild in child:
-                    key = self._get_tag(grandchild)
-                    if key == "SoilUncovering":
-                        self._read_children_of_children(grandchild)
-                    else:
-                        self._warn_unknown_tag(key)
+                if self._check_single_child_with_tag(child, "SoilUncovering"):
+                    child = child[0]
+                self._read_children_of_children(child)
             elif key == "soilFaceDescription":
-                for grandchild in child:
-                    key = self._get_tag(grandchild)
-                    if key == "SoilFaceDescription":
-                        self._read_soil_face_description(grandchild)
-                    else:
-                        self._warn_unknown_tag(key)
+                if self._check_single_child_with_tag(child, "soilFaceDescription"):
+                    child = child[0]
+                self._read_soil_face_description(child)
             elif key == "soilFaceSampleAnalysis":
-                for grandchild in child:
-                    key = self._get_tag(grandchild)
-                    if key == "SoilFaceSampleAnalysis":
-                        self._read_soil_face_sample_analysis(grandchild)
-                    else:
-                        self._warn_unknown_tag(key)
+                if self._check_single_child_with_tag(child, "SoilFaceSampleAnalysis"):
+                    child = child[0]
+                self._read_soil_face_sample_analysis(child)
             else:
                 self._warn_unknown_tag(key)
 
