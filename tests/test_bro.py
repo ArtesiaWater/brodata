@@ -165,6 +165,13 @@ def test_geotechnical_borehole_research():
     brodata.bhr.bhrgt_graph(fname)
 
 
+def test_geotechnical_borehole_research_with_investigated_interval():
+    bhr = brodata.bhr.GeotechnicalBoreholeResearch.from_bro_id("BHR000000365423")
+    assert isinstance(bhr.boredInterval, pd.DataFrame)
+    assert isinstance(bhr.investigatedInterval, pd.DataFrame)
+    brodata.plot.descriptive_borehole_log(bhr)
+
+
 def test_pedological_borehole_research():
     fname = os.path.join("tests", "data", "BHR000000175723.xml")
     brodata.bhr.PedologicalBoreholeResearch(fname)

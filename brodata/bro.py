@@ -496,21 +496,6 @@ class FileOrUrl(ABC):
         to_dict():
             Converts instance attributes to a dictionary, excluding methods and
             private attributes.
-
-        _check_for_rejection(tree):
-            Checks XML for rejection responses and raises an error if found.
-
-        _read_children_of_children(node, d=None, to_float=None):
-            Recursively reads child elements, converting specified ones to float.
-
-        _read_delivered_location(node):
-            Extracts geographic location and date information from the XML node.
-
-        _read_date(node):
-            Extracts date information from the XML, handling multiple formats.
-
-        _read_time_instant(node):
-            Extracts time instant information from a GML-compliant time element.
     """
 
     def __init__(
@@ -627,13 +612,18 @@ class FileOrUrl(ABC):
     def _get_tag(node):
         return util._get_tag(node)
 
-    def _warn_unknown_tag(self, tag):
-        util._warn_unknown_tag(tag, self.__class__.__name__, getattr(self, "broId", ""))
+    def _warn_unknown_tag(self, tag, parent=None):
+        class_name = self.__class__.__name__
+        bro_id = getattr(self, "broId", "")
+        util._warn_unknown_tag(tag, parent, class_name, bro_id)
 
     def _raise_assumed_single(self, key):
         raise ValueError(
             f"Assumed there is only one {key} in {self.__class__.__name__} {getattr(self, 'broId', '')}"
         )
+
+    def _check_single_child_with_tag(self, node, tag):
+        return len(node) == 1 and self._get_tag(node[0]) == tag
 
     def _read_children_of_children(self, node, d=None, to_float=None, to_int=None):
         if to_float is not None and isinstance(to_float, str):
@@ -815,16 +805,59 @@ class FileOrUrl(ABC):
 
     def _read_descriptive_borehole_log(self, node):
         d = {}
-        to_float = ["upperBoundary", "lowerBoundary"]
         for child in node:
             key = self._get_tag(child)
-            if len(child) == 0:
+            if key in [
+                "descriptionQuality",
+                "describedSamplesQuality",
+                "continuouslySampled",
+                "descriptionLocation",
+                "describedMaterial",
+                "sampleMoistness",
+                "boreholeLogChecked",
+            ]:
                 d[key] = child.text
             elif key == "layer":
                 if key not in d:
                     d[key] = []
+                if self._check_single_child_with_tag(child, "Layer"):
+                    child = child[0]
                 layer = {}
-                self._read_children_of_children(child, d=layer, to_float=to_float)
+                for grandchild in child:
+                    key2 = self._get_tag(grandchild)
+                    if key2 in ["upperBoundary", "lowerBoundary"]:
+                        layer[key2] = self._parse_float(grandchild)
+                    elif key2 in [
+                        "upperBoundaryDetermination",
+                        "lowerBoundaryDetermination",
+                        "anthropogenic",
+                        "activityType",
+                        "specialMaterial",
+                        "slant",
+                        "internalStructureIntact",
+                        "bedded",
+                        "compositeLayer",
+                        "bedding",
+                        "rooted",
+                        "identification",
+                    ]:
+                        layer[key2] = grandchild.text
+                    elif key2 == "soil":
+                        self._read_soil(grandchild, layer)
+                    elif key2 == "rock":
+                        self._read_rock(grandchild, layer)
+                    elif key2 == "soilType":
+                        for greatgrandchild in grandchild:
+                            key2 = self._get_tag(greatgrandchild)
+                            if key2 in ["soilName", "sandMedianClass"]:
+                                layer[key2] = greatgrandchild.text
+                    elif key2 == "particularConstituent":
+                        for greatgrandchild in grandchild:
+                            key2 = self._get_tag(greatgrandchild)
+                            if key2 in ["ConstituentType"]:
+                                layer[key2] = greatgrandchild.text
+                    else:
+                        self._warn_unknown_tag(key2)
                 d[key].append(layer)
             else:
                 self._warn_unknown_tag(key)
@@ -885,7 +918,7 @@ class FileOrUrl(ABC):
                 for grandchild in child:
                     key = self._get_tag(grandchild)
                     if key in ["sizeFraction", "angularity", "sphericity"]:
-                        d[key].append(child.text)
+                        d[key] = grandchild.text
                     else:
                         self._warn_unknown_tag(key)
             elif key == "incompleteFractionSpecification":
@@ -944,6 +977,13 @@ class FileOrUrl(ABC):
                 for grandchild in child:
                     key = self._get_tag(grandchild)
                     if key in ["munsellHue", "munsellValue", "munsellChroma"]:
+                        d[key] = grandchild.text
+                    else:
+                        self._warn_unknown_tag(key)
+            elif key == "sandFraction":
+                for grandchild in child:
+                    key = self._get_tag(grandchild)
+                    if key in ["sandMedianClass", "sandSorting"]:
                         d[key] = grandchild.text
                     else:
                         self._warn_unknown_tag(key)

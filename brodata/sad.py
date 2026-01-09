@@ -125,30 +125,23 @@ class SiteAssessmentData(bro.FileOrUrl):
             elif key == "deliveredVerticalPosition":
                 self._read_delivered_vertical_position(child, d=d)
             elif key == "boreholeSampleDescription":
-                for grandchild in child:
-                    key = self._get_tag(grandchild)
-                    if key == "BoreholeSampleDescription":
-                        self._read_borehole_sample_description(grandchild, d)
-                    else:
-                        self._warn_unknown_tag(key)
+                if self._check_single_child_with_tag(
+                    child, "BoreholeSampleDescription"
+                ):
+                    child = child[0]
+                self._read_borehole_sample_description(child, d)
             elif key == "soilSampling":
                 if key not in d:
                     d[key] = []
-                for grandchild in child:
-                    key2 = self._get_tag(grandchild)
-                    if key2 == "SoilSampling":
-                        d[key].append(self._read_soil_sampling(grandchild))
-                    else:
-                        self._warn_unknown_tag(key2)
+                if self._check_single_child_with_tag(child, "SoilSampling"):
+                    child = child[0]
+                d[key].append(self._read_soil_sampling(child))
             elif key == "filter":
                 if key not in d:
                     d[key] = []
-                for grandchild in child:
-                    key2 = self._get_tag(grandchild)
-                    if key2 == "Filter":
-                        d[key].append(self._read_filter(grandchild))
-                    else:
-                        self._warn_unknown_tag(key2)
+                if self._check_single_child_with_tag(child, "Filter"):
+                    child = child[0]
+                d[key].append(self._read_filter(child))
             else:
                 self._warn_unknown_tag(key)
 
