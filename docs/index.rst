@@ -40,7 +40,7 @@ About This Documentation
 This website serves as the documentation for the **brodata** package. Use the menu below or on the left to navigate through the following sections:
 
 - **Package** – General information about the package setup.
-- **BRO-domains** – Demonstrations of how to use the package, splitted into the 4 supported BRO-domains. This section demonstrates for example how to download groundwater time-series and drilling data, and how to visualize them.
+- **BRO-domains** – Demonstrations of how to use the package, splitted into the 5 supported BRO-domains (the 6th domain, Models and maps, is not supported). This section demonstrates for example how to download groundwater time-series and drilling data, and how to visualize them.
 - **DINO Data** – Demonstrations of how to use the package for DINO data.
 - **API Docs** – Detailed documentation of classes and methods available in **brodata**, also accessible via your Python interpreter.
 
@@ -55,6 +55,7 @@ Contents
    Groundwater Monitoring <groundwater_monitoring>
    Subsurface Research <subsurface_research>
    Groundwater Use <groundwater_use>
+   Mining Act <mining_act>
    Site Quality <site_quality>
    DINO Data <dino_data>
    API Docs <modules>

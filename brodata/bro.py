@@ -716,7 +716,7 @@ class FileOrUrl(ABC):
     def _read_lifespan(self, node, d=None):
         for child in node:
             key = self._get_tag(child)
-            if key in ["startTime", "endTime"]:
+            if key in ["startDate", "startTime", "endTime"]:
                 if d is None:
                     setattr(self, key, self._read_date(child))
                 else:
