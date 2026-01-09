@@ -1,6 +1,6 @@
-===============
-Groundwater Use
-===============
+==========
+Mining Act
+==========
 The following examples are available as Jupyter Notebooks.
 
 .. toctree::
