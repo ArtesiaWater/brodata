@@ -165,6 +165,13 @@ def test_geotechnical_borehole_research():
     brodata.bhr.bhrgt_graph(fname)
 
 
+def test_geotechnical_borehole_research_with_investigated_interval():
+    bhr = brodata.bhr.GeotechnicalBoreholeResearch.from_bro_id("BHR000000365423")
+    assert isinstance(bhr.boredInterval, pd.DataFrame)
+    assert isinstance(bhr.investigatedInterval, pd.DataFrame)
+    brodata.plot.descriptive_borehole_log(bhr)
+
+
 def test_pedological_borehole_research():
     fname = os.path.join("tests", "data", "BHR000000175723.xml")
     brodata.bhr.PedologicalBoreholeResearch(fname)
@@ -206,6 +213,10 @@ def test_gar_get_parameter_list():
 def test_soil_face_research():
     fname = os.path.join("tests", "data", "SFR000000000243.xml")
     brodata.sfr.SoilFaceResearch(fname)
+
+
+def test_soil_face_research_with_non_standardised_fraction():
+    brodata.sfr.SoilFaceResearch.from_bro_id("SFR000000001861")
 
 
 def test_groundwater_monitoring_network():
@@ -320,3 +331,8 @@ def test_get_gpd():
 def test_site_assessment_data():
     fname = os.path.join("tests", "data", "SAD000000011742.xml")
     brodata.sad.SiteAssessmentData(fname)
+
+
+def test_exploration_production_construction():
+    fname = os.path.join("tests", "data", "EPC000000000140.xml")
+    brodata.epc.ExplorationProductionConstruction(fname)

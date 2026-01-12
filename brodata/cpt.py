@@ -95,30 +95,8 @@ class ConePenetrationTest(bro.FileOrUrl):
             ]:
                 self._read_children_of_children(child)
             elif key in ["cptResult", "disResult"]:
-                for grandchild in child:
-                    key2 = grandchild.tag.split("}", 1)[1]
-                    if key2 == "encoding":
-                        ns = {"swe": "http://www.opengis.net/swe/2.0"}
-                        text_encoding = grandchild.find("swe:TextEncoding", ns)
-                        for key3 in text_encoding.attrib:
-                            setattr(self, f"{name}_{key3}", text_encoding.attrib[key3])
-
-                    elif key2 == "elementCount":
-                        pass
-                    elif key2 == "elementType":
-                        pass
-                    elif key2 == "values":
-                        values = pd.read_csv(
-                            StringIO(grandchild.text),
-                            header=None,
-                            decimal=getattr(self, f"{name}_decimalSeparator"),
-                            sep=getattr(self, f"{name}_tokenSeparator"),
-                            lineterminator=getattr(self, f"{name}_blockSeparator"),
-                            na_values=-999999,
-                        )
-                        setattr(self, name, values)
-                    else:
-                        self._warn_unknown_tag(key)
+                setattr(self, name, self._read_data_array(child))
+                
             else:
                 self._warn_unknown_tag(key)
 

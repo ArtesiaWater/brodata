@@ -577,10 +577,35 @@ def bro_lithology(df, **kwargs):
 
 
 def get_dino_lithology_colors():
+    """
+    Retrieve the standard color mapping for DINO lithology types.
+
+    Returns
+    -------
+    dict
+        A dictionary mapping lithology type names to their corresponding color values
+        used for visualization in plots and maps.
+    """
     return lithology_colors
 
 
 def get_bro_lithology_properties():
+    """
+    Retrieve a comprehensive legend dictionary for BRO (Basisregistratie Ondergrond) lithology properties.
+    This function defines visual properties (colors and hatching patterns) for various soil and rock types
+    used in geological mapping, including:
+    - Primary lithologies (veen, klei, leem, zand, grind, silt)
+    - Unspecified categories (nietBepaald, grondNietGespecificeerd)
+    - Complex composite lithologies with width-based proportions for mixed soil types
+
+    Returns
+    -------
+        dict: A dictionary mapping lithology type names (str) to their visual properties (dict or list of dict).
+              Each property dict contains:
+              - "color": tuple of RGB values (normalized to 0-1 range)
+              - "hatch": str, optional pattern for visualization ("-", "/", "\\", ".", "o", "|")
+              - "width": float, optional proportion value used for composite lithologies
+    """
     legend = {
         "veen": {"color": (153 / 255, 76 / 255, 58 / 255), "hatch": "-"},
         "klei": {"color": (0, 150 / 255, 8 / 255), "hatch": "/"},
@@ -710,6 +735,10 @@ def get_bro_lithology_properties():
             {"width": 36 / 60} | legend["grind"],
             {"width": 24 / 60} | legend["zand"],
         ],
+        "zandNietGespecificeerd": [
+            {"width": (24 / 60)} | legend["zand"],
+            {"width": (36 / 60)} | legend["grondNietGespecificeerd"],
+        ],
     }
     return legend
 
@@ -727,6 +756,58 @@ def bro_lithology_advanced(
     hatch_linewidth=2,
     bro_id=None,
 ):
+    """
+    Plot advanced lithology data from a BRO (Basisregistratie Ondergrond) dataframe.
+    This function visualizes soil layers with customizable colors, patterns, and
+    hatching, creating a detailed stratigraphic column representation.
+
+    Parameters
+    ----------
+    df : pandas.DataFrame
+        DataFrame containing borehole lithology data with columns for soil names and
+        depth boundaries.
+    soil_name_column : str, optional
+        Name of the column containing soil classifications. Default is
+        "geotechnicalSoilName". Other options include "soilNameNEN5104",
+        "standardSoilName" or "soilName" depending on data source.
+    z : float, optional
+        Base depth (z-coordinate) for the plot in meters. Default is 0.0.
+    x : float, optional
+        Horizontal x-coordinate position for the lithology column. Default is 0.5.
+    width : float, optional
+        Base width of the lithology column. Default is 0.1.
+    lithology_properties : dict, optional
+        Dictionary mapping soil names to their visual properties (color, hatch pattern,
+        width). If None, properties are loaded from get_bro_lithology_properties().
+        Default is None.
+    ax : matplotlib.axes.Axes, optional
+        Matplotlib axes object to plot on. If None, uses current axes. Default is None.
+    hatch_factor : float, optional
+        Scaling factor for hatch pattern density. Default is 2.
+    hatch_color : tuple, optional
+        RGBA color tuple for hatch patterns. Default is (0.0, 0.0, 0.0, 0.2) (semi-
+        transparent black).
+    hatch_linewidth : float, optional
+        Line width for hatch patterns in points. Default is 2.
+    bro_id : str or int, optional
+        BRO identifier for logging purposes. Used in warning messages. Default is None.
+
+    Returns
+    -------
+    list
+        List of matplotlib Rectangle patch handles for the plotted soil layers.
+
+    Raises
+    ------
+    ValueError
+        If the specified soil_name_column is not present in the dataframe.
+
+    Notes
+    -----
+    - Soil names with NaN values are mapped to "grondNietGespecificeerd" (unspecified ground).
+    - Unsupported soil names generate warning messages but do not halt execution.
+    - Lithology properties can be overridden per layer using the lithology_properties dictionary.
+    """
     # TODO: create a legend. See https://stackoverflow.com/questions/55501860/how-to-put-multiple-colormap-patches-in-a-matplotlib-legend
     ax = plt.gca() if ax is None else ax
 
@@ -739,6 +820,7 @@ def bro_lithology_advanced(
     handles = []
     for index in df.index:
         # soil_name_column = "geotechnicalSoilName" for GeotechnicalBoreholeResearch
+        # soil_name_column = "soilNameNEN5104" for GeologicalBoreholeResearch
         # soil_name_column = "standardSoilName" for PedologicalBoreholeResearch
         # soil_name_column = "soilName" for DescriptiveBoreholeLog in SiteAssessmentData
         sn = df.at[index, soil_name_column]
@@ -750,7 +832,7 @@ def bro_lithology_advanced(
             msg = f"SoilName {sn} not supported"
             if bro_id is not None:
                 msg = f"{msg} (found at broId {bro_id})"
-            logger.warning(f"{msg}. Please add {sn} to lithology_properties")
+            logger.warning(f"{msg}. Please add {sn} to lithology_properties.")
             continue
         ps = lithology_properties[sn]
         if isinstance(ps, dict):
@@ -768,3 +850,75 @@ def bro_lithology_advanced(
             left = left + w
             handles.append(h)
     return handles
+
+
+def descriptive_borehole_log(
+    bhr,
+    attr="descriptiveBoreholeLog",
+    soil_name_column="geotechnicalSoilName",
+    figsize=None,
+    width=0.2,
+    ylabel=None,
+    nap=True,
+):
+    """
+    Generate a descriptive borehole log visualization.
+
+    Parameters
+    ----------
+    bhr : object
+        Borehole object containing descriptive log data, offset, and bored interval information.
+    soil_name_column : str, optional
+        Name of the column containing soil classifications. Default is
+        "geotechnicalSoilName". Other options include "soilNameNEN5104",
+        "standardSoilName" or "soilName" depending on data source.
+    figsize : tuple, optional
+        Figure size as (width, height) in inches. If None, uses matplotlib default.
+    width : float, default=0.2
+        Width of each borehole column in the plot.
+    ylabel : str, optional
+        Label for the y-axis. If None, defaults to "z (m t.o.v. NAP)" if nap=True,
+        or "z (m t.o.v. maaiveld)" if nap=False.
+    nap : bool, default=True
+        If True, use NAP (Normaal Amsterdams Peil) reference level for depth.
+        If False, use ground level (maaiveld) as reference.
+
+    Returns
+    -------
+    f : matplotlib.figure.Figure
+        The generated figure object.
+    ax : matplotlib.axes.Axes
+        The axes object containing the plot.
+    """
+    if nap:
+        z = bhr.offset
+    else:
+        z = 0.0
+
+    if ylabel is None:
+        if nap:
+            ylabel = "z (m t.o.v. NAP)"
+        else:
+            ylabel = "z (m t.o.v. maaiveld)"
+
+    f, ax = plt.subplots(figsize=figsize, layout="constrained")
+    xticks = []
+    xticklabels = []
+    df = getattr(bhr, attr)
+    if not isinstance(df, list):
+        df = [df]
+    for x, bl in enumerate(df):
+        df = bl["layer"]
+        bro_lithology_advanced(
+            df, x=x, width=width, z=z, ax=ax, soil_name_column=soil_name_column
+        )
+        xticks.append(x)
+        xticklabels.append(bl["descriptionQuality"])
+    ax.set_xlim(-0.5, x + 0.5)
+    ax.set_ylim(z - bhr.boredInterval["endDepth"].max(), z)
+    ax.set_xticks(xticks)
+    ax.set_xticklabels(xticklabels)
+    ax.set_ylabel(ylabel)
+    ax.set_axisbelow(True)
+    ax.grid()
+    return f, ax

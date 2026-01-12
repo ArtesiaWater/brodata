@@ -81,16 +81,12 @@ class GroundwaterUtilisationFacility(bro.FileOrUrl):
                     else:
                         self._warn_unknown_tag(key)
             elif key == "realisedInstallation":
-                for grandchild in child:
-                    key = self._get_tag(grandchild)
-                    if key == "RealisedInstallation":
-                        setattr(
-                            self,
-                            "realisedInstallation",
-                            self._read_realised_installation(grandchild),
-                        )
-                    else:
-                        self._warn_unknown_tag(key)
+                if not hasattr(self, key):
+                    self.realisedInstallation = []
+                if self._check_single_child_with_tag(child, "RealisedInstallation"):
+                    child = child[0]
+                ri = self._read_realised_installation(child)
+                self.realisedInstallation.append(ri)
             else:
                 self._warn_unknown_tag(key)
         if hasattr(self, "designLoop"):
@@ -101,6 +97,8 @@ class GroundwaterUtilisationFacility(bro.FileOrUrl):
             self.realisedLoop = pd.DataFrame(self.realisedLoop)
         if hasattr(self, "realisedWell"):
             self.realisedWell = pd.DataFrame(self.realisedWell)
+        if hasattr(self, "realisedInstallation"):
+            self.realisedInstallation = pd.DataFrame(self.realisedInstallation)
         if hasattr(self, "licensedQuantity"):
             self.licensedQuantity = pd.DataFrame(self.licensedQuantity)
         if hasattr(self, "designInstallation"):
@@ -119,13 +117,10 @@ class GroundwaterUtilisationFacility(bro.FileOrUrl):
             elif key == "designInstallation":
                 if not hasattr(self, key):
                     self.designInstallation = []
-                for grandchild in child:
-                    key = self._get_tag(grandchild)
-                    if key == "DesignInstallation":
-                        di = self._read_design_installation(grandchild)
-                        self.designInstallation.append(di)
-                    else:
-                        self._warn_unknown_tag(key)
+                if self._check_single_child_with_tag(child, "DesignInstallation"):
+                    child = child[0]
+                di = self._read_design_installation(child)
+                self.designInstallation.append(di)
             elif key == "licensedQuantity":
                 if not hasattr(self, key):
                     self.licensedQuantity = []
@@ -158,21 +153,15 @@ class GroundwaterUtilisationFacility(bro.FileOrUrl):
             elif key == "designLoop":
                 if not hasattr(self, key):
                     self.designLoop = []
-                for grandchild in child:
-                    key = self._get_tag(grandchild)
-                    if key == "DesignLoop":
-                        self.designLoop.append(self._read_design_loop(grandchild))
-                    else:
-                        self._warn_unknown_tag(key)
+                if self._check_single_child_with_tag(child, "DesignLoop"):
+                    child = child[0]
+                self.designLoop.append(self._read_design_loop(child))
             elif key == "designWell":
                 if not hasattr(self, key):
                     self.designWell = []
-                for grandchild in child:
-                    key = self._get_tag(grandchild)
-                    if key == "DesignWell":
-                        self.designWell.append(self._read_design_well(grandchild))
-                    else:
-                        self._warn_unknown_tag(key)
+                if self._check_single_child_with_tag(child, "DesignWell"):
+                    child = child[0]
+                self.designWell.append(self._read_design_well(child))
             else:
                 self._warn_unknown_tag(key)
         return d
@@ -237,22 +226,15 @@ class GroundwaterUtilisationFacility(bro.FileOrUrl):
             elif key == "realisedLoop":
                 if not hasattr(self, key):
                     self.realisedLoop = []
-                for grandchild in child:
-                    key = self._get_tag(grandchild)
-                    if key == "RealisedLoop":
-                        self.realisedLoop.append(self._read_realised_loop(grandchild))
-                    else:
-                        self._warn_unknown_tag(key)
+                if self._check_single_child_with_tag(child, "RealisedLoop"):
+                    child = child[0]
+                self.realisedLoop.append(self._read_realised_loop(child))
             elif key == "realisedWell":
                 if not hasattr(self, key):
                     self.realisedWell = []
-                for grandchild in child:
-                    key = self._get_tag(grandchild)
-                    if key == "RealisedWell":
-                        loop = self._read_realised_well(grandchild)
-                        self.realisedWell.append(loop)
-                    else:
-                        self._warn_unknown_tag(key)
+                if self._check_single_child_with_tag(child, "RealisedWell"):
+                    child = child[0]
+                self.realisedWell.append(self._read_realised_well(child))
             else:
                 self._warn_unknown_tag(key)
         return d

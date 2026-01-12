@@ -49,6 +49,8 @@ class GroundwaterProductionDossier(bro.FileOrUrl):
 
         if hasattr(self, "report"):
             self.report = pd.DataFrame(self.report)
+            if "reportId" in self.report.columns:
+                self.report = self.report.set_index("reportId")
         if hasattr(self, "volumeSeries"):
             self.volumeSeries = pd.DataFrame(self.volumeSeries)
             for column in ["beginDate", "endDate"]:
