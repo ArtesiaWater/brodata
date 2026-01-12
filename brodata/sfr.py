@@ -58,7 +58,7 @@ class SoilFaceResearch(bro.FileOrUrl):
                     child = child[0]
                 self._read_children_of_children(child)
             elif key == "soilFaceDescription":
-                if self._check_single_child_with_tag(child, "soilFaceDescription"):
+                if self._check_single_child_with_tag(child, "SoilFaceDescription"):
                     child = child[0]
                 self._read_soil_face_description(child)
             elif key == "soilFaceSampleAnalysis":
