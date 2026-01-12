@@ -208,3 +208,18 @@ def _format_repr(self, props):
 
 def _get_tag(node):
     return node.tag.split("}", 1)[1]
+
+
+def _warn_unknown_tag(tag, parent=None, class_name=None, bro_id=None):
+    msg = f"Tag {tag} "
+    if parent is not None:
+        msg = f"{msg} of parent {parent} "
+    msg = f"{msg} not supported"
+    if class_name is not None:
+        msg = f"{msg} in {class_name}"
+    if bro_id is not None:
+        if class_name is None:
+            msg = f"{msg} in"
+        msg = f"{msg} {bro_id}"
+
+    logger.warning(msg)

@@ -1,4 +1,5 @@
 import pandas as pd
+import geopandas as gpd
 from functools import partial
 from . import bro
 
@@ -9,15 +10,14 @@ class SiteAssessmentData(bro.FileOrUrl):
     _rest_url = "https://publiek.broservices.nl/sq/sad/v1"
     _xmlns = "http://www.broservices.nl/xsd/dssad-internal/1.1"
     _char = "SAD_C"
-    _namespace = {
+
+    def _read_contents(self, tree):
+        ns = {
         "brocom": "http://www.broservices.nl/xsd/brocommon/3.0",
         "gml": "http://www.opengis.net/gml/3.2",
         "sadcommon": "http://www.broservices.nl/xsd/sadcommon-internal/1.1",
-        "xmlns": _xmlns,
+        "xmlns": self._xmlns,
     }
-
-    def _read_contents(self, tree):
-        ns = self._namespace
         sads = tree.findall(".//xmlns:SAD_O", ns)
         if len(sads) != 1:
             raise (Exception("Only one SAD_O supported"))
@@ -64,6 +64,12 @@ class SiteAssessmentData(bro.FileOrUrl):
 
         if hasattr(self, "measurementPoint"):
             self.measurementPoint = pd.DataFrame(self.measurementPoint)
+            if "deliveredLocation" in self.measurementPoint.columns:
+                self.measurementPoint = gpd.GeoDataFrame(
+                    self.measurementPoint, geometry="deliveredLocation"
+                )
+            if "name" in self.measurementPoint.columns:
+                self.measurementPoint.set_index("name", inplace=True)
         if hasattr(self, "mixedSampleAnalysis"):
             self.mixedSampleAnalysis = pd.DataFrame(self.mixedSampleAnalysis)
 
@@ -112,36 +118,29 @@ class SiteAssessmentData(bro.FileOrUrl):
         for child in node:
             key = self._get_tag(child)
             if key in ["identification", "name", "date", "finalDepth", "type"]:
-                d[key] = self._parse_text(child, key)
+                d[key] = self._parse_text(child, key, to_float=["finalDepth"])
             elif key == "deliveredLocation":
                 d[key] = self._read_geometry(child)
             elif key == "deliveredVerticalPosition":
                 self._read_delivered_vertical_position(child, d=d)
             elif key == "boreholeSampleDescription":
-                for grandchild in child:
-                    key = self._get_tag(grandchild)
-                    if key == "BoreholeSampleDescription":
-                        self._read_borehole_sample_description(grandchild, d)
-                    else:
-                        self._warn_unknown_tag(key)
+                if self._check_single_child_with_tag(
+                    child, "BoreholeSampleDescription"
+                ):
+                    child = child[0]
+                self._read_borehole_sample_description(child, d)
             elif key == "soilSampling":
                 if key not in d:
                     d[key] = []
-                for grandchild in child:
-                    key2 = self._get_tag(grandchild)
-                    if key2 == "SoilSampling":
-                        d[key].append(self._read_soil_sampling(grandchild))
-                    else:
-                        self._warn_unknown_tag(key2)
+                if self._check_single_child_with_tag(child, "SoilSampling"):
+                    child = child[0]
+                d[key].append(self._read_soil_sampling(child))
             elif key == "filter":
                 if key not in d:
                     d[key] = []
-                for grandchild in child:
-                    key2 = self._get_tag(grandchild)
-                    if key2 == "Filter":
-                        d[key].append(self._read_filter(grandchild))
-                    else:
-                        self._warn_unknown_tag(key2)
+                if self._check_single_child_with_tag(child, "Filter"):
+                    child = child[0]
+                d[key].append(self._read_filter(child))
             else:
                 self._warn_unknown_tag(key)
 
@@ -158,7 +157,9 @@ class SiteAssessmentData(bro.FileOrUrl):
         for child in node:
             key = self._get_tag(child)
             if key in ["identification", "name", "upperBoundary", "lowerBoundary"]:
-                d[key] = self._parse_text(child, key)
+                d[key] = self._parse_text(
+                    child, key, to_float=["upperBoundary", "lowerBoundary"]
+                )
             elif key == "deliveredVerticalPosition":
                 self._read_delivered_vertical_position(child, d=d)
             elif key == "groundwaterSampling":
@@ -175,6 +176,42 @@ class SiteAssessmentData(bro.FileOrUrl):
                 self._warn_unknown_tag(key)
         if "groundwaterSampling" in d:
             d["groundwaterSampling"] = pd.DataFrame(d["groundwaterSampling"])
+            # Flatten groundwaterSampleAnalysis from each sampling into a per-filter DataFrame
+            analyses = []
+            for _, samp in d["groundwaterSampling"].iterrows():
+                samp_ident = samp.get("identification", None)
+                samp_name = samp.get("name", None)
+                samp_date = samp.get("date", None)
+                if "groundwaterSampleAnalysis" in samp and isinstance(
+                    samp["groundwaterSampleAnalysis"], pd.DataFrame
+                ):
+                    gsa_df = samp["groundwaterSampleAnalysis"]
+                    for _, gsa in gsa_df.iterrows():
+                        gsa_ident = gsa.get("identification", None)
+                        gsa_name = gsa.get("name", None)
+                        if "analysis" in gsa and isinstance(
+                            gsa["analysis"], pd.DataFrame
+                        ):
+                            for _, row in gsa["analysis"].iterrows():
+                                rowd = dict(row)
+                                # keep reference to the sampling and the sample analysis id
+                                rowd["groundwaterSampling_identification"] = samp_ident
+                                rowd["groundwaterSampling_name"] = samp_name
+                                rowd["groundwaterSampling_date"] = samp_date
+                                rowd["groundwaterSampleAnalysis_identification"] = (
+                                    gsa_ident
+                                )
+                                rowd["groundwaterSampleAnalysis_name"] = gsa_name
+                                analyses.append(rowd)
+            if len(analyses) > 0:
+                d["groundwaterSampleAnalysis"] = pd.DataFrame(analyses)
+            else:
+                d["groundwaterSampleAnalysis"] = pd.DataFrame()
+            # remove analysis results from groundwaterSampling to avoid duplication
+            if "groundwaterSampleAnalysis" in d["groundwaterSampling"].columns:
+                d["groundwaterSampling"] = d["groundwaterSampling"].drop(
+                    columns=["groundwaterSampleAnalysis"]
+                )
         return d
 
     def _read_groundwater_sampling(self, node):

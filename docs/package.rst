@@ -1,6 +1,6 @@
-========
+=======
 Package
-========
+=======
 This section describes the general setup of the Python-package `brodata`.
 
 .. toctree::
@@ -8,3 +8,4 @@ This section describes the general setup of the Python-package `brodata`.
   :glob:
 
   package/*
+  examples/3_1_files.ipynb
