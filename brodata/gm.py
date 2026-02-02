@@ -121,8 +121,8 @@ def _gm_items(
     if len(json_data["features"]) == 0:
         msg = "No data found"
         if extent is not None:
-            msg = f"{msg} for extent={extent}"
-        msg = f"{msg} on {url}"
+            msg = "%s for extent=%s" % (msg, extent)
+        msg = "%s on %s" % (msg, url)
         logger.warning(msg)
         return
     gdf = gpd.GeoDataFrame.from_features(json_data["features"], crs=crs)
@@ -228,6 +228,7 @@ def get_data_in_extent(
     to_path=None,
     to_zip=None,
     redownload=False,
+    skip_errors=False,
 ):
     """
     Retrieve metadata and observations within a specified spatial extent.
@@ -273,6 +274,9 @@ def get_data_in_extent(
         When downloaded files exist in to_path or to_zip, read from these files when
         redownload is False. If redownload is True, download the data again from the
         BRO-servers. The default is False.
+    skip_errors : bool, optional
+        If True, errors during downloading or processing of individual observation
+        files are skipped with a warning. Defaults to False.
 
     Returns
     -------
@@ -297,7 +301,7 @@ def get_data_in_extent(
     _files = None
     if to_zip is not None:
         if not redownload and os.path.isfile(to_zip):
-            logger.info(f"Reading data from {to_zip}")
+            logger.info("Reading data from %s", to_zip)
             zipfile = ZipFile(to_zip)
         else:
             if to_path is None:
@@ -375,15 +379,32 @@ def get_data_in_extent(
         ):
             # download the data
             if as_csv:
-                df = gld.get_objects_as_csv(
-                    url,
-                    qualifier=qualifier,
-                    rapportagetype="compact",
-                    to_file=to_file,
-                )
-                meas_dict = {"broId": bro_id, datcol: df}
+                try:
+                    df = gld.get_objects_as_csv(
+                        url,
+                        qualifier=qualifier,
+                        rapportagetype="compact",
+                        to_file=to_file,
+                    )
+                    meas_dict = {"broId": bro_id, datcol: df}
+                except Exception as e:
+                    if skip_errors:
+                        logger.error(
+                            "Error processing %s csv for broid %s: %s", kind, bro_id, e
+                        )
+                        continue
             else:
-                meas_dict = meas_cl(url, to_file=to_file, **meas_cl_kwargs).to_dict()
+                try:
+                    meas_dict = meas_cl(
+                        url, to_file=to_file, **meas_cl_kwargs
+                    ).to_dict()
+                except Exception as e:
+                    if skip_errors:
+                        logger.error(
+                            "Error processing %s xml for broid %s: %s", kind, bro_id, e
+                        )
+                        continue
+
         else:
             # read the data from a file
             if as_csv:
