@@ -498,7 +498,7 @@ class CsvFileOrUrl:
         # this is the new format of properties from dinoloket
         df, line = self._read_csv_part(f, header=None, index_col=0, **kwargs)
         # remove empty columns
-        df = df.loc[:, ~df.isna().all(0)]
+        df = df.loc[:, ~df.isna().all(axis=0)]
         if merge_columns:
             for index in df.index:
                 df.at[index, 1] = " ".join(df.loc[index, ~df.loc[index].isna()].values)
