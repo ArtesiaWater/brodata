@@ -97,6 +97,7 @@ def _get_data_within_extent(
     index="NITG-nr",
     to_gdf=True,
     max_retries=2,
+    continue_on_error=False,
 ):
     """Retrieve DINO data within a specified geographical extent or from local files.
 
@@ -138,6 +139,9 @@ def _get_data_within_extent(
         default is True
     max_retries : int, optional
         Maximum number of retries for failed network requests. The default is 2.
+    continue_on_error : bool, optional
+        If True, continue after an error occurs during downloading or processing of
+        individual observation data. Defaults to False.
 
     Returns
     -------
@@ -195,9 +199,15 @@ def _get_data_within_extent(
             if not redownload and os.path.isfile(to_file):
                 data[dino_nr] = dino_cl(to_file)
                 continue
-        data[dino_nr] = dino_cl.from_dino_nr(
-            dino_nr, timeout=timeout, to_file=to_file, max_retries=max_retries
-        )
+        try:
+            data[dino_nr] = dino_cl.from_dino_nr(
+                dino_nr, timeout=timeout, to_file=to_file, max_retries=max_retries
+            )
+        except Exception as e:
+            if not continue_on_error:
+                raise e
+            logger.error("Error retrieving %s %s: %s", kind, dino_nr, e)
+            continue
     if to_zip is not None:
         util._save_data_to_zip(to_zip, files, remove_path_again, to_path)
 
@@ -253,6 +263,7 @@ def get_grondwaterstand(
     redownload=False,
     to_gdf=True,
     skip=None,
+    continue_on_error=False,
 ):
     """
     Get groundwater level (Grondwaterstand) data as a GeoDataFrame or raw objects.
@@ -287,6 +298,9 @@ def get_grondwaterstand(
         geopandas.GeoDataFrame. If False, return the raw mapping of objects.
     skip : str or iterable, optional
         Name or iterable of location names to skip during download or processing.
+    continue_on_error : bool, optional
+        If True, continue after an error occurs during downloading or processing of
+        individual observation data. Defaults to False.
 
     Returns
     -------
@@ -346,9 +360,21 @@ def get_grondwaterstand(
                 if not redownload and os.path.isfile(to_file):
                     data[f"{name}_{piezometer_nr}"] = dino_class(to_file)
                     continue
-            data[f"{name}_{piezometer_nr}"] = dino_class(
-                url, timeout=timeout, to_file=to_file
-            )
+            try:
+                data[f"{name}_{piezometer_nr}"] = dino_class(
+                    url, timeout=timeout, to_file=to_file
+                )
+            except Exception as e:
+                if not continue_on_error:
+                    raise e
+                logger.error(
+                    "Error retrieving %s %s piezometer %s: %s",
+                    kind,
+                    name,
+                    piezometer_nr,
+                    e,
+                )
+                continue
     if to_zip is not None:
         util._save_data_to_zip(to_zip, files, remove_path_again, to_path)
     return objects_to_gdf(

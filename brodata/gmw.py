@@ -153,6 +153,7 @@ def get_observations(
     to_zip=None,
     redownload=False,
     zipfile=None,
+    continue_on_error=False,
     _files=None,
 ):
     """
@@ -200,6 +201,9 @@ def get_observations(
     zipfile : zipfile.ZipFile, optional
         A zipfile-object. When not None, zipfile is used to read previously downloaded
         data from. The default is None.
+    continue_on_error : bool, optional
+        If True, continue after an error occurs during downloading or processing of
+        individual observation data. Defaults to False.
 
 
     Returns
@@ -252,6 +256,25 @@ def get_observations(
     to_file = None
     if to_path is not None and not os.path.isdir(to_path):
         os.makedirs(to_path)
+
+    meas_cl_kwargs = {}
+    if kind == "gld":
+        if tmin is not None:
+            meas_cl_kwargs["tmin"] = tmin
+        if tmax is not None:
+            meas_cl_kwargs["tmax"] = tmax
+        if qualifier is not None:
+            meas_cl_kwargs["qualifier"] = qualifier
+        meas_cl = gld.GroundwaterLevelDossier
+    elif kind == "gar":
+        meas_cl = gar.GroundwaterAnalysisReport
+    elif kind == "frd":
+        meas_cl = frd.FormationResistanceDossier
+    elif kind == "gmn":
+        meas_cl = gmn.GroundwaterMonitoringNetwork
+    else:
+        raise (ValueError(f"kind='{kind}' not supported"))
+
     for bro_id in util.tqdm(np.unique(bro_ids), disable=silent, desc=desc):
         to_rel_file = util._get_to_file(
             f"gmw_relations_{bro_id}.json", zipfile, to_path, _files
@@ -289,53 +312,48 @@ def get_observations(
                 to_file = util._get_to_file(fname, zipfile, to_path, _files)
                 if zipfile is None and (
                     redownload or to_file is None or not os.path.isfile(to_file)
-                ):
-                    if kind == "gld":
-                        if as_csv:
+                ):  # download the data
+                    if as_csv:
+                        try:
                             df = gld.get_objects_as_csv(
                                 ref["broId"], qualifier=qualifier, to_file=to_file
                             )
-                        else:
-                            df = gld.GroundwaterLevelDossier.from_bro_id(
+                        except Exception as e:
+                            if not continue_on_error:
+                                raise e
+                            logger.error(
+                                "Error processing %s csv for broid %s: %s",
+                                kind,
                                 ref["broId"],
-                                qualifier=qualifier,
-                                to_file=to_file,
-                                tmin=tmin,
-                                tmax=tmax,
+                                e,
                             )
-                    elif kind == "gar":
-                        df = gar.GroundwaterAnalysisReport.from_bro_id(
-                            ref["broId"], to_file=to_file
-                        )
-                    elif kind == "frd":
-                        df = frd.FormationResistanceDossier.from_bro_id(
-                            ref["broId"], to_file=to_file
-                        )
-                    elif kind == "gmn":
-                        df = gmn.GroundwaterMonitoringNetwork.from_bro_id(
-                            ref["broId"], to_file=to_file
-                        )
+                    else:
+                        try:
+                            df = meas_cl.from_bro_id(
+                                ref["broId"], to_file=to_file, **meas_cl_kwargs
+                            )
+                        except Exception as e:
+                            if not continue_on_error:
+                                raise e
+                            logger.error(
+                                "Error processing %s xml for broid %s: %s",
+                                kind,
+                                ref["broId"],
+                                e,
+                            )
                 else:
-                    if kind == "gld":
-                        if as_csv:
-                            if zipfile is not None:
-                                to_file = zipfile.open(to_file)
-                            df = gld.read_gld_csv(
-                                to_file,
-                                ref["broId"],
-                                rapportagetype="compact_met_timestamps",
-                                qualifier=qualifier,
-                            )
-                        else:
-                            df = gld.GroundwaterLevelDossier(
-                                to_file, qualifier=qualifier, zipfile=zipfile
-                            )
-                    elif kind == "gar":
-                        df = gar.GroundwaterAnalysisReport(to_file, zipfile=zipfile)
-                    elif kind == "frd":
-                        df = frd.FormationResistanceDossier(to_file, zipfile=zipfile)
-                    elif kind == "gmn":
-                        df = gmn.GroundwaterMonitoringNetwork(to_file, zipfile=zipfile)
+                    # read the data from a file
+                    if as_csv:
+                        if zipfile is not None:
+                            to_file = zipfile.open(to_file)
+                        df = gld.read_gld_csv(
+                            to_file,
+                            ref["broId"],
+                            rapportagetype="compact_met_timestamps",
+                            qualifier=qualifier,
+                        )
+                    else:
+                        df = meas_cl(to_file, zipfile=zipfile, **meas_cl_kwargs)
 
                 if as_csv:
                     tube_ref["observation"] = df
@@ -469,6 +487,7 @@ def get_data_in_extent(
     to_path=None,
     redownload=False,
     silent=False,
+    continue_on_error=False,
 ):
     """
     Retrieve metadata and observations within a specified spatial extent.
@@ -513,6 +532,9 @@ def get_data_in_extent(
         BRO-server. The default is False.
     silent : bool, optional
         If True, suppresses progress logging. Defaults to False.
+    continue_on_error : bool, optional
+        If True, continue after an error occurs during downloading or processing of
+        individual observation data. Defaults to False.
 
     Returns
     -------

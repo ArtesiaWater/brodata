@@ -228,7 +228,7 @@ def get_data_in_extent(
     to_path=None,
     to_zip=None,
     redownload=False,
-    skip_errors=False,
+    continue_on_error=False,
 ):
     """
     Retrieve metadata and observations within a specified spatial extent.
@@ -274,9 +274,9 @@ def get_data_in_extent(
         When downloaded files exist in to_path or to_zip, read from these files when
         redownload is False. If redownload is True, download the data again from the
         BRO-servers. The default is False.
-    skip_errors : bool, optional
-        If True, errors during downloading or processing of individual observation
-        files are skipped with a warning. Defaults to False.
+    continue_on_error : bool, optional
+        If True, continue after an error occurs during downloading or processing of
+        individual observation data. Defaults to False.
 
     Returns
     -------
@@ -354,7 +354,7 @@ def get_data_in_extent(
             meas_cl_kwargs["qualifier"] = qualifier
         meas_cl = gld.GroundwaterLevelDossier
     else:
-        raise (ValueError("kind='{kind}' not supported"))
+        raise (ValueError(f"kind='{kind}' not supported"))
     meas_gdf = meas_gdf.set_index("bro_id")
     measurement_objects = []
     if zipfile is None:
@@ -388,23 +388,24 @@ def get_data_in_extent(
                     )
                     meas_dict = {"broId": bro_id, datcol: df}
                 except Exception as e:
-                    if skip_errors:
-                        logger.error(
-                            "Error processing %s csv for broid %s: %s", kind, bro_id, e
-                        )
-                        continue
+                    if not continue_on_error:
+                        raise e
+                    logger.error(
+                        "Error processing %s csv for broid %s: %s", kind, bro_id, e
+                    )
+                    continue
             else:
                 try:
                     meas_dict = meas_cl(
                         url, to_file=to_file, **meas_cl_kwargs
                     ).to_dict()
                 except Exception as e:
-                    if skip_errors:
-                        logger.error(
-                            "Error processing %s xml for broid %s: %s", kind, bro_id, e
-                        )
-                        continue
-
+                    if not continue_on_error:
+                        raise e
+                    logger.error(
+                        "Error processing %s xml for broid %s: %s", kind, bro_id, e
+                    )
+                    continue
         else:
             # read the data from a file
             if as_csv:
