@@ -519,6 +519,8 @@ def get_data_in_extent(
     redownload=False,
     silent=False,
     continue_on_error=False,
+    sort=True,
+    drop_duplicates=True,
 ):
     """
     Retrieve metadata and observations within a specified spatial extent.
@@ -566,6 +568,11 @@ def get_data_in_extent(
     continue_on_error : bool, optional
         If True, continue after an error occurs during downloading or processing of
         individual observation data. Defaults to False.
+    sort : bool, optional
+        If True, sort the observations. Only used if `kind` is 'gld'. Defaults to True.
+    drop_duplicates : bool, optional
+        If True, drop duplicate observations based on their timestamp. Only used if
+        `kind` is 'gld'. Defaults to True.
 
     Returns
     -------
@@ -629,6 +636,9 @@ def get_data_in_extent(
             zipfile=zipfile,
             _files=_files,
             silent=silent,
+            continue_on_error=continue_on_error,
+            sort=sort,
+            drop_duplicates=drop_duplicates,
         )
 
         # only keep wells with observations
