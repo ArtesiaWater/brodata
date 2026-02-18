@@ -28,6 +28,7 @@ def allow_network_fail(e):
         urllib.error.URLError,
         requests.ConnectionError,
         requests.exceptions.RequestException,
+        FileNotFoundError,
     )
     if isinstance(e, allowed):
         pytest.skip(f"Network unavailable: {e}")

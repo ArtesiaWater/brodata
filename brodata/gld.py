@@ -230,7 +230,7 @@ def read_gld_csv(fname, bro_id, rapportagetype, **kwargs):
     if rapportagetype == "compact_met_timestamps":
         df.index = pd.to_datetime(df.index, unit="ms")
     # remove empty indices
-    mask = df.index.isna() & df.isna().all(1)
+    mask = df.index.isna() & df.isna().all(axis=1)
     if mask.any():
         df = df[~mask]
     df = process_observations(df, bro_id, **kwargs)
@@ -445,11 +445,11 @@ def process_observations(
     df,
     bro_id="gld",
     to_wintertime=True,
-    drop_duplicates=True,
-    sort=True,
     qualifier=None,
     tmin=None,
     tmax=None,
+    sort=True,
+    drop_duplicates=True,
 ):
     """
     Process groundwater level observations.
@@ -473,11 +473,6 @@ def process_observations(
         If True, the observation times are converted to Dutch winter time by
         removing any time zone information and adding one hour. If to_wintertime is
         False, observation times are kept in CET/CEST. Default is True.
-    drop_duplicates : bool, optional
-        If True, any duplicate observation times will be dropped, keeping only
-        the first occurrence. Default is True.
-    sort : bool, optional
-        If True, the DataFrame will be sorted by the time index. Default is True.
     qualifier : str or list of str, optional
         If provided, the observations are filtered based on their "qualifier"
         column. Only rows with the specified qualifier(s) will be kept.
@@ -485,6 +480,12 @@ def process_observations(
         The minimum time for filtering observations. Defaults to None.
     tmax : str or datetime, optional
         The maximum time for filtering observations. Defaults to None.
+    sort : bool, optional
+        If True, the DataFrame will be sorted, see `sort_observations`. Default is
+        True.
+    drop_duplicates : bool, optional
+        If True, any duplicate observation times will be dropped, keeping only
+        the first occurrence. Default is True.
 
     Returns
     -------
@@ -514,15 +515,33 @@ def process_observations(
         df = df.loc[: pd.Timestamp(tmax)]
 
     if sort:
-        df = _sort_observations(df)
+        df = sort_observations(df)
 
     if drop_duplicates:
-        df = _drop_duplicate_observations(df, bro_id=bro_id)
+        df = drop_duplicate_observations(df, bro_id=bro_id)
 
     return df
 
 
-def _sort_observations(df):
+def sort_observations(df):
+    """
+    Sort observations in a DataFrame by multiple criteria. Applies a multi-level sort
+    to the input DataFrame, prioritizing the following criteria in order:
+    1. By the DataFrame's DatetimeIndex in ascending order
+    2. By status (if present): volledigBeoordeeld before voorlopig before onbekend
+    3. By observation_type (if present): reguliereMeting before controleMeting
+
+    Parameters
+    ----------
+    df : pandas.DataFrame
+        DataFrame with optional 'observation_type' and 'status' columns,
+        and a DatetimeIndex.
+
+    Returns
+    -------
+    pandas.DataFrame
+        Sorted DataFrame with the same structure as input.
+    """
     if "observation_type" in df.columns:
         # make sure measurements with observation_type set to reguliereMeting are first
         sort_dict = {"reguliereMeting": 0, "controleMeting": 1}
@@ -539,7 +558,34 @@ def _sort_observations(df):
     return df
 
 
-def _drop_duplicate_observations(df, bro_id="gld", keep="first"):
+def drop_duplicate_observations(df, bro_id="gld", keep="first"):
+    """
+    Remove duplicate observations from a DataFrame based on its index.
+
+    Parameters
+    ----------
+    df : pd.DataFrame
+        The DataFrame to process.
+    bro_id : str, optional
+        Identifier for the dataset, used in warning messages. Default is "gld".
+    keep : {'first', 'last', False}, optional
+        Which duplicates to mark:
+        - 'first' : Mark duplicates as True except for the first occurrence.
+        - 'last' : Mark duplicates as True except for the last occurrence.
+        - False : Mark all duplicates as True.
+        Default is 'first'.
+
+    Returns
+    -------
+    pd.DataFrame
+        DataFrame with duplicate index values removed, keeping only the rows
+        specified by the `keep` parameter.
+
+    Warnings
+    --------
+    Logs a warning message if duplicates are found, indicating the number and
+    total count of duplicates before removal.
+    """
     if df.index.has_duplicates:
         duplicates = df.index.duplicated(keep=keep)
         message = "{} contains {} duplicates (of {}). Keeping only first values."

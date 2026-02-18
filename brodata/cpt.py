@@ -1,7 +1,6 @@
 import logging
 import tempfile
 from functools import partial
-from io import StringIO
 
 import pandas as pd
 import requests
@@ -96,7 +95,7 @@ class ConePenetrationTest(bro.FileOrUrl):
                 self._read_children_of_children(child)
             elif key in ["cptResult", "disResult"]:
                 setattr(self, name, self._read_data_array(child))
-                
+
             else:
                 self._warn_unknown_tag(key)
 

@@ -153,6 +153,9 @@ def get_observations(
     to_zip=None,
     redownload=False,
     zipfile=None,
+    continue_on_error=False,
+    sort=True,
+    drop_duplicates=True,
     _files=None,
 ):
     """
@@ -200,6 +203,14 @@ def get_observations(
     zipfile : zipfile.ZipFile, optional
         A zipfile-object. When not None, zipfile is used to read previously downloaded
         data from. The default is None.
+    continue_on_error : bool, optional
+        If True, continue after an error occurs during downloading or processing of
+        individual observation data. Defaults to False.
+    sort : bool, optional
+        If True, sort the observations. Only used if `kind` is 'gld'. Defaults to True.
+    drop_duplicates : bool, optional
+        If True, drop duplicate observations based on their timestamp. Only used if
+        `kind` is 'gld'. Defaults to True.
 
 
     Returns
@@ -237,7 +248,6 @@ def get_observations(
     if to_zip is not None:
         if not redownload and os.path.isfile(to_zip):
             raise (NotImplementedError("Redownload=False is not suppported yet"))
-            return
         if to_path is None:
             to_path = os.path.splitext(to_zip)[0]
         remove_path_again = not os.path.isdir(to_path)
@@ -252,6 +262,27 @@ def get_observations(
     to_file = None
     if to_path is not None and not os.path.isdir(to_path):
         os.makedirs(to_path)
+
+    meas_cl_kwargs = {}
+    if kind == "gld":
+        if tmin is not None:
+            meas_cl_kwargs["tmin"] = tmin
+        if tmax is not None:
+            meas_cl_kwargs["tmax"] = tmax
+        if qualifier is not None:
+            meas_cl_kwargs["qualifier"] = qualifier
+        meas_cl_kwargs["sort"] = sort
+        meas_cl_kwargs["drop_duplicates"] = drop_duplicates
+        meas_cl = gld.GroundwaterLevelDossier
+    elif kind == "gar":
+        meas_cl = gar.GroundwaterAnalysisReport
+    elif kind == "frd":
+        meas_cl = frd.FormationResistanceDossier
+    elif kind == "gmn":
+        meas_cl = gmn.GroundwaterMonitoringNetwork
+    else:
+        raise (ValueError(f"kind='{kind}' not supported"))
+
     for bro_id in util.tqdm(np.unique(bro_ids), disable=silent, desc=desc):
         to_rel_file = util._get_to_file(
             f"gmw_relations_{bro_id}.json", zipfile, to_path, _files
@@ -289,53 +320,48 @@ def get_observations(
                 to_file = util._get_to_file(fname, zipfile, to_path, _files)
                 if zipfile is None and (
                     redownload or to_file is None or not os.path.isfile(to_file)
-                ):
-                    if kind == "gld":
-                        if as_csv:
+                ):  # download the data
+                    if as_csv:
+                        try:
                             df = gld.get_objects_as_csv(
                                 ref["broId"], qualifier=qualifier, to_file=to_file
                             )
-                        else:
-                            df = gld.GroundwaterLevelDossier.from_bro_id(
+                        except Exception as e:
+                            if not continue_on_error:
+                                raise e
+                            logger.error(
+                                "Error processing %s csv for broid %s: %s",
+                                kind,
                                 ref["broId"],
-                                qualifier=qualifier,
-                                to_file=to_file,
-                                tmin=tmin,
-                                tmax=tmax,
+                                e,
                             )
-                    elif kind == "gar":
-                        df = gar.GroundwaterAnalysisReport.from_bro_id(
-                            ref["broId"], to_file=to_file
-                        )
-                    elif kind == "frd":
-                        df = frd.FormationResistanceDossier.from_bro_id(
-                            ref["broId"], to_file=to_file
-                        )
-                    elif kind == "gmn":
-                        df = gmn.GroundwaterMonitoringNetwork.from_bro_id(
-                            ref["broId"], to_file=to_file
-                        )
+                    else:
+                        try:
+                            df = meas_cl.from_bro_id(
+                                ref["broId"], to_file=to_file, **meas_cl_kwargs
+                            )
+                        except Exception as e:
+                            if not continue_on_error:
+                                raise e
+                            logger.error(
+                                "Error processing %s xml for broid %s: %s",
+                                kind,
+                                ref["broId"],
+                                e,
+                            )
                 else:
-                    if kind == "gld":
-                        if as_csv:
-                            if zipfile is not None:
-                                to_file = zipfile.open(to_file)
-                            df = gld.read_gld_csv(
-                                to_file,
-                                ref["broId"],
-                                rapportagetype="compact_met_timestamps",
-                                qualifier=qualifier,
-                            )
-                        else:
-                            df = gld.GroundwaterLevelDossier(
-                                to_file, qualifier=qualifier, zipfile=zipfile
-                            )
-                    elif kind == "gar":
-                        df = gar.GroundwaterAnalysisReport(to_file, zipfile=zipfile)
-                    elif kind == "frd":
-                        df = frd.FormationResistanceDossier(to_file, zipfile=zipfile)
-                    elif kind == "gmn":
-                        df = gmn.GroundwaterMonitoringNetwork(to_file, zipfile=zipfile)
+                    # read the data from a file
+                    if as_csv:
+                        if zipfile is not None:
+                            to_file = zipfile.open(to_file)
+                        df = gld.read_gld_csv(
+                            to_file,
+                            ref["broId"],
+                            rapportagetype="compact_met_timestamps",
+                            qualifier=qualifier,
+                        )
+                    else:
+                        df = meas_cl(to_file, zipfile=zipfile, **meas_cl_kwargs)
 
                 if as_csv:
                     tube_ref["observation"] = df
@@ -360,7 +386,9 @@ def get_observations(
     return pd.DataFrame(tubes)
 
 
-def get_tube_observations(gwm_id, tube_number, kind="gld", **kwargs):
+def get_tube_observations(
+    gwm_id, tube_number, kind="gld", sort=True, drop_duplicates=True, **kwargs
+):
     """
     Get the observations of a single groundwater monitoring tube.
 
@@ -370,6 +398,14 @@ def get_tube_observations(gwm_id, tube_number, kind="gld", **kwargs):
         The bro_id of the groundwater monitoring well.
     tube_number : int
         The tube number.
+    kind : str, optional
+        The type of observations to retrieve. Can be one of {'gmn', 'gld', 'gar', 'frd'}.
+        Defaults to 'gld' (groundwater level dossier).
+    sort : bool, optional
+        If True, sort the observations. Only used if `kind` is 'gld'. Defaults to True.
+    drop_duplicates : bool, optional
+        If True, drop duplicate observations based on their timestamp. Only used if
+        `kind` is 'gld'. Defaults to True.
     **kwargs : dict
         Kwargs are passed onto get_observations.
 
@@ -379,13 +415,26 @@ def get_tube_observations(gwm_id, tube_number, kind="gld", **kwargs):
         A DataFrame containing the observations.
 
     """
-    df = get_observations(gwm_id, tube_number=tube_number, kind=kind, **kwargs)
+    # sorting and dropping duplicates is done after combining the observations
+    # to avoid doing this multiple times
+    df = get_observations(
+        gwm_id,
+        tube_number=tube_number,
+        kind=kind,
+        sort=False,
+        drop_duplicates=False,
+        **kwargs,
+    )
     if df.empty:
         return _get_empty_observation_df(kind)
     else:
         data_column = _get_data_column(kind)
         return _combine_observations(
-            df[data_column], kind=kind, bro_id=f"{gwm_id}_{tube_number}"
+            df[data_column],
+            kind=kind,
+            bro_id=f"{gwm_id}_{tube_number}",
+            sort=sort,
+            drop_duplicates=drop_duplicates,
         )
 
 
@@ -469,6 +518,9 @@ def get_data_in_extent(
     to_path=None,
     redownload=False,
     silent=False,
+    continue_on_error=False,
+    sort=True,
+    drop_duplicates=True,
 ):
     """
     Retrieve metadata and observations within a specified spatial extent.
@@ -513,6 +565,14 @@ def get_data_in_extent(
         BRO-server. The default is False.
     silent : bool, optional
         If True, suppresses progress logging. Defaults to False.
+    continue_on_error : bool, optional
+        If True, continue after an error occurs during downloading or processing of
+        individual observation data. Defaults to False.
+    sort : bool, optional
+        If True, sort the observations. Only used if `kind` is 'gld'. Defaults to True.
+    drop_duplicates : bool, optional
+        If True, drop duplicate observations based on their timestamp. Only used if
+        `kind` is 'gld'. Defaults to True.
 
     Returns
     -------
@@ -576,6 +636,9 @@ def get_data_in_extent(
             zipfile=zipfile,
             _files=_files,
             silent=silent,
+            continue_on_error=continue_on_error,
+            sort=sort,
+            drop_duplicates=drop_duplicates,
         )
 
         # only keep wells with observations
@@ -652,7 +715,9 @@ def _get_empty_observation_df(kind):
         raise (NotImplementedError(f"Measurement-kind {kind} not supported yet"))
 
 
-def _combine_observations(observations, kind, bro_id=None):
+def _combine_observations(
+    observations, kind, bro_id=None, sort=True, drop_duplicates=True
+):
     obslist = []
     for observation in observations:
         if not isinstance(observation, pd.DataFrame) or observation.empty:
@@ -663,8 +728,10 @@ def _combine_observations(observations, kind, bro_id=None):
     else:
         df = pd.concat(obslist).sort_index()
         if kind == "gld":
-            df = gld._sort_observations(df)
-            df = gld._drop_duplicate_observations(df, bro_id=bro_id)
+            if sort:
+                df = gld.sort_observations(df)
+            if drop_duplicates:
+                df = gld.drop_duplicate_observations(df, bro_id=bro_id)
         return df
 
 
