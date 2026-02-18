@@ -1,7 +1,6 @@
 import logging
 import tempfile
 from functools import partial
-from io import StringIO
 
 import pandas as pd
 import requests

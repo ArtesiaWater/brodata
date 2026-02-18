@@ -430,7 +430,7 @@ def _get_data_for_bro_ids(
             try:
                 data[bro_id] = bro_cl.from_bro_id(bro_id, **kwargs)
             except Exception as e:
-                logger.error(f"Error retrieving {bro_id}: {e}")
+                logger.error("Error retrieving %s: %s", bro_id, e)
         else:
             data[bro_id] = bro_cl.from_bro_id(bro_id, **kwargs)
     return data

@@ -121,8 +121,8 @@ def _gm_items(
     if len(json_data["features"]) == 0:
         msg = "No data found"
         if extent is not None:
-            msg = f"{msg} for extent={extent}"
-        msg = f"{msg} on {url}"
+            msg = "%s for extent=%s" % (msg, extent)
+        msg = "%s on %s" % (msg, url)
         logger.warning(msg)
         return
     gdf = gpd.GeoDataFrame.from_features(json_data["features"], crs=crs)
@@ -228,6 +228,9 @@ def get_data_in_extent(
     to_path=None,
     to_zip=None,
     redownload=False,
+    continue_on_error=False,
+    sort=True,
+    drop_duplicates=True,
 ):
     """
     Retrieve metadata and observations within a specified spatial extent.
@@ -273,6 +276,14 @@ def get_data_in_extent(
         When downloaded files exist in to_path or to_zip, read from these files when
         redownload is False. If redownload is True, download the data again from the
         BRO-servers. The default is False.
+    continue_on_error : bool, optional
+        If True, continue after an error occurs during downloading or processing of
+        individual observation data. Defaults to False.
+    sort : bool, optional
+        If True, sort the observations. Only used if `kind` is 'gld'. Defaults to True.
+    drop_duplicates : bool, optional
+        If True, drop duplicate observations based on their timestamp. Only used if
+        `kind` is 'gld'. Defaults to True.
 
     Returns
     -------
@@ -297,7 +308,7 @@ def get_data_in_extent(
     _files = None
     if to_zip is not None:
         if not redownload and os.path.isfile(to_zip):
-            logger.info(f"Reading data from {to_zip}")
+            logger.info("Reading data from %s", to_zip)
             zipfile = ZipFile(to_zip)
         else:
             if to_path is None:
@@ -348,9 +359,12 @@ def get_data_in_extent(
 
         if qualifier is not None:
             meas_cl_kwargs["qualifier"] = qualifier
+
+        meas_cl_kwargs["sort"] = sort
+        meas_cl_kwargs["drop_duplicates"] = drop_duplicates
         meas_cl = gld.GroundwaterLevelDossier
     else:
-        raise (ValueError("kind='{kind}' not supported"))
+        raise (ValueError(f"kind='{kind}' not supported"))
     meas_gdf = meas_gdf.set_index("bro_id")
     measurement_objects = []
     if zipfile is None:
@@ -375,15 +389,33 @@ def get_data_in_extent(
         ):
             # download the data
             if as_csv:
-                df = gld.get_objects_as_csv(
-                    url,
-                    qualifier=qualifier,
-                    rapportagetype="compact",
-                    to_file=to_file,
-                )
-                meas_dict = {"broId": bro_id, datcol: df}
+                try:
+                    df = gld.get_objects_as_csv(
+                        url,
+                        qualifier=qualifier,
+                        rapportagetype="compact",
+                        to_file=to_file,
+                    )
+                    meas_dict = {"broId": bro_id, datcol: df}
+                except Exception as e:
+                    if not continue_on_error:
+                        raise e
+                    logger.error(
+                        "Error processing %s csv for broid %s: %s", kind, bro_id, e
+                    )
+                    continue
             else:
-                meas_dict = meas_cl(url, to_file=to_file, **meas_cl_kwargs).to_dict()
+                try:
+                    meas_dict = meas_cl(
+                        url, to_file=to_file, **meas_cl_kwargs
+                    ).to_dict()
+                except Exception as e:
+                    if not continue_on_error:
+                        raise e
+                    logger.error(
+                        "Error processing %s xml for broid %s: %s", kind, bro_id, e
+                    )
+                    continue
         else:
             # read the data from a file
             if as_csv:
