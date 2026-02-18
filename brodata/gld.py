@@ -342,10 +342,7 @@ class GroundwaterLevelDossier(bro.FileOrUrl):
             "om": "http://www.opengis.net/om/2.0",
             "xlink": "http://www.w3.org/1999/xlink",
         }
-        glds = tree.findall(".//ns11:GLD_O", ns)
-        if len(glds) != 1:
-            raise (Exception("Only one gld supported"))
-        gld = glds[0]
+        gld = self._get_main_object(tree, "GLD_O", ns)
         for key in gld.attrib:
             setattr(self, key.split("}", 1)[1], gld.attrib[key])
         for child in gld:

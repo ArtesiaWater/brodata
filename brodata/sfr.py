@@ -26,10 +26,7 @@ class SoilFaceResearch(bro.FileOrUrl):
             "sfrcom": "http://www.broservices.nl/xsd/sfrcommon/2.0",
             "xmlns": self._xmlns,
         }
-        sfrs = tree.findall(".//xmlns:SFR_O", ns)
-        if len(sfrs) != 1:
-            raise (Exception("Only one SFR_O supported"))
-        sfr = sfrs[0]
+        sfr = self._get_main_object(tree, "SFR_O", ns)
         for key in sfr.attrib:
             setattr(self, key.split("}", 1)[1], sfr.attrib[key])
         for child in sfr:

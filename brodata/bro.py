@@ -612,6 +612,24 @@ class FileOrUrl(ABC):
     def _get_tag(node):
         return util._get_tag(node)
 
+    def _get_main_object(self, tree, object_name=None, ns=None):
+        if object_name is None:
+            object_name = self._object_name
+        if ns is None:
+            ns = {"xmlns": self._xmlns}
+        if isinstance(object_name, list):
+            for name in object_name:
+                objects = tree.findall(f".//xmlns:{name}", ns)
+                if objects:
+                    break
+        else:
+            objects = tree.findall(f".//xmlns:{object_name}", ns)
+        if len(objects) > 1:
+            raise (Exception(f"Only one {object_name} supported"))
+        elif len(objects) == 0:
+            raise (Exception(f"No {object_name} found"))
+        return objects[0]
+
     def _warn_unknown_tag(self, tag, parent=None):
         class_name = self.__class__.__name__
         bro_id = getattr(self, "broId", "")

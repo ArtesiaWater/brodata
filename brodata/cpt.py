@@ -25,12 +25,7 @@ class ConePenetrationTest(bro.FileOrUrl):
             "cptcommon": "http://www.broservices.nl/xsd/cptcommon/1.1",
             "xmlns": self._xmlns,
         }
-        cpts = tree.findall(".//xmlns:CPT_O", ns)
-        if len(cpts) > 1:
-            raise (Exception("Only one CPT_0 supported"))
-        elif len(cpts) == 0:
-            raise (Exception("No CPT_0 found"))
-        cpt = cpts[0]
+        cpt = self._get_main_object(tree, "CPT_0", ns)
         for key in cpt.attrib:
             setattr(self, key.split("}", 1)[1], cpt.attrib[key])
         for child in cpt:

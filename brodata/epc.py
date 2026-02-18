@@ -23,17 +23,9 @@ class ExplorationProductionConstruction(bro.FileOrUrl):
             "xmlns": self._xmlns,
         }
 
-        # Try to find EPC_PO_Borehole or EPC_PO_DP_Borehole
-        epcs = tree.findall(".//xmlns:EPC_PO_Borehole", ns)
-        if not epcs:
-            epcs = tree.findall(".//xmlns:EPC_PO_DP_Borehole", ns)
-        if not epcs:
-            epcs = tree.findall(".//xmlns:EPC_PPO_Borehole", ns)
-
-        if len(epcs) != 1:
-            raise Exception(f"Expected 1 EPC object, found {len(epcs)}")
-
-        epc = epcs[0]
+        # Try to find EPC_PO_Borehole, EPC_PO_DP_Borehole or EPC_PPO_Borehole
+        object_names = ["EPC_PO_Borehole", "EPC_PO_DP_Borehole", "EPC_PPO_Borehole"]
+        epc = self._get_main_object(tree, object_names, ns)
 
         # Parse attributes
         for key in epc.attrib:

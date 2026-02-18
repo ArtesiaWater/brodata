@@ -35,12 +35,7 @@ class GroundwaterUtilisationFacility(bro.FileOrUrl):
 
     def _read_contents(self, tree):
         ns = self._namespace
-        gufs = tree.findall(".//xmlns:GUF_PO", ns)
-        if len(gufs) == 0:
-            gufs = tree.findall(".//xmlns:GUF_PPO", ns)
-        if len(gufs) != 1:
-            raise (Exception("Only one GUF_PO supported"))
-        guf = gufs[0]
+        guf = self._get_main_object(tree, ["GUF_PO", "GUF_PPO"], ns)
         for key in guf.attrib:
             setattr(self, key.split("}", 1)[1], guf.attrib[key])
         for child in guf:

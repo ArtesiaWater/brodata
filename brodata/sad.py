@@ -13,15 +13,13 @@ class SiteAssessmentData(bro.FileOrUrl):
 
     def _read_contents(self, tree):
         ns = {
-        "brocom": "http://www.broservices.nl/xsd/brocommon/3.0",
-        "gml": "http://www.opengis.net/gml/3.2",
-        "sadcommon": "http://www.broservices.nl/xsd/sadcommon-internal/1.1",
-        "xmlns": self._xmlns,
-    }
-        sads = tree.findall(".//xmlns:SAD_O", ns)
-        if len(sads) != 1:
-            raise (Exception("Only one SAD_O supported"))
-        sad = sads[0]
+            "brocom": "http://www.broservices.nl/xsd/brocommon/3.0",
+            "gml": "http://www.opengis.net/gml/3.2",
+            "sadcommon": "http://www.broservices.nl/xsd/sadcommon-internal/1.1",
+            "xmlns": self._xmlns,
+        }
+        sad = self._get_main_object(tree, "SAD_O", ns)
+
         for key in sad.attrib:
             setattr(self, key.split("}", 1)[1], sad.attrib[key])
         for child in sad:
@@ -36,7 +34,7 @@ class SiteAssessmentData(bro.FileOrUrl):
                 self._read_standardized_location(child)
             elif key == "report":
                 if hasattr(self, key):
-                    self._raise_assumed_single()
+                    self._raise_assumed_single(key)
                 self.report = {}
                 self._read_children_of_children(child, d=self.report)
             elif key == "measurementPoint":
