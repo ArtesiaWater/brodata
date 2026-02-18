@@ -335,7 +335,7 @@ class GroundwaterLevelDossier(bro.FileOrUrl):
         accessed as a DataFrame.
         """
         ns = {
-            "ns11": "http://www.broservices.nl/xsd/dsgld/1.0",
+            "xmlns": "http://www.broservices.nl/xsd/dsgld/1.0",
             "gldcommon": "http://www.broservices.nl/xsd/gldcommon/1.0",
             "waterml": "http://www.opengis.net/waterml/2.0",
             "swe": "http://www.opengis.net/swe/2.0",
