@@ -25,7 +25,7 @@ class ConePenetrationTest(bro.FileOrUrl):
             "cptcommon": "http://www.broservices.nl/xsd/cptcommon/1.1",
             "xmlns": self._xmlns,
         }
-        cpt = self._get_main_object(tree, "CPT_0", ns)
+        cpt = self._get_main_object(tree, "CPT_O", ns)
         for key in cpt.attrib:
             setattr(self, key.split("}", 1)[1], cpt.attrib[key])
         for child in cpt:
@@ -91,7 +91,6 @@ class ConePenetrationTest(bro.FileOrUrl):
                 self._read_children_of_children(child)
             elif key in ["cptResult", "disResult"]:
                 setattr(self, name, self._read_data_array(child))
-                
             else:
                 self._warn_unknown_tag(key)
 
