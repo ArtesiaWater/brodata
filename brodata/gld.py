@@ -1,3 +1,5 @@
+from csv import reader
+import csv
 import logging
 from functools import partial
 from io import StringIO
@@ -14,8 +16,9 @@ logger = logging.getLogger(__name__)
 def get_objects_as_csv(
     bro_id,
     rapportagetype="compact_met_timestamps",
-    observatietype="regulier_voorlopig",
+    observatietype=None,
     to_file=None,
+    return_contents=True,
     **kwargs,
 ):
     """
@@ -47,18 +50,16 @@ def get_objects_as_csv(
         (observatietype = controle meting)
         - "onbekend" : Unknown evaluation
         (observatietype = reguliere meting en mate beoordeling = onbekend)
-        If None, all observation types will be included, separated by empty lines and
-        with an explanation. Default is "regulier_voorlopig".
+        If None, all observation types will be returned. Default is None.
     to_file : str, optional
         If provided, the CSV data will be written to the specified file.
         If None, the function returns the CSV data as a DataFrame. Default is None.
+    return_contents : bool, optional
+        If True, the function returns the parsed CSV data as a DataFrame. If False,
+        the function returns None after saving the CSV to the specified file (if
+        `to_file` is provided). Default is True.
     **kwargs : additional keyword arguments
         Additional arguments passed to `read_gld_csv`.
-
-    Raises
-    ------
-    Exception
-        If the `rapportagetype` is not supported, or if `observatietype` is None.
 
     Returns
     -------
@@ -93,15 +94,17 @@ def get_objects_as_csv(
     if to_file is not None:
         with open(to_file, "w") as f:
             f.write(req.text)
-    if rapportagetype not in ["compact", "compact_met_timestamps"]:
-        raise (Exception(f"rapportagetype {rapportagetype} is not supported for now"))
-    if observatietype is None:
-        raise (Exception("observatietype is None is not supported."))
+    if not return_contents:
+        return
     if req.text == "":
         return None
     else:
         df = read_gld_csv(
-            StringIO(req.text), bro_id, rapportagetype=rapportagetype, **kwargs
+            StringIO(req.text),
+            bro_id,
+            rapportagetype=rapportagetype,
+            observatietype=observatietype,
+            **kwargs,
         )
         return df
 
@@ -167,7 +170,7 @@ def get_series_as_csv(
         return df
 
 
-def read_gld_csv(fname, bro_id, rapportagetype, **kwargs):
+def read_gld_csv(fname, bro_id, rapportagetype, observatietype, **kwargs):
     """
     Read and process a Groundwater Level Dossier (GLD) CSV file.
 
@@ -220,13 +223,76 @@ def read_gld_csv(fname, bro_id, rapportagetype, **kwargs):
         parse_dates = ["time"]
     else:
         parse_dates = None
-    df = pd.read_csv(
-        fname,
-        names=names,
-        index_col="time",
-        parse_dates=parse_dates,
-        usecols=[0, 1, 2],
-    )
+    if observatietype is None or rapportagetype == "volledig":
+        # the csv contains multiple observation types, seperated by a header with
+        # observation-type and status.
+        if isinstance(fname, StringIO):
+            lines = fname.readlines()
+        else:
+            with open(fname, "r") as f:
+                lines = f.readlines()
+        if rapportagetype == "volledig":
+            header_start = '"observatie ID",'
+            header_values = 1
+            header_length = 4
+        else:
+            header_start = '"_'
+            header_values = 0
+            header_length = 1
+
+        dfs = []
+        headers = []
+        for i, line in enumerate(lines):
+            if line.startswith(header_start):
+                headers.append(i)
+
+        for i, header in enumerate(headers):
+            line = lines[header + header_values]
+            # split string by comma, but ignore commas between quotes
+            reader = csv.reader(StringIO(line))
+            parts = next(reader)
+            observation_type = parts[3]
+            status = parts[4]
+
+            if i < len(headers) - 1:
+                current_lines = lines[header + header_length : headers[i + 1]]
+            else:
+                current_lines = lines[header + header_length :]
+            df = pd.read_csv(
+                StringIO("".join(current_lines)),
+                names=names,
+                index_col="time",
+                parse_dates=parse_dates,
+                usecols=[0, 1, 2],
+            )
+            # remove empty indices
+            mask = df.index.isna() & df.isna().all(axis=1)
+            if mask.any():
+                df = df[~mask]
+            df["status"] = status
+            df["observation_type"] = observation_type
+            dfs.append(df)
+        df = pd.concat(dfs)
+    else:
+        df = pd.read_csv(
+            fname,
+            names=names,
+            index_col="time",
+            parse_dates=parse_dates,
+            usecols=[0, 1, 2],
+        )
+        if observatietype == "regulier_beoordeeld":
+            df["status"] = "volledigBeoordeeld"
+            df["observation_type"] = "reguliereMeting"
+        elif observatietype == "regulier_voorlopig":
+            df["status"] = "voorlopig"
+            df["observation_type"] = "reguliereMeting"
+        elif observatietype == "controle":
+            df["status"] = np.nan
+            df["observation_type"] = "controleMeting"
+        elif observatietype == "onbekend":
+            df["status"] = "onbekend"
+            df["observation_type"] = "reguliereMeting"
     if rapportagetype == "compact_met_timestamps":
         df.index = pd.to_datetime(df.index, unit="ms")
     # remove empty indices

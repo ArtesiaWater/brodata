@@ -140,6 +140,8 @@ def get_observations(
     tmax=None,
     as_csv=False,
     tube_number=None,
+    status=None,
+    observation_type=None,
     qualifier=None,
     to_path=None,
     to_zip=None,
@@ -179,6 +181,14 @@ def get_observations(
         if `kind` is 'gld'. Defaults to False.
     tube_number : int, optional
         Filters observations to a specific tube number. Defaults to None.
+    status : str, optional
+        A status string for additional filtering. Possible values are
+        "volledigBeoordeeld", "voorlopig" and "onbekend" Only valid if `kind` is 'gld'.
+        Defaults to None.
+    observation_type : str, optional
+        An observation type string for additional filtering. Possible values are
+        "reguliereMeting" and "controleMeting". Only valid if `kind` is 'gld'. Defaults
+        to None.
     qualifier : str or list of str, optional
         A qualifier string for additional filtering. Only valid if `kind` is 'gld'.
         Defaults to None.
@@ -263,6 +273,10 @@ def get_observations(
             meas_cl_kwargs["tmax"] = tmax
         if qualifier is not None:
             meas_cl_kwargs["qualifier"] = qualifier
+        if status is not None:
+            meas_cl_kwargs["status"] = status
+        if observation_type is not None:
+            meas_cl_kwargs["observation_type"] = observation_type
         meas_cl_kwargs["sort"] = sort
         meas_cl_kwargs["drop_duplicates"] = drop_duplicates
         meas_cl = gld.GroundwaterLevelDossier
@@ -314,9 +328,20 @@ def get_observations(
                     redownload or to_file is None or not os.path.isfile(to_file)
                 ):  # download the data
                     if as_csv:
+                        observatietype = "regulier_voorlopig"
+                        if status == "volledigBeoordeeld":
+                            observatietype = "regulier_beoordeeld"
+                        elif status == "onbekend":
+                            observatietype = "onbekend"
+                        elif observation_type == "controleMeting":
+                            observatietype = "controle"
+
                         try:
                             df = gld.get_objects_as_csv(
-                                ref["broId"], qualifier=qualifier, to_file=to_file
+                                ref["broId"],
+                                observatietype=observatietype,
+                                qualifier=qualifier,
+                                to_file=to_file,
                             )
                         except Exception as e:
                             if not continue_on_error:
@@ -502,7 +527,7 @@ def get_data_in_extent(
     kind="gld",
     tmin=None,
     tmax=None,
-    combine=False,
+    combine=None,
     index=None,
     as_csv=False,
     qualifier=None,
@@ -536,7 +561,7 @@ def get_data_in_extent(
         The maximum time for filtering observations. Defaults to None.
     combine : bool, optional
         If True, combines the metadata, tube properties, and observations into a single
-        dataframe. Defaults to False.
+        dataframe. Defaults to False, which will change to True in a future version.
     index : str, optional
         The column to use for indexing in the resulting dataframe. Defaults to None.
     as_csv : bool, optional
@@ -580,6 +605,13 @@ def get_data_in_extent(
     Exception
         If `as_csv=True` and `kind` is not 'gld', or if other parameters are invalid.
     """
+    if combine is None:
+        logger.warning(
+            "The default of `combine=False` will change to True in a future version of "
+            "brodata. Pass combine=False to retain current behavior or combine=True to "
+            "adopt the future default and silence this warning."
+        )
+        combine = False
     if isinstance(extent, str):
         if to_zip is not None:
             raise (Exception("When extent is a string, do not supply to_zip"))

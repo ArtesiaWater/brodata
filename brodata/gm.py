@@ -255,7 +255,7 @@ def get_data_in_extent(
         If True, suppresses progress logging. Defaults to False.
     combine : bool, optional
         If True, combines the tube properties, and observations into a single
-        dataframe. Defaults to False.
+        dataframe. Defaults to True.
     index : str, optional
         The column to use for indexing in the resulting dataframe. If None, the index
         will be set to a MultiIndex of the columns "gmw_bro_id" and "tube_number".
