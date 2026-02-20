@@ -19,13 +19,7 @@ class GroundwaterProductionDossier(bro.FileOrUrl):
             "xmlns": self._xmlns,
         }
 
-        gpds = tree.findall(".//xmlns:GPD_O", ns)
-
-        if len(gpds) == 0:
-            raise (ValueError("No gpd found"))
-        elif len(gpds) > 1:
-            raise (Exception("Only one gpd supported"))
-        gpd = gpds[0]
+        gpd = self._get_main_object(tree, "GPD_O", ns)
 
         for key in gpd.attrib:
             setattr(self, key.split("}", 1)[1], gpd.attrib[key])

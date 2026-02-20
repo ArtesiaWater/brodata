@@ -21,10 +21,7 @@ class GroundwaterMonitoringNetwork(bro.FileOrUrl):
             "gmncom": "http://www.broservices.nl/xsd/gmncommon/1.0",
             "xmlns": self._xmlns,
         }
-        gmns = tree.findall(".//xmlns:GMN_PO", ns)
-        if len(gmns) != 1:
-            raise (Exception("Only one GMN_PO supported"))
-        gmn = gmns[0]
+        gmn = self._get_main_object(tree, "GMN_PO", ns)
         for key in gmn.attrib:
             setattr(self, key.split("}", 1)[1], gmn.attrib[key])
         for child in gmn:

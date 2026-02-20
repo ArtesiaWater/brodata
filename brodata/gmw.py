@@ -65,16 +65,8 @@ class GroundwaterMonitoringWell(bro.FileOrUrl):
             "xmlns": self._xmlns,
         }
 
-        gmws = tree.findall(".//xmlns:GMW_PO", ns)
-        if len(gmws) == 0:
-            gmws = tree.findall(".//xmlns:GMW_PPO", ns)
-        if len(gmws) == 0:
-            gmws = tree.findall(".//brocom:BRO_DO", ns)
-        if len(gmws) == 0:
-            raise (ValueError("No gmw found"))
-        elif len(gmws) > 1:
-            raise (Exception("Only one gmw supported"))
-        gmw = gmws[0]
+        object_names = ["GMW_PO", "GMW_PPO", "BRO_DO"]
+        gmw = self._get_main_object(tree, object_names, ns)
 
         for key in gmw.attrib:
             setattr(self, key.split("}", 1)[1], gmw.attrib[key])
