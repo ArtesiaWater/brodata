@@ -387,7 +387,6 @@ def get_data_in_extent(
             meas_cl,
             kind,
             as_csv,
-            to_file,
             zipfile,
             to_path,
             _files,

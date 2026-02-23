@@ -315,7 +315,6 @@ def get_observations(
                     meas_cl,
                     kind,
                     as_csv,
-                    to_file,
                     zipfile,
                     to_path,
                     _files,
