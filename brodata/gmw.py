@@ -261,7 +261,6 @@ def get_observations(
         raise (Exception("as_csv=True is only supported for kind=='gld'"))
     if qualifier is not None and kind != "gld":
         raise (Exception("A qualifier is only supported for kind=='gld'"))
-    to_file = None
     if to_path is not None and not os.path.isdir(to_path):
         os.makedirs(to_path)
 
