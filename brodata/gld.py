@@ -1,4 +1,3 @@
-from csv import reader
 import csv
 import logging
 from functools import partial
@@ -581,7 +580,7 @@ def process_observations(
         df = sort_observations(df)
 
     if drop_duplicates:
-        df = drop_duplicate_observations(df, bro_id=bro_id)
+        df = drop_duplicate_observations(df, bro_id=bro_id, sort=sort)
 
     return df
 
@@ -621,7 +620,7 @@ def sort_observations(df):
     return df
 
 
-def drop_duplicate_observations(df, bro_id="gld", keep="first"):
+def drop_duplicate_observations(df, bro_id="gld", keep="first", sort=True):
     """
     Remove duplicate observations from a DataFrame based on its index.
 
@@ -651,8 +650,12 @@ def drop_duplicate_observations(df, bro_id="gld", keep="first"):
     """
     if df.index.has_duplicates:
         duplicates = df.index.duplicated(keep=keep)
-        message = "{} contains {} duplicates (of {}). Keeping only first values."
-        logger.warning(message.format(bro_id, duplicates.sum(), len(df.index)))
+        message = "{} contains {} duplicates (of {}). Keeping only first values"
+        message = message.format(bro_id, duplicates.sum(), len(df.index))
+        if sort:
+            message = f"{message} (sorted for importance)"
+        message = f"{message}."
+        logger.warning(message)
         df = df[~duplicates]
     return df
 
