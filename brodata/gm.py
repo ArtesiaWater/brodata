@@ -382,10 +382,9 @@ def get_data_in_extent(
         raise (Exception("A qualifier is only supported for kind=='gld'"))
     datcol = gmw._get_data_column(kind)
     for bro_id in util.tqdm(meas_gdf.index, disable=silent, desc=desc):
-        data = gmw._download_observations_for_bro_id(
+        obsdata = gmw._download_observations_for_bro_id(
             bro_id,
             meas_cl,
-            kind,
             as_csv,
             zipfile,
             to_path,
@@ -396,9 +395,9 @@ def get_data_in_extent(
         )
 
         if as_csv:
-            meas_dict = {"broId": bro_id, datcol: data}
+            meas_dict = {"broId": bro_id, datcol: obsdata}
         else:
-            meas_dict = data.to_dict()
+            meas_dict = obsdata.to_dict()
         meas_dict["gm_gmw_monitoringtube_fk"] = meas_gdf.at[
             bro_id, "gm_gmw_monitoringtube_fk"
         ]

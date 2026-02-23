@@ -310,10 +310,9 @@ def get_observations(
                     continue
             ref_key = f"{kind}References"
             for ref in tube_ref[ref_key]:
-                data = _download_observations_for_bro_id(
+                obsdata = _download_observations_for_bro_id(
                     ref["broId"],
                     meas_cl,
-                    kind,
                     as_csv,
                     zipfile,
                     to_path,
@@ -323,7 +322,7 @@ def get_observations(
                     continue_on_error=continue_on_error,
                 )
                 if as_csv:
-                    tube_ref["observation"] = data
+                    tube_ref["observation"] = obsdata
                     for key in drop_references:
                         if key in tube_ref:
                             tube_ref.pop(key)
@@ -339,7 +338,7 @@ def get_observations(
                     tube_ref["broId"] = ref["broId"]
                     tubes.append(tube_ref)
                 else:
-                    tubes.append(data.to_dict())
+                    tubes.append(obsdata.to_dict())
     if to_zip is not None:
         util._save_data_to_zip(to_zip, _files, remove_path_again, to_path)
     return pd.DataFrame(tubes)
@@ -348,7 +347,6 @@ def get_observations(
 def _download_observations_for_bro_id(
     bro_id,
     meas_cl,
-    kind,
     as_csv,
     zipfile,
     to_path,
@@ -393,7 +391,7 @@ def _download_observations_for_bro_id(
                     raise e
                 logger.error(
                     "Error processing %s csv for broid %s: %s",
-                    kind,
+                    meas_cl.__name__,
                     bro_id,
                     e,
                 )
@@ -405,7 +403,7 @@ def _download_observations_for_bro_id(
                     raise e
                 logger.error(
                     "Error processing %s xml for broid %s: %s",
-                    kind,
+                    meas_cl.__name__,
                     bro_id,
                     e,
                 )
