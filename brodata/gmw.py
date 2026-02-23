@@ -265,20 +265,7 @@ def get_observations(
     if to_path is not None and not os.path.isdir(to_path):
         os.makedirs(to_path)
 
-    meas_cl_kwargs = {}
     if kind == "gld":
-        if tmin is not None:
-            meas_cl_kwargs["tmin"] = tmin
-        if tmax is not None:
-            meas_cl_kwargs["tmax"] = tmax
-        if qualifier is not None:
-            meas_cl_kwargs["qualifier"] = qualifier
-        if status is not None:
-            meas_cl_kwargs["status"] = status
-        if observation_type is not None:
-            meas_cl_kwargs["observation_type"] = observation_type
-        meas_cl_kwargs["sort"] = sort
-        meas_cl_kwargs["drop_duplicates"] = drop_duplicates
         meas_cl = gld.GroundwaterLevelDossier
     elif kind == "gar":
         meas_cl = gar.GroundwaterAnalysisReport
@@ -288,6 +275,10 @@ def get_observations(
         meas_cl = gmn.GroundwaterMonitoringNetwork
     else:
         raise (ValueError(f"kind='{kind}' not supported"))
+
+    gld_kwargs = _get_gld_kwargs(
+        kind, tmin, tmax, qualifier, status, observation_type, sort, drop_duplicates
+    )
 
     for bro_id in util.tqdm(np.unique(bro_ids), disable=silent, desc=desc):
         to_rel_file = util._get_to_file(
@@ -319,69 +310,21 @@ def get_observations(
                     continue
             ref_key = f"{kind}References"
             for ref in tube_ref[ref_key]:
+                data = _download_observations_for_bro_id(
+                    ref["broId"],
+                    meas_cl,
+                    kind,
+                    as_csv,
+                    to_file,
+                    zipfile,
+                    to_path,
+                    _files,
+                    gld_kwargs,
+                    redownload=redownload,
+                    continue_on_error=continue_on_error,
+                )
                 if as_csv:
-                    fname = f"{ref['broId']}.csv"
-                else:
-                    fname = f"{ref['broId']}.xml"
-                to_file = util._get_to_file(fname, zipfile, to_path, _files)
-                if zipfile is None and (
-                    redownload or to_file is None or not os.path.isfile(to_file)
-                ):  # download the data
-                    if as_csv:
-                        observatietype = "regulier_voorlopig"
-                        if status == "volledigBeoordeeld":
-                            observatietype = "regulier_beoordeeld"
-                        elif status == "onbekend":
-                            observatietype = "onbekend"
-                        elif observation_type == "controleMeting":
-                            observatietype = "controle"
-
-                        try:
-                            df = gld.get_objects_as_csv(
-                                ref["broId"],
-                                observatietype=observatietype,
-                                qualifier=qualifier,
-                                to_file=to_file,
-                            )
-                        except Exception as e:
-                            if not continue_on_error:
-                                raise e
-                            logger.error(
-                                "Error processing %s csv for broid %s: %s",
-                                kind,
-                                ref["broId"],
-                                e,
-                            )
-                    else:
-                        try:
-                            df = meas_cl.from_bro_id(
-                                ref["broId"], to_file=to_file, **meas_cl_kwargs
-                            )
-                        except Exception as e:
-                            if not continue_on_error:
-                                raise e
-                            logger.error(
-                                "Error processing %s xml for broid %s: %s",
-                                kind,
-                                ref["broId"],
-                                e,
-                            )
-                else:
-                    # read the data from a file
-                    if as_csv:
-                        if zipfile is not None:
-                            to_file = zipfile.open(to_file)
-                        df = gld.read_gld_csv(
-                            to_file,
-                            ref["broId"],
-                            rapportagetype="compact_met_timestamps",
-                            qualifier=qualifier,
-                        )
-                    else:
-                        df = meas_cl(to_file, zipfile=zipfile, **meas_cl_kwargs)
-
-                if as_csv:
-                    tube_ref["observation"] = df
+                    tube_ref["observation"] = data
                     for key in drop_references:
                         if key in tube_ref:
                             tube_ref.pop(key)
@@ -397,10 +340,110 @@ def get_observations(
                     tube_ref["broId"] = ref["broId"]
                     tubes.append(tube_ref)
                 else:
-                    tubes.append(df.to_dict())
+                    tubes.append(data.to_dict())
     if to_zip is not None:
         util._save_data_to_zip(to_zip, _files, remove_path_again, to_path)
     return pd.DataFrame(tubes)
+
+
+def _download_observations_for_bro_id(
+    bro_id,
+    meas_cl,
+    kind,
+    as_csv,
+    zipfile,
+    to_path,
+    _files,
+    gld_kwargs,
+    redownload=False,
+    continue_on_error=False,
+):
+    if as_csv:
+        fname = f"{bro_id}.csv"
+    else:
+        fname = f"{bro_id}.xml"
+    to_file = util._get_to_file(fname, zipfile, to_path, _files)
+    if zipfile is None and (
+        redownload or to_file is None or not os.path.isfile(to_file)
+    ):  # download the data
+        if as_csv:
+            observatietype = None
+            if "status" in gld_kwargs and gld_kwargs["status"] == "voorlopig":
+                observatietype = "regulier_voorlopig"
+            elif (
+                "status" in gld_kwargs and gld_kwargs["status"] == "volledigBeoordeeld"
+            ):
+                observatietype = "regulier_beoordeeld"
+            elif "status" in gld_kwargs and gld_kwargs["status"] == "onbekend":
+                observatietype = "onbekend"
+            elif (
+                "observation_type" in gld_kwargs
+                and gld_kwargs["observation_type"] == "controleMeting"
+            ):
+                observatietype = "controle"
+
+            try:
+                data = gld.get_objects_as_csv(
+                    bro_id,
+                    observatietype=observatietype,
+                    to_file=to_file,
+                    **gld_kwargs,
+                )
+            except Exception as e:
+                if not continue_on_error:
+                    raise e
+                logger.error(
+                    "Error processing %s csv for broid %s: %s",
+                    kind,
+                    bro_id,
+                    e,
+                )
+        else:
+            try:
+                data = meas_cl.from_bro_id(bro_id, to_file=to_file, **gld_kwargs)
+            except Exception as e:
+                if not continue_on_error:
+                    raise e
+                logger.error(
+                    "Error processing %s xml for broid %s: %s",
+                    kind,
+                    bro_id,
+                    e,
+                )
+    else:
+        # read the data from a file
+        if as_csv:
+            if zipfile is not None:
+                to_file = zipfile.open(to_file)
+            data = gld.read_gld_csv(
+                to_file,
+                bro_id,
+                rapportagetype="compact_met_timestamps",
+                **gld_kwargs,
+            )
+        else:
+            data = meas_cl(to_file, zipfile=zipfile, **gld_kwargs)
+    return data
+
+
+def _get_gld_kwargs(
+    kind, tmin, tmax, qualifier, status, observation_type, sort, drop_duplicates
+):
+    gld_kwargs = {}
+    if kind == "gld":
+        if tmin is not None:
+            gld_kwargs["tmin"] = tmin
+        if tmax is not None:
+            gld_kwargs["tmax"] = tmax
+        if qualifier is not None:
+            gld_kwargs["qualifier"] = qualifier
+        if status is not None:
+            gld_kwargs["status"] = status
+        if observation_type is not None:
+            gld_kwargs["observation_type"] = observation_type
+        gld_kwargs["sort"] = sort
+        gld_kwargs["drop_duplicates"] = drop_duplicates
+    return gld_kwargs
 
 
 def get_tube_observations(
