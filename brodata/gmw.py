@@ -356,6 +356,18 @@ def _download_observations_for_bro_id(
 ):
     if as_csv:
         fname = f"{bro_id}.csv"
+        observatietype = None
+        if "status" in gld_kwargs and gld_kwargs["status"] == "voorlopig":
+            observatietype = "regulier_voorlopig"
+        elif "status" in gld_kwargs and gld_kwargs["status"] == "volledigBeoordeeld":
+            observatietype = "regulier_beoordeeld"
+        elif "status" in gld_kwargs and gld_kwargs["status"] == "onbekend":
+            observatietype = "onbekend"
+        elif (
+            "observation_type" in gld_kwargs
+            and gld_kwargs["observation_type"] == "controleMeting"
+        ):
+            observatietype = "controle"
     else:
         fname = f"{bro_id}.xml"
     to_file = util._get_to_file(fname, zipfile, to_path, _files)
@@ -363,21 +375,6 @@ def _download_observations_for_bro_id(
         redownload or to_file is None or not os.path.isfile(to_file)
     ):  # download the data
         if as_csv:
-            observatietype = None
-            if "status" in gld_kwargs and gld_kwargs["status"] == "voorlopig":
-                observatietype = "regulier_voorlopig"
-            elif (
-                "status" in gld_kwargs and gld_kwargs["status"] == "volledigBeoordeeld"
-            ):
-                observatietype = "regulier_beoordeeld"
-            elif "status" in gld_kwargs and gld_kwargs["status"] == "onbekend":
-                observatietype = "onbekend"
-            elif (
-                "observation_type" in gld_kwargs
-                and gld_kwargs["observation_type"] == "controleMeting"
-            ):
-                observatietype = "controle"
-
             try:
                 data = gld.get_objects_as_csv(
                     bro_id,
@@ -414,7 +411,7 @@ def _download_observations_for_bro_id(
             data = gld.read_gld_csv(
                 to_file,
                 bro_id,
-                rapportagetype="compact_met_timestamps",
+                observatietype=observatietype,
                 **gld_kwargs,
             )
         else:

@@ -1,5 +1,6 @@
 import csv
 import logging
+import time
 from functools import partial
 from io import StringIO
 
@@ -14,7 +15,7 @@ logger = logging.getLogger(__name__)
 
 def get_objects_as_csv(
     bro_id,
-    rapportagetype="compact_met_timestamps",
+    rapportagetype="volledig",
     observatietype=None,
     to_file=None,
     return_contents=True,
@@ -37,8 +38,7 @@ def get_objects_as_csv(
         - "volledig" : Full report
         - "compact" : Compact report with readable timestamps
         - "compact_met_timestamps" : Compact report with Unix epoch timestamps
-        Default is "compact_met_timestamps". Only "compact" and "compact_met_timestamps"
-        are supported.
+        Default is "volledig".
     observatietype : str, optional
         Type of observations. The valid values are:
         - "regulier_beoordeeld" : Regular measurement with full evaluation
@@ -83,13 +83,7 @@ def get_objects_as_csv(
         if observatietype is not None:
             params["observatietype"] = observatietype
         req = requests.get(url, params=params)
-    if req.status_code > 200:
-        json_data = req.json()
-        if "errors" in json_data:
-            logger.error(json_data["errors"][0]["message"])
-        else:
-            logger.error("{}: {}".format(json_data["title"], json_data["description"]))
-        return
+    req = _check_request_status(req)
     if to_file is not None:
         with open(to_file, "w") as f:
             f.write(req.text)
@@ -106,6 +100,30 @@ def get_objects_as_csv(
             **kwargs,
         )
         return df
+
+
+def _check_request_status(req):
+    if req.status_code == 429:
+        msg = "Too many requests. The BRO API has rate limits in place."
+        logger.warning(msg)
+        # try 3 times with increasing wait time
+        wait_times = [1, 2, 4]
+        for wait_time in wait_times:
+            logger.warning(f"Waiting for {wait_time} seconds before retrying...")
+            time.sleep(wait_time)
+            req = requests.get(req.url)
+            if req.status_code <= 200:
+                break
+        if req.status_code == 429:
+            raise Exception(msg + " Please try again later.")
+    if req.status_code > 200:
+        json_data = req.json()
+        if "errors" in json_data:
+            msg = json_data["errors"][0]["message"]
+        else:
+            msg = "{}: {}".format(json_data["title"], json_data["description"])
+        raise Exception(msg)
+    return req
 
 
 def get_series_as_csv(
@@ -150,9 +168,7 @@ def get_series_as_csv(
     if asISO8601:
         params["asISO8601"] = ""
     req = requests.get(url, params=params)
-    if req.status_code > 200:
-        logger.error(req.json()["errors"][0]["message"])
-        return
+    req = _check_request_status(req)
     if to_file is not None:
         with open(to_file, "w") as f:
             f.write(req.text)
@@ -230,23 +246,36 @@ def read_gld_csv(fname, bro_id, rapportagetype, observatietype, **kwargs):
         else:
             with open(fname, "r") as f:
                 lines = f.readlines()
+
+        # look for header lines
+        headers = []
         if rapportagetype == "volledig":
-            header_start = '"observatie ID",'
-            header_values = 1
-            header_length = 4
+            # the line with metdata is proceeded by a line starting with "observatie ID"
+            for i, line in enumerate(lines):
+                if line.startswith('"observatie ID",'):
+                    headers.append(i + 1)
+            header_length = 3
         else:
-            header_start = '"_'
-            header_values = 0
-            header_length = 1
+            # the line with metdata is proceeded by an empty line
+            # but directly after the header, there can also be empty lines, that we skip
+            data_lines = False
+            for i, line in enumerate(lines):
+                only_commas = all(c == "," for c in line.rstrip("\r\n"))
+                last_line_was_header = len(headers) > 0 and headers[-1] == i - 1
+
+                if only_commas:
+                    if last_line_was_header:
+                        data_lines = True
+                    else:
+                        data_lines = False
+                else:
+                    if not data_lines:
+                        headers.append(i)
+            header_length = 2
 
         dfs = []
-        headers = []
-        for i, line in enumerate(lines):
-            if line.startswith(header_start):
-                headers.append(i)
-
         for i, header in enumerate(headers):
-            line = lines[header + header_values]
+            line = lines[header]
             # split string by comma, but ignore commas between quotes
             reader = csv.reader(StringIO(line))
             parts = next(reader)
@@ -254,7 +283,7 @@ def read_gld_csv(fname, bro_id, rapportagetype, observatietype, **kwargs):
             status = parts[4]
 
             if i < len(headers) - 1:
-                current_lines = lines[header + header_length : headers[i + 1]]
+                current_lines = lines[header + header_length : headers[i + 1] - 1]
             else:
                 current_lines = lines[header + header_length :]
             df = pd.read_csv(
@@ -271,7 +300,10 @@ def read_gld_csv(fname, bro_id, rapportagetype, observatietype, **kwargs):
             df["status"] = status
             df["observation_type"] = observation_type
             dfs.append(df)
-        df = pd.concat(dfs)
+        if len(dfs) > 0:
+            df = pd.concat(dfs)
+        else:
+            df = _get_empty_observation_df()
     else:
         df = pd.read_csv(
             fname,
@@ -336,8 +368,7 @@ def get_observations_summary(bro_id):
     url = GroundwaterLevelDossier._rest_url
     url = "{}/objects/{}/observationsSummary".format(url, bro_id)
     req = requests.get(url)
-    if req.status_code > 200:
-        raise (Exception(req.json()["errors"][0]["message"]))
+    req = _check_request_status(req)
     df = pd.DataFrame(req.json())
     if "observationId" in df.columns:
         df = df.set_index("observationId")
