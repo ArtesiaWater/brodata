@@ -253,6 +253,7 @@ def _get_data_in_extent(
     to_gdf=True,
     index="broId",
     continue_on_error=False,
+    progress_callback=None,
 ):
     """
     Retrieve data within a specified extent for a certain bro-class.
@@ -281,6 +282,9 @@ def _get_data_in_extent(
         Column name to use as index in the output GeoDataFrame.
     continue_on_error : bool, default=False
         If True, continues processing other items if an error occurs.
+    progress_callback : function, optional
+        A callback function that takes two arguments (current, total) to report
+        progress. If None, no progress reporting is done. Defaults to None.
 
     Returns
     -------
@@ -345,6 +349,7 @@ def _get_data_in_extent(
         zipfile=zipfile,
         redownload=redownload,
         continue_on_error=continue_on_error,
+        progress_callback=progress_callback,
         _files=_files,
     )
     if zipfile is not None:
@@ -367,6 +372,7 @@ def _get_data_for_bro_ids(
     redownload=False,
     continue_on_error=False,
     desc=None,
+    progress_callback=None,
     _files=None,
 ):
     """
@@ -391,6 +397,11 @@ def _get_data_for_bro_ids(
         If True, forces redownload of data even if files exist.
     continue_on_error : bool, default=False
         If True, continues processing other items if an error occurs.
+    desc : str, optional
+        Description for the progress bar. The default is None.
+    progress_callback : function, optional
+        A callback function that takes two arguments (current, total) to report
+        progress. If None, no progress reporting is done. Defaults to None.
 
     Returns
     -------
@@ -433,6 +444,9 @@ def _get_data_for_bro_ids(
                 logger.error("Error retrieving %s: %s", bro_id, e)
         else:
             data[bro_id] = bro_cl.from_bro_id(bro_id, **kwargs)
+
+        if progress_callback is not None:
+            progress_callback(len(data), len(bro_ids))
     return data
 
 

@@ -132,9 +132,9 @@ def get_series_as_csv(
     """
     Get groundwater level series as a CSV, with timestamps and corresponding measurements.
 
-    This function retrieves a table with timestamps (Unix epoch or ISO8601 format)
-    as the first column and corresponding measurements for different observation
-    types (regulier_voorlopig, regulier_beoordeeld, controle en onbekend) as columns.
+    This function retrieves a table with measurements for different observation types
+    (regulier_voorlopig, regulier_beoordeeld, controle en onbekend) as columns. It is
+    intended for applications such as the graphical visualization of groundwater levels.
 
     Parameters
     ----------

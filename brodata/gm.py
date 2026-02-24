@@ -233,6 +233,7 @@ def get_data_in_extent(
     continue_on_error=False,
     sort=True,
     drop_duplicates=True,
+    progress_callback=None,
 ):
     """
     Retrieve metadata and observations within a specified spatial extent.
@@ -294,6 +295,9 @@ def get_data_in_extent(
     drop_duplicates : bool, optional
         If True, drop duplicate observations based on their timestamp. Only used if
         `kind` is 'gld'. Defaults to True.
+    progress_callback : function, optional
+        A callback function that takes two arguments (current, total) to report
+        progress. If None, no progress reporting is done. Defaults to None.
 
     Returns
     -------
@@ -402,6 +406,9 @@ def get_data_in_extent(
             bro_id, "gm_gmw_monitoringtube_fk"
         ]
         measurement_objects.append(meas_dict)
+
+        if progress_callback is not None:
+            progress_callback(len(measurement_objects), len(meas_gdf.index))
     obs_df = pd.DataFrame(measurement_objects)
 
     if zipfile is not None:

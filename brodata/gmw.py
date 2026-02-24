@@ -150,6 +150,7 @@ def get_observations(
     continue_on_error=False,
     sort=True,
     drop_duplicates=True,
+    progress_callback=None,
     _files=None,
 ):
     """
@@ -213,6 +214,9 @@ def get_observations(
     drop_duplicates : bool, optional
         If True, drop duplicate observations based on their timestamp. Only used if
         `kind` is 'gld'. Defaults to True.
+    progress_callback : function, optional
+        A callback function that takes two arguments (current, total) to report
+        progress. If None, no progress reporting is done. Defaults to None.
 
 
     Returns
@@ -279,7 +283,9 @@ def get_observations(
         kind, tmin, tmax, qualifier, status, observation_type, sort, drop_duplicates
     )
 
-    for bro_id in util.tqdm(np.unique(bro_ids), disable=silent, desc=desc):
+    for igmw, bro_id in enumerate(
+        util.tqdm(np.unique(bro_ids), disable=silent, desc=desc)
+    ):
         to_rel_file = util._get_to_file(
             f"gmw_relations_{bro_id}.json", zipfile, to_path, _files
         )
@@ -338,6 +344,9 @@ def get_observations(
                     tubes.append(tube_ref)
                 else:
                     tubes.append(obsdata.to_dict())
+
+        if progress_callback is not None:
+            progress_callback(igmw + 1, len(bro_ids))
     if to_zip is not None:
         util._save_data_to_zip(to_zip, _files, remove_path_again, to_path)
     return pd.DataFrame(tubes)
@@ -574,6 +583,7 @@ def get_data_in_extent(
     continue_on_error=False,
     sort=True,
     drop_duplicates=True,
+    progress_callback=None,
 ):
     """
     Retrieve metadata and observations within a specified spatial extent.
@@ -626,6 +636,9 @@ def get_data_in_extent(
     drop_duplicates : bool, optional
         If True, drop duplicate observations based on their timestamp. Only used if
         `kind` is 'gld'. Defaults to True.
+    progress_callback : function, optional
+        A callback function that takes two arguments (current, total) to report
+        progress. If None, no progress reporting is done. Defaults to None.
 
     Returns
     -------
@@ -699,6 +712,7 @@ def get_data_in_extent(
             continue_on_error=continue_on_error,
             sort=sort,
             drop_duplicates=drop_duplicates,
+            progress_callback=progress_callback,
         )
 
         # only keep wells with observations
