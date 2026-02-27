@@ -122,6 +122,8 @@ def cone_penetration_test(
 lithology_colors = {
     "ballast": (200 / 255, 200 / 255, 200 / 255),  # checked at B38D4055
     "baggert": (144 / 255, 144 / 255, 144 / 255),  # checked at B60C5217 
+    "baksteen": (200 / 255, 200 / 255, 200 / 255),  # checked at B31H2923 
+    "beton": (200 / 255, 200 / 255, 200 / 255),  # same as baksteen, checked at B31H2925     
     "bruinkool": (140 / 255, 92 / 255, 54 / 255),  # checked at B51G2426
     "detritus": (157 / 255, 78 / 255, 64 / 255),  # checked at B44A0733
     "glauconietzand": (204 / 255, 1, 153 / 255),  # checked at B49E1446
@@ -131,10 +133,11 @@ lithology_colors = {
     "kalksteen": (140 / 255, 180 / 255, 1),  # checked at B44B0062
     "klei": (0, 146 / 255, 0),
     "leem": (194 / 255, 207 / 255, 92 / 255),
-    "mergel ": (140 / 255, 180 / 255, 255 / 255), # checked at B60C0656 
+    "mergel ": (140 / 255, 180 / 255, 1), # checked at B60C0656 
     "mijnsteen": (200 / 255, 200 / 255, 200 / 255), # checked at B60C3651
+    "moeraskalk": (204 / 255, 102 / 255, 1), # checked at B31D1237
     "oer": (200 / 255, 200 / 255, 200 / 255),
-    "puin": (200 / 255, 200 / 255, 200 / 255),
+    "puin": (200 / 255, 200 / 255, 200 / 255), # same as beton
     "slurrie": (144 / 255, 144 / 255, 144 / 255),  # same as slib, checked at B25A3512
     "stenen": (216 / 255, 163 / 255, 32 / 255),
     "stigmaria": (144 / 255, 144 / 255, 144 / 255), # same as baggert , checked at B60C5003 
