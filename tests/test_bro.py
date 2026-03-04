@@ -106,7 +106,11 @@ def test_gld_observations_summary():
 
 
 def test_gld_get_objects_as_csv():
-    brodata.gld.get_objects_as_csv("GLD000000012893")
+    df = brodata.gld.get_objects_as_csv("GLD000000012893")
+
+    # compare to the dataframe in the GroundwaterLevelDossier object
+    gld = brodata.gld.GroundwaterLevelDossier.from_bro_id("GLD000000012893")
+    assert (df == gld.observation).all(None)
 
 
 def test_gld_get_series_as_csv():

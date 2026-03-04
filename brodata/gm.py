@@ -224,6 +224,8 @@ def get_data_in_extent(
     combine=True,
     index=None,
     as_csv=False,
+    status=None,
+    observation_type=None,
     qualifier=None,
     to_path=None,
     to_zip=None,
@@ -231,6 +233,7 @@ def get_data_in_extent(
     continue_on_error=False,
     sort=True,
     drop_duplicates=True,
+    progress_callback=None,
 ):
     """
     Retrieve metadata and observations within a specified spatial extent.
@@ -255,7 +258,7 @@ def get_data_in_extent(
         If True, suppresses progress logging. Defaults to False.
     combine : bool, optional
         If True, combines the tube properties, and observations into a single
-        dataframe. Defaults to False.
+        dataframe. Defaults to True.
     index : str, optional
         The column to use for indexing in the resulting dataframe. If None, the index
         will be set to a MultiIndex of the columns "gmw_bro_id" and "tube_number".
@@ -263,6 +266,14 @@ def get_data_in_extent(
     as_csv : bool, optional
         If True, the measurement data is requested as CSV files instead of XML files
          (only supported for 'gld'). Defaults to False.
+    status : str, optional
+        A status string for additional filtering. Possible values are
+        "volledigBeoordeeld", "voorlopig" and "onbekend" Only valid if `kind` is 'gld'.
+        Defaults to None.
+    observation_type : str, optional
+        An observation type string for additional filtering. Possible values are
+        "reguliereMeting" and "controleMeting". Only valid if `kind` is 'gld'. Defaults
+        to None.
     qualifier : str or list of str, optional
         A string or list of strings used to filter the observations. Only valid if
         `kind` is 'gld'. Defaults to None.
@@ -284,6 +295,9 @@ def get_data_in_extent(
     drop_duplicates : bool, optional
         If True, drop duplicate observations based on their timestamp. Only used if
         `kind` is 'gld'. Defaults to True.
+    progress_callback : function, optional
+        A callback function that takes two arguments (current, total) to report
+        progress. If None, no progress reporting is done. Defaults to None.
 
     Returns
     -------
@@ -331,7 +345,6 @@ def get_data_in_extent(
     if kind is None:
         return tubes
 
-    meas_cl_kwargs = {}
     if kind == "gar":
         to_file = util._get_to_file("gm_gar.json", zipfile, to_path, _files)
         meas_gdf = gar_items(
@@ -348,23 +361,19 @@ def get_data_in_extent(
         meas_gdf = gld_items(
             extent, to_file=to_file, redownload=redownload, zipfile=zipfile
         )
-
         if tmin is not None:
             meas_gdf = meas_gdf[meas_gdf["research_last_date"] >= tmin]
-            meas_cl_kwargs["tmin"] = tmin
 
         if tmax is not None:
             meas_gdf = meas_gdf[meas_gdf["research_first_date"] <= tmax]
-            meas_cl_kwargs["tmax"] = tmax
-
-        if qualifier is not None:
-            meas_cl_kwargs["qualifier"] = qualifier
-
-        meas_cl_kwargs["sort"] = sort
-        meas_cl_kwargs["drop_duplicates"] = drop_duplicates
         meas_cl = gld.GroundwaterLevelDossier
     else:
         raise (ValueError(f"kind='{kind}' not supported"))
+
+    gld_kwargs = gmw._get_gld_kwargs(
+        kind, tmin, tmax, qualifier, status, observation_type, sort, drop_duplicates
+    )
+
     meas_gdf = meas_gdf.set_index("bro_id")
     measurement_objects = []
     if zipfile is None:
@@ -377,66 +386,29 @@ def get_data_in_extent(
         raise (Exception("A qualifier is only supported for kind=='gld'"))
     datcol = gmw._get_data_column(kind)
     for bro_id in util.tqdm(meas_gdf.index, disable=silent, desc=desc):
-        if as_csv:
-            url = meas_gdf.at[bro_id, "series_preliminary_csv_url"]
-            to_file = f"{bro_id}.csv"
-        else:
-            url = meas_gdf.at[bro_id, "imbro_xml_url"]
-            to_file = f"{bro_id}.xml"
-        to_file = util._get_to_file(to_file, zipfile, to_path, _files)
-        if zipfile is None and (
-            redownload or to_file is None or not os.path.isfile(to_file)
-        ):
-            # download the data
-            if as_csv:
-                try:
-                    df = gld.get_objects_as_csv(
-                        url,
-                        qualifier=qualifier,
-                        rapportagetype="compact",
-                        to_file=to_file,
-                    )
-                    meas_dict = {"broId": bro_id, datcol: df}
-                except Exception as e:
-                    if not continue_on_error:
-                        raise e
-                    logger.error(
-                        "Error processing %s csv for broid %s: %s", kind, bro_id, e
-                    )
-                    continue
-            else:
-                try:
-                    meas_dict = meas_cl(
-                        url, to_file=to_file, **meas_cl_kwargs
-                    ).to_dict()
-                except Exception as e:
-                    if not continue_on_error:
-                        raise e
-                    logger.error(
-                        "Error processing %s xml for broid %s: %s", kind, bro_id, e
-                    )
-                    continue
-        else:
-            # read the data from a file
-            if as_csv:
-                if zipfile is not None:
-                    to_file = zipfile.open(to_file)
-                df = gld.read_gld_csv(
-                    to_file,
-                    bro_id,
-                    rapportagetype="compact",
-                    qualifier=qualifier,
-                )
-                meas_dict = {"broId": bro_id, datcol: df}
-            else:
-                meas_dict = meas_cl(
-                    to_file, zipfile=zipfile, **meas_cl_kwargs
-                ).to_dict()
+        obsdata = gmw._download_observations_for_bro_id(
+            bro_id,
+            meas_cl,
+            as_csv,
+            zipfile,
+            to_path,
+            _files,
+            gld_kwargs,
+            redownload=redownload,
+            continue_on_error=continue_on_error,
+        )
 
+        if as_csv:
+            meas_dict = {"broId": bro_id, datcol: obsdata}
+        else:
+            meas_dict = obsdata.to_dict()
         meas_dict["gm_gmw_monitoringtube_fk"] = meas_gdf.at[
             bro_id, "gm_gmw_monitoringtube_fk"
         ]
         measurement_objects.append(meas_dict)
+
+        if progress_callback is not None:
+            progress_callback(len(measurement_objects), len(meas_gdf.index))
     obs_df = pd.DataFrame(measurement_objects)
 
     if zipfile is not None:

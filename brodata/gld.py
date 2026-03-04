@@ -1,4 +1,6 @@
+import csv
 import logging
+import time
 from functools import partial
 from io import StringIO
 
@@ -13,9 +15,10 @@ logger = logging.getLogger(__name__)
 
 def get_objects_as_csv(
     bro_id,
-    rapportagetype="compact_met_timestamps",
-    observatietype="regulier_voorlopig",
+    rapportagetype="volledig",
+    observatietype=None,
     to_file=None,
+    return_contents=True,
     **kwargs,
 ):
     """
@@ -35,8 +38,7 @@ def get_objects_as_csv(
         - "volledig" : Full report
         - "compact" : Compact report with readable timestamps
         - "compact_met_timestamps" : Compact report with Unix epoch timestamps
-        Default is "compact_met_timestamps". Only "compact" and "compact_met_timestamps"
-        are supported.
+        Default is "volledig".
     observatietype : str, optional
         Type of observations. The valid values are:
         - "regulier_beoordeeld" : Regular measurement with full evaluation
@@ -47,18 +49,16 @@ def get_objects_as_csv(
         (observatietype = controle meting)
         - "onbekend" : Unknown evaluation
         (observatietype = reguliere meting en mate beoordeling = onbekend)
-        If None, all observation types will be included, separated by empty lines and
-        with an explanation. Default is "regulier_voorlopig".
+        If None, all observation types will be returned. Default is None.
     to_file : str, optional
         If provided, the CSV data will be written to the specified file.
         If None, the function returns the CSV data as a DataFrame. Default is None.
+    return_contents : bool, optional
+        If True, the function returns the parsed CSV data as a DataFrame. If False,
+        the function returns None after saving the CSV to the specified file (if
+        `to_file` is provided). Default is True.
     **kwargs : additional keyword arguments
         Additional arguments passed to `read_gld_csv`.
-
-    Raises
-    ------
-    Exception
-        If the `rapportagetype` is not supported, or if `observatietype` is None.
 
     Returns
     -------
@@ -83,27 +83,47 @@ def get_objects_as_csv(
         if observatietype is not None:
             params["observatietype"] = observatietype
         req = requests.get(url, params=params)
-    if req.status_code > 200:
-        json_data = req.json()
-        if "errors" in json_data:
-            logger.error(json_data["errors"][0]["message"])
-        else:
-            logger.error("{}: {}".format(json_data["title"], json_data["description"]))
-        return
+    req = _check_request_status(req)
     if to_file is not None:
         with open(to_file, "w") as f:
             f.write(req.text)
-    if rapportagetype not in ["compact", "compact_met_timestamps"]:
-        raise (Exception(f"rapportagetype {rapportagetype} is not supported for now"))
-    if observatietype is None:
-        raise (Exception("observatietype is None is not supported."))
+    if not return_contents:
+        return
     if req.text == "":
         return None
     else:
         df = read_gld_csv(
-            StringIO(req.text), bro_id, rapportagetype=rapportagetype, **kwargs
+            StringIO(req.text),
+            bro_id,
+            rapportagetype=rapportagetype,
+            observatietype=observatietype,
+            **kwargs,
         )
         return df
+
+
+def _check_request_status(req):
+    if req.status_code == 429:
+        msg = "Too many requests. The BRO API has rate limits in place."
+        logger.warning(msg)
+        # try 3 times with increasing wait time
+        wait_times = [1, 2, 4]
+        for wait_time in wait_times:
+            logger.warning(f"Waiting for {wait_time} seconds before retrying...")
+            time.sleep(wait_time)
+            req = requests.get(req.url)
+            if req.status_code <= 200:
+                break
+        if req.status_code == 429:
+            raise Exception(msg + " Please try again later.")
+    if req.status_code > 200:
+        json_data = req.json()
+        if "errors" in json_data:
+            msg = json_data["errors"][0]["message"]
+        else:
+            msg = "{}: {}".format(json_data["title"], json_data["description"])
+        raise Exception(msg)
+    return req
 
 
 def get_series_as_csv(
@@ -112,9 +132,9 @@ def get_series_as_csv(
     """
     Get groundwater level series as a CSV, with timestamps and corresponding measurements.
 
-    This function retrieves a table with timestamps (Unix epoch or ISO8601 format)
-    as the first column and corresponding measurements for different observation
-    types (regulier_voorlopig, regulier_beoordeeld, controle en onbekend) as columns.
+    This function retrieves a table with measurements for different observation types
+    (regulier_voorlopig, regulier_beoordeeld, controle en onbekend) as columns. It is
+    intended for applications such as the graphical visualization of groundwater levels.
 
     Parameters
     ----------
@@ -148,9 +168,7 @@ def get_series_as_csv(
     if asISO8601:
         params["asISO8601"] = ""
     req = requests.get(url, params=params)
-    if req.status_code > 200:
-        logger.error(req.json()["errors"][0]["message"])
-        return
+    req = _check_request_status(req)
     if to_file is not None:
         with open(to_file, "w") as f:
             f.write(req.text)
@@ -167,7 +185,7 @@ def get_series_as_csv(
         return df
 
 
-def read_gld_csv(fname, bro_id, rapportagetype, **kwargs):
+def read_gld_csv(fname, bro_id, rapportagetype, observatietype, **kwargs):
     """
     Read and process a Groundwater Level Dossier (GLD) CSV file.
 
@@ -220,13 +238,92 @@ def read_gld_csv(fname, bro_id, rapportagetype, **kwargs):
         parse_dates = ["time"]
     else:
         parse_dates = None
-    df = pd.read_csv(
-        fname,
-        names=names,
-        index_col="time",
-        parse_dates=parse_dates,
-        usecols=[0, 1, 2],
-    )
+    if observatietype is None or rapportagetype == "volledig":
+        # the csv contains multiple observation types, seperated by a header with
+        # observation-type and status.
+        if isinstance(fname, StringIO):
+            lines = fname.readlines()
+        else:
+            with open(fname, "r") as f:
+                lines = f.readlines()
+
+        # look for header lines
+        headers = []
+        if rapportagetype == "volledig":
+            # the line with metdata is proceeded by a line starting with "observatie ID"
+            for i, line in enumerate(lines):
+                if line.startswith('"observatie ID",'):
+                    headers.append(i + 1)
+            header_length = 3
+        else:
+            # the line with metdata is proceeded by an empty line
+            # but directly after the header, there can also be empty lines, that we skip
+            data_lines = False
+            for i, line in enumerate(lines):
+                only_commas = all(c == "," for c in line.rstrip("\r\n"))
+                last_line_was_header = len(headers) > 0 and headers[-1] == i - 1
+
+                if only_commas:
+                    if last_line_was_header:
+                        data_lines = True
+                    else:
+                        data_lines = False
+                else:
+                    if not data_lines:
+                        headers.append(i)
+            header_length = 2
+
+        dfs = []
+        for i, header in enumerate(headers):
+            line = lines[header]
+            # split string by comma, but ignore commas between quotes
+            reader = csv.reader(StringIO(line))
+            parts = next(reader)
+            observation_type = parts[3]
+            status = parts[4]
+
+            if i < len(headers) - 1:
+                current_lines = lines[header + header_length : headers[i + 1] - 1]
+            else:
+                current_lines = lines[header + header_length :]
+            df = pd.read_csv(
+                StringIO("".join(current_lines)),
+                names=names,
+                index_col="time",
+                parse_dates=parse_dates,
+                usecols=[0, 1, 2],
+            )
+            # remove empty indices
+            mask = df.index.isna() & df.isna().all(axis=1)
+            if mask.any():
+                df = df[~mask]
+            df["status"] = status
+            df["observation_type"] = observation_type
+            dfs.append(df)
+        if len(dfs) > 0:
+            df = pd.concat(dfs)
+        else:
+            df = _get_empty_observation_df()
+    else:
+        df = pd.read_csv(
+            fname,
+            names=names,
+            index_col="time",
+            parse_dates=parse_dates,
+            usecols=[0, 1, 2],
+        )
+        if observatietype == "regulier_beoordeeld":
+            df["status"] = "volledigBeoordeeld"
+            df["observation_type"] = "reguliereMeting"
+        elif observatietype == "regulier_voorlopig":
+            df["status"] = "voorlopig"
+            df["observation_type"] = "reguliereMeting"
+        elif observatietype == "controle":
+            df["status"] = np.nan
+            df["observation_type"] = "controleMeting"
+        elif observatietype == "onbekend":
+            df["status"] = "onbekend"
+            df["observation_type"] = "reguliereMeting"
     if rapportagetype == "compact_met_timestamps":
         df.index = pd.to_datetime(df.index, unit="ms")
     # remove empty indices
@@ -271,8 +368,7 @@ def get_observations_summary(bro_id):
     url = GroundwaterLevelDossier._rest_url
     url = "{}/objects/{}/observationsSummary".format(url, bro_id)
     req = requests.get(url)
-    if req.status_code > 200:
-        raise (Exception(req.json()["errors"][0]["message"]))
+    req = _check_request_status(req)
     df = pd.DataFrame(req.json())
     if "observationId" in df.columns:
         df = df.set_index("observationId")
@@ -515,7 +611,7 @@ def process_observations(
         df = sort_observations(df)
 
     if drop_duplicates:
-        df = drop_duplicate_observations(df, bro_id=bro_id)
+        df = drop_duplicate_observations(df, bro_id=bro_id, sort=sort)
 
     return df
 
@@ -555,7 +651,7 @@ def sort_observations(df):
     return df
 
 
-def drop_duplicate_observations(df, bro_id="gld", keep="first"):
+def drop_duplicate_observations(df, bro_id="gld", keep="first", sort=True):
     """
     Remove duplicate observations from a DataFrame based on its index.
 
@@ -585,8 +681,12 @@ def drop_duplicate_observations(df, bro_id="gld", keep="first"):
     """
     if df.index.has_duplicates:
         duplicates = df.index.duplicated(keep=keep)
-        message = "{} contains {} duplicates (of {}). Keeping only first values."
-        logger.warning(message.format(bro_id, duplicates.sum(), len(df.index)))
+        message = "{} contains {} duplicates (of {}). Keeping only first values"
+        message = message.format(bro_id, duplicates.sum(), len(df.index))
+        if sort:
+            message = f"{message} (sorted for importance)"
+        message = f"{message}."
+        logger.warning(message)
         df = df[~duplicates]
     return df
 
