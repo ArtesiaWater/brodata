@@ -1,21 +1,44 @@
-/* Restore notebook-like dataframe layout */
+/* Classic Jupyter dataframe styling */
+
 table.dataframe {
+  border-collapse: collapse;
+  border-spacing: 0;
   display: block;
   overflow-x: auto;
   max-width: 100%;
-  border-collapse: collapse;
+  font-size: 0.9rem;
 }
 
-table.dataframe th,
+table.dataframe thead th {
+  text-align: right;
+  padding: 6px 10px;
+  border-bottom: 2px solid #ddd;
+  font-weight: 600;
+}
+
+table.dataframe tbody th {
+  text-align: right;
+  font-weight: normal;
+  padding: 6px 10px;
+  border-right: 1px solid #eee;
+}
+
 table.dataframe td {
+  text-align: right;
   font-size: 0.7em;
   padding: 0.3em 0.5em;
 }
 
-table.dataframe thead th {
-  border-bottom: 2px solid #ddd;
+table.dataframe tbody tr:nth-child(odd) {
+  background-color: #f9f9f9;
 }
 
-table.dataframe tbody tr:nth-child(even) {
-  background: #f6f6f6;
+table.dataframe tbody tr:hover {
+  background-color: #f1f1f1;
+}
+
+table.dataframe caption {
+  caption-side: bottom;
+  padding: 4px;
+  color: #666;
 }

@@ -3,4 +3,3 @@ sphinx-rtd-theme
 ipykernel
 folium
 mapclassify
-itables
