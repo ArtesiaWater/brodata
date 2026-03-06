@@ -4,21 +4,6 @@
 # https://www.sphinx-doc.org/en/master/usage/configuration.html
 
 from brodata import __version__
-import itables
-
-# Initialize interactive tables in all notebooks
-itables.init_notebook_mode(all_interactive=True)
-
-# Optional: tweak table appearance & behavior
-itables.options.lengthMenu = [5, 10, 25, 50]  # pagination options
-itables.options.style = "full"  # full table width
-itables.options.classes = "display nowrap"  # ensure scrolling if wide
-itables.options.responsive = True  # responsive layout
-nb_execution_prelude = """
-import itables
-from itables import init_notebook_mode
-init_notebook_mode(all_interactive=True)
-"""
 
 # -- Project information -----------------------------------------------------
 # https://www.sphinx-doc.org/en/master/usage/configuration.html#project-information
@@ -42,14 +27,9 @@ exclude_patterns = ["_build", "Thumbs.db", ".DS_Store"]
 html_theme = "sphinx_rtd_theme"
 html_static_path = ["_static"]
 html_css_files = [
-    #'custom.css',
+    "custom.css",
 ]
 html_theme_options = {"navigation_depth": 4}
-
-# Ensure HTML output is prioritized (important for pandas DataFrames)
-nb_mime_priority_overrides = [
-    ("html", "text/html", 100),
-]
 
 nb_execution_mode = "auto"
 # Allow errors in notebooks, so we can see the error online
