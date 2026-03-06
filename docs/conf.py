@@ -4,6 +4,10 @@
 # https://www.sphinx-doc.org/en/master/usage/configuration.html
 
 from brodata import __version__
+import itables
+
+# Initialize interactive tables in all notebooks
+itables.init_notebook_mode(all_interactive=True)
 
 # -- Project information -----------------------------------------------------
 # https://www.sphinx-doc.org/en/master/usage/configuration.html#project-information
