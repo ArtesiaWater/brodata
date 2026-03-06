@@ -9,6 +9,12 @@ import itables
 # Initialize interactive tables in all notebooks
 itables.init_notebook_mode(all_interactive=True)
 
+# Optional: tweak table appearance & behavior
+itables.options.lengthMenu = [5, 10, 25, 50]  # pagination options
+itables.options.style = "full"  # full table width
+itables.options.classes = "display nowrap"  # ensure scrolling if wide
+itables.options.responsive = True  # responsive layout
+
 # -- Project information -----------------------------------------------------
 # https://www.sphinx-doc.org/en/master/usage/configuration.html#project-information
 
@@ -34,6 +40,11 @@ html_css_files = [
     #'custom.css',
 ]
 html_theme_options = {"navigation_depth": 4}
+
+# Ensure HTML output is prioritized (important for pandas DataFrames)
+nb_mime_priority_overrides = [
+    ("html", "text/html", 100),
+]
 
 nb_execution_mode = "auto"
 # Allow errors in notebooks, so we can see the error online
