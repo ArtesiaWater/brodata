@@ -14,6 +14,11 @@ itables.options.lengthMenu = [5, 10, 25, 50]  # pagination options
 itables.options.style = "full"  # full table width
 itables.options.classes = "display nowrap"  # ensure scrolling if wide
 itables.options.responsive = True  # responsive layout
+nb_execution_prelude = """
+import itables
+from itables import init_notebook_mode
+init_notebook_mode(all_interactive=True)
+"""
 
 # -- Project information -----------------------------------------------------
 # https://www.sphinx-doc.org/en/master/usage/configuration.html#project-information
