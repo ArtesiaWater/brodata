@@ -253,6 +253,7 @@ def _get_data_in_extent(
     to_gdf=True,
     index="broId",
     continue_on_error=False,
+    progress_callback=None,
 ):
     """
     Retrieve data within a specified extent for a certain bro-class.
@@ -281,6 +282,9 @@ def _get_data_in_extent(
         Column name to use as index in the output GeoDataFrame.
     continue_on_error : bool, default=False
         If True, continues processing other items if an error occurs.
+    progress_callback : function, optional
+        A callback function that takes two arguments (current, total) to report
+        progress. If None, no progress reporting is done. Defaults to None.
 
     Returns
     -------
@@ -345,6 +349,7 @@ def _get_data_in_extent(
         zipfile=zipfile,
         redownload=redownload,
         continue_on_error=continue_on_error,
+        progress_callback=progress_callback,
         _files=_files,
     )
     if zipfile is not None:
@@ -367,6 +372,7 @@ def _get_data_for_bro_ids(
     redownload=False,
     continue_on_error=False,
     desc=None,
+    progress_callback=None,
     _files=None,
 ):
     """
@@ -391,6 +397,11 @@ def _get_data_for_bro_ids(
         If True, forces redownload of data even if files exist.
     continue_on_error : bool, default=False
         If True, continues processing other items if an error occurs.
+    desc : str, optional
+        Description for the progress bar. The default is None.
+    progress_callback : function, optional
+        A callback function that takes two arguments (current, total) to report
+        progress. If None, no progress reporting is done. Defaults to None.
 
     Returns
     -------
@@ -430,9 +441,12 @@ def _get_data_for_bro_ids(
             try:
                 data[bro_id] = bro_cl.from_bro_id(bro_id, **kwargs)
             except Exception as e:
-                logger.error(f"Error retrieving {bro_id}: {e}")
+                logger.error("Error retrieving %s: %s", bro_id, e)
         else:
             data[bro_id] = bro_cl.from_bro_id(bro_id, **kwargs)
+
+        if progress_callback is not None:
+            progress_callback(len(data), len(bro_ids))
     return data
 
 
@@ -611,6 +625,24 @@ class FileOrUrl(ABC):
     @staticmethod
     def _get_tag(node):
         return util._get_tag(node)
+
+    def _get_main_object(self, tree, object_name=None, ns=None):
+        if object_name is None:
+            object_name = self._object_name
+        if ns is None:
+            ns = {"xmlns": self._xmlns}
+        if isinstance(object_name, list):
+            for name in object_name:
+                objects = tree.findall(f".//xmlns:{name}", ns)
+                if objects:
+                    break
+        else:
+            objects = tree.findall(f".//xmlns:{object_name}", ns)
+        if len(objects) > 1:
+            raise (Exception(f"Only one {object_name} supported"))
+        elif len(objects) == 0:
+            raise (Exception(f"No {object_name} found"))
+        return objects[0]
 
     def _warn_unknown_tag(self, tag, parent=None):
         class_name = self.__class__.__name__

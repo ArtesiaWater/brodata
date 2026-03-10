@@ -24,10 +24,7 @@ class _BoreholeResearch(bro.FileOrUrl):
             "bhrgtcom": "http://www.broservices.nl/xsd/bhrgtcommon/2.1",
             "xmlns": self._xmlns,
         }
-        bhrs = tree.findall(f".//xmlns:{self._object_name}", ns)
-        if len(bhrs) != 1:
-            raise (Exception(f"Only one {self._object_name} supported"))
-        bhr = bhrs[0]
+        bhr = self._get_main_object(tree, self._object_name, ns)
         for key in bhr.attrib:
             setattr(self, key.split("}", 1)[1], bhr.attrib[key])
         for child in bhr:

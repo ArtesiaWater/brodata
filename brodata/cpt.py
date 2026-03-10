@@ -1,7 +1,6 @@
 import logging
 import tempfile
 from functools import partial
-from io import StringIO
 
 import pandas as pd
 import requests
@@ -25,12 +24,7 @@ class ConePenetrationTest(bro.FileOrUrl):
             "cptcommon": "http://www.broservices.nl/xsd/cptcommon/1.1",
             "xmlns": self._xmlns,
         }
-        cpts = tree.findall(".//xmlns:CPT_O", ns)
-        if len(cpts) > 1:
-            raise (Exception("Only one CPT_0 supported"))
-        elif len(cpts) == 0:
-            raise (Exception("No CPT_0 found"))
-        cpt = cpts[0]
+        cpt = self._get_main_object(tree, "CPT_O", ns)
         for key in cpt.attrib:
             setattr(self, key.split("}", 1)[1], cpt.attrib[key])
         for child in cpt:
@@ -96,7 +90,6 @@ class ConePenetrationTest(bro.FileOrUrl):
                 self._read_children_of_children(child)
             elif key in ["cptResult", "disResult"]:
                 setattr(self, name, self._read_data_array(child))
-                
             else:
                 self._warn_unknown_tag(key)
 

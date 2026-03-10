@@ -45,10 +45,7 @@ class GroundwaterAnalysisReport(bro.FileOrUrl):
             "garcommon": "http://www.broservices.nl/xsd/garcommon/1.0",
             "xmlns": self._xmlns,
         }
-        gars = tree.findall(".//xmlns:GAR_O", ns)
-        if len(gars) != 1:
-            raise (Exception("Only one GAR_O supported"))
-        gar = gars[0]
+        gar = self._get_main_object(tree, "GAR_O", ns)
         for key in gar.attrib:
             setattr(self, key.split("}", 1)[1], gar.attrib[key])
         for child in gar:
