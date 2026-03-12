@@ -98,6 +98,7 @@ def _get_data_within_extent(
     to_gdf=True,
     max_retries=2,
     continue_on_error=False,
+    progress_callback=None,
 ):
     """Retrieve DINO data within a specified geographical extent or from local files.
 
@@ -142,6 +143,9 @@ def _get_data_within_extent(
     continue_on_error : bool, optional
         If True, continue after an error occurs during downloading or processing of
         individual observation data. Defaults to False.
+    progress_callback : function, optional
+        A callback function that takes two arguments (current, total) to report
+        progress. If None, no progress reporting is done. Defaults to None.
 
     Returns
     -------
@@ -191,7 +195,9 @@ def _get_data_within_extent(
     to_file = None
 
     data = {}
-    for dino_nr in util.tqdm(gdf.index, disable=silent):
+    for i, dino_nr in util.tqdm(enumerate(gdf.index), disable=silent):
+        if progress_callback is not None:
+            progress_callback(i, len(gdf))
         if to_path is not None:
             to_file = os.path.join(to_path, f"{dino_nr}.csv")
             if to_zip is not None:
@@ -264,6 +270,7 @@ def get_grondwaterstand(
     to_gdf=True,
     skip=None,
     continue_on_error=False,
+    progress_callback=None,
 ):
     """
     Get groundwater level (Grondwaterstand) data as a GeoDataFrame or raw objects.
@@ -301,6 +308,9 @@ def get_grondwaterstand(
     continue_on_error : bool, optional
         If True, continue after an error occurs during downloading or processing of
         individual observation data. Defaults to False.
+    progress_callback : function, optional
+        A callback function that takes two arguments (current, total) to report
+        progress. If None, no progress reporting is done. Defaults to None.
 
     Returns
     -------
@@ -347,7 +357,9 @@ def get_grondwaterstand(
     if to_path is not None and not os.path.isdir(to_path):
         os.makedirs(to_path)
     data = {}
-    for name in util.tqdm(gdf.index, disable=silent):
+    for i, name in util.tqdm(enumerate(gdf.index), disable=silent):
+        if progress_callback is not None:
+            progress_callback(i, len(gdf))
         if skip is not None and name in skip:
             continue
         for i_st in range(1, gdf.at[name, "ST_CNT"] + 1):
