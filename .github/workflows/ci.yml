@@ -80,13 +80,13 @@ jobs:
           retention-days: 7
 
       - name: Upload coverage artifact
-        if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+        if: github.event_name == 'push' && (github.ref == 'refs/heads/main' || github.ref == 'refs/heads/dev')
         uses: actions/upload-pages-artifact@v4
         with:
           path: htmlcov
 
   deploy-coverage:
-    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    if: github.event_name == 'push' && (github.ref == 'refs/heads/main' || github.ref == 'refs/heads/dev')
     environment:
       name: github-pages
       url: ${{ steps.deployment.outputs.page_url }}
