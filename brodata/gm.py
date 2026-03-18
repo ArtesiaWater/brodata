@@ -6,6 +6,7 @@ import urllib.request
 import json
 import pandas as pd
 import geopandas as gpd
+from shapely.geometry import MultiPolygon, Polygon
 from . import gmw, gld, gar, util
 
 
@@ -61,8 +62,9 @@ def _gm_items(
     ----------
     url : str
         The base URL to request the GeoJSON data from.
-    extent : list of 4 floats
-        The spatial extent ([xmin, xmax, ymin, ymax]) to filter the data..
+    extent : list, tuple, shapely.geometry.Polygon or shapely.geometry.MultiPolygon, optional
+        The spatial extent ([xmin, xmax, ymin, ymax]) or polygon geometry to filter the data.
+        When a polygon is provided, its bounding box is used for the spatial query.
     crs : string, optional
         The coordinate reference system of the requested extent and the geometries in
         the response. Possible values are:
@@ -99,7 +101,10 @@ def _gm_items(
     elif redownload or to_file is None or not os.path.isfile(to_file):
         params = {"f": "json", "crs": crs, "limit": limit}
         if extent is not None:
-            xmin, xmax, ymin, ymax = extent
+            if isinstance(extent, (Polygon, MultiPolygon)):
+                xmin, ymin, xmax, ymax = extent.bounds
+            else:
+                xmin, xmax, ymin, ymax = extent
             bbox = f"{xmin},{ymin},{xmax},{ymax}"
             params["bbox-crs"] = crs
             params["bbox"] = bbox
@@ -145,6 +150,9 @@ def _gm_items(
         gdf[column] = (
             pd.to_datetime(gdf[column], utc=True).dt.tz_localize(None) + one_hour
         )
+    # Filter results to polygon if polygon extent was provided
+    if extent is not None and isinstance(extent, (Polygon, MultiPolygon)):
+        gdf = gdf[gdf.intersects(extent)]
     return gdf
 
 
