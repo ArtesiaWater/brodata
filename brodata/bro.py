@@ -6,7 +6,7 @@ from abc import ABC, abstractmethod
 from io import StringIO
 from zipfile import ZipFile
 
-from shapely.geometry import Point
+from shapely.geometry import MultiPolygon, Point, Polygon
 import shapely
 import numpy as np
 import geopandas as gpd
@@ -71,9 +71,9 @@ def _get_characteristics(
 
     Parameters
     ----------
-    extent : list or tuple of 4 floats, optional
-        Download the characteristics within extent ([xmin, xmax, ymin, ymax]). The
-        default is None.
+    extent : list, tuple, shapely.geometry.Polygon or shapely.geometry.MultiPolygon, optional
+        Download the characteristics within extent ([xmin, xmax, ymin, ymax]) or
+        within the bounds of a polygon. The default is None.
     tmin : str or pd.Timestamp, optional
         The minimum registrationPeriod of the requested characteristics. The default is
         None.
@@ -154,11 +154,16 @@ def _get_characteristics(
                 "radius": radius / 1000,
             }
         if extent is not None:
-            lat_ll, lon_ll = transformer.transform(extent[0], extent[2])
-            lat_ur, lon_ur = transformer.transform(extent[1], extent[3])
+            if isinstance(extent, (Polygon, MultiPolygon)):
+                xmin, ymin, xmax, ymax = extent.bounds
+            else:
+                xmin, xmax, ymin, ymax = extent
+
+            lat_ll, lon_ll = transformer.transform(xmin, ymin)
+            lat_ur, lon_ur = transformer.transform(xmax, ymax)
             if use_all_corners_of_extent:
-                lat_ul, lon_ul = transformer.transform(extent[0], extent[3])
-                lat_lr, lon_lr = transformer.transform(extent[1], extent[2])
+                lat_ul, lon_ul = transformer.transform(xmin, ymax)
+                lat_lr, lon_lr = transformer.transform(xmax, ymin)
                 lat_ll = min(lat_ll, lat_lr)
                 lon_ll = min(lon_ll, lon_ul)
                 lat_ur = max(lat_ul, lat_ur)
@@ -236,8 +241,11 @@ def _get_characteristics(
         data.append(d)
 
     gdf = objects_to_gdf(data)
-    if zipfile is not None and extent is not None:
-        gdf = gdf.cx[extent[0] : extent[1], extent[2] : extent[3]]
+    if zipfile is not None and extent is not None and isinstance(gdf, gpd.GeoDataFrame):
+        if isinstance(extent, (Polygon, MultiPolygon)):
+            gdf = gdf[gdf.intersects(extent)]
+        else:
+            gdf = gdf.cx[extent[0] : extent[1], extent[2] : extent[3]]
     return gdf
 
 

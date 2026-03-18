@@ -1,4 +1,6 @@
 # brodata
+[![Coverage Report](https://img.shields.io/badge/Coverage-HTML%20report-1f6feb?style=for-the-badge)](https://ArtesiaWater.github.io/brodata/)
+
 **brodata** is a Python package for downloading and processing subsurface data from **DINO** and **BRO**.
 
 You can install the package using pip from [PyPI](https://pypi.org/project/brodata/):

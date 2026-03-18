@@ -1,4 +1,5 @@
 import logging
+import json
 
 import geopandas as gpd
 import numpy as np
@@ -11,6 +12,28 @@ logger = logging.getLogger(__name__)
 
 
 def get_gdf(kind, extent=None, config=None, index="DINO_NR", **kwargs):
+    """Retrieve a GeoDataFrame for a configured BRO/GDN service.
+
+    Parameters
+    ----------
+    kind : str
+        Name of the service as defined in the configuration.
+    extent : list, tuple, np.array, shapely.geometry.Polygon or shapely.geometry.MultiPolygon, optional
+        Spatial filter. Use [xmin, xmax, ymin, ymax] for an envelope query or
+        a polygon geometry for an intersects query.
+    config : dict, optional
+        Service configuration dictionary. If omitted, the default configuration
+        from get_configuration() is used.
+    index : str, optional
+        Column name to use as index when present in the returned data.
+    **kwargs
+        Extra keyword arguments passed to requests.get via arcrest.
+
+    Returns
+    -------
+    geopandas.GeoDataFrame
+        GeoDataFrame with optional post-filtering and index assignment.
+    """
     if config is None:
         config = get_configuration()
     if kind not in config:
@@ -47,8 +70,8 @@ def arcrest(
         arcrest url.
     layer : str
         layer
-    extent : list, tuple or np.array
-        extent
+    extent : list, tuple, np.array, shapely.geometry.Polygon or shapely.geometry.MultiPolygon
+        spatial filter as envelope [xmin, xmax, ymin, ymax] or polygon geometry.
     sr : int, optional
         coördinate reference system. The default is 28992 (RD).
     f : str, optional
@@ -67,9 +90,13 @@ def arcrest(
     }
     if extent is not None:
         params["spatialRel"] = "esriSpatialRelIntersects"
-        xmin, xmax, ymin, ymax = extent
-        params["geometry"] = f"{xmin},{ymin},{xmax},{ymax}"
-        params["geometryType"] = "esriGeometryEnvelope"
+        if isinstance(extent, (Polygon, MultiPolygon)):
+            params["geometry"] = json.dumps(_as_arcgis_polygon(extent, sr=sr))
+            params["geometryType"] = "esriGeometryPolygon"
+        else:
+            xmin, xmax, ymin, ymax = extent
+            params["geometry"] = f"{xmin},{ymin},{xmax},{ymax}"
+            params["geometryType"] = "esriGeometryEnvelope"
         params["inSR"] = sr
     props = _get_data(url, {"f": "json"}, timeout=timeout, **kwargs)
     if max_record_count is None:
@@ -153,6 +180,34 @@ def arcrest(
             gdf = gpd.GeoDataFrame.from_features(features, crs=sr)
 
     return gdf
+
+
+def _as_arcgis_polygon(polygon, sr=28992):
+    """Convert polygon input to ArcGIS REST polygon geometry."""
+    if isinstance(polygon, dict):
+        geometry = polygon.copy()
+        if "rings" not in geometry:
+            raise ValueError("polygon dict must contain 'rings'")
+    elif isinstance(polygon, Polygon):
+        rings = [list(polygon.exterior.coords)]
+        for interior in polygon.interiors:
+            rings.append(list(interior.coords))
+        geometry = {"rings": rings}
+    elif isinstance(polygon, MultiPolygon):
+        rings = []
+        for pol in polygon.geoms:
+            rings.append(list(pol.exterior.coords))
+            for interior in pol.interiors:
+                rings.append(list(interior.coords))
+        geometry = {"rings": rings}
+    else:
+        raise TypeError(
+            "polygon must be a shapely Polygon, MultiPolygon, or dict with 'rings'"
+        )
+
+    if "spatialReference" not in geometry:
+        geometry["spatialReference"] = {"wkid": sr}
+    return geometry
 
 
 def _get_data(url, params, timeout=5, **kwargs):
