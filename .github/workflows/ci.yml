@@ -46,6 +46,31 @@ jobs:
         run: |
           pytest ./tests --cov=brodata --cov-report=xml --cov-report=html --cov-report=term-missing
 
+      - name: Generate coverage badge
+        run: |
+          import xml.etree.ElementTree as ET
+          import math
+          tree = ET.parse('coverage.xml')
+          root = tree.getroot()
+          coverage = float(root.get('line-rate', 0)) * 100
+          coverage_pct = math.ceil(coverage)
+          
+          # Determine color based on coverage percentage
+          if coverage_pct >= 80:
+              color = '4c1'  # green
+          elif coverage_pct >= 60:
+              color = 'dfb317'  # yellow
+          else:
+              color = 'e05d44'  # red
+          
+          # Generate SVG badge
+          svg = f'''<svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" width="124" height="20" role="img" aria-label="coverage: {coverage_pct}%"><title>coverage: {coverage_pct}%</title><linearGradient id="s" x2="0" y2="100%"><stop offset="0" stop-color="#bbb"/><stop offset="1" stop-color="#999"/></linearGradient><clipPath id="r"><rect width="124" height="20" rx="3" fill="#fff"/></clipPath><g clip-path="url(#r)"><rect width="93" height="20" fill="#555"/><rect x="93" width="31" height="20" fill="#{color}"/><rect width="124" height="20" fill="url(#s)"/></g><g fill="#fff" text-anchor="middle" font-family="Verdana,Geneva,DejaVu Sans,sans-serif" text-rendering="geometricPrecision" font-size="110"><text aria-hidden="true" x="475" y="150" fill="#010101" fill-opacity=".3" transform="scale(.1)" textLength="830">coverage</text><text x="475" y="140" transform="scale(.1)" fill="#fff" textLength="830">coverage</text><text aria-hidden="true" x="1075" y="150" fill="#010101" fill-opacity=".3" transform="scale(.1)" textLength="210">{coverage_pct}%</text><text x="1075" y="140" transform="scale(.1)" fill="#fff" textLength="210">{coverage_pct}%</text></g></svg>'''
+          
+          with open('htmlcov/coverage-badge.svg', 'w') as f:
+              f.write(svg)
+          print(f'Coverage badge generated: {coverage_pct}%')
+        shell: python
+
       - name: Upload coverage preview artifact (dev)
         if: github.event_name == 'push' && github.ref == 'refs/heads/dev'
         uses: actions/upload-artifact@v4
