@@ -64,16 +64,16 @@ jobs:
           else:
               color = 'e05d44'  # red
 
-            branch = os.environ.get('GITHUB_REF', '').split('/')[-1]
-            left_label = f'coverage ({branch})'
-            badge_width = 170
-            left_width = 132
-            right_width = badge_width - left_width
-            left_center = left_width / 2
-            right_center = left_width + right_width / 2
+          branch = os.environ.get('GITHUB_REF', '').split('/')[-1]
+          left_label = f'coverage ({branch})'
+          badge_width = 170
+          left_width = 132
+          right_width = badge_width - left_width
+          left_center = left_width / 2
+          right_center = left_width + right_width / 2
           
           # Generate a flat SVG badge without an opaque overlay.
-            svg = f'''<svg xmlns="http://www.w3.org/2000/svg" width="{badge_width}" height="20" role="img" aria-label="coverage ({branch}): {coverage_pct}%"><title>coverage ({branch}): {coverage_pct}%</title><rect rx="3" width="{badge_width}" height="20" fill="#555"/><rect rx="3" x="{left_width}" width="{right_width}" height="20" fill="#{color}"/><path fill="#{color}" d="M{left_width} 0h4v20h-4z"/><g fill="#fff" text-anchor="middle" font-family="Verdana,Geneva,DejaVu Sans,sans-serif" font-size="11"><text x="{left_center}" y="15">{left_label}</text><text x="{right_center}" y="15">{coverage_pct}%</text></g></svg>'''
+          svg = f'''<svg xmlns="http://www.w3.org/2000/svg" width="{badge_width}" height="20" role="img" aria-label="coverage ({branch}): {coverage_pct}%"><title>coverage ({branch}): {coverage_pct}%</title><rect rx="3" width="{badge_width}" height="20" fill="#555"/><rect rx="3" x="{left_width}" width="{right_width}" height="20" fill="#{color}"/><path fill="#{color}" d="M{left_width} 0h4v20h-4z"/><g fill="#fff" text-anchor="middle" font-family="Verdana,Geneva,DejaVu Sans,sans-serif" font-size="11"><text x="{left_center}" y="15">{left_label}</text><text x="{right_center}" y="15">{coverage_pct}%</text></g></svg>'''
           
           # Generate branch-specific badge file
           badge_filename = f'coverage-badge-{branch}.svg'
