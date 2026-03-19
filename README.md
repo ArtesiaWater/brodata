@@ -1,6 +1,10 @@
 # brodata
-[![Coverage (main)](https://ArtesiaWater.github.io/brodata/coverage-badge-main.svg)](https://ArtesiaWater.github.io/brodata/)
-[![Coverage (dev)](https://ArtesiaWater.github.io/brodata/dev/coverage-badge-dev.svg)](https://ArtesiaWater.github.io/brodata/dev/)
+<a href="https://ArtesiaWater.github.io/brodata/" target="_blank" rel="noopener noreferrer">
+  <img alt="Coverage (main)" src="https://ArtesiaWater.github.io/brodata/coverage-badge-main.svg" />
+</a>
+<a href="https://ArtesiaWater.github.io/brodata/dev/" target="_blank" rel="noopener noreferrer">
+  <img alt="Coverage (dev)" src="https://ArtesiaWater.github.io/brodata/dev/coverage-badge-dev.svg" />
+</a>
 
 **brodata** is a Python package for downloading and processing subsurface data from **DINO** and **BRO**.
 
