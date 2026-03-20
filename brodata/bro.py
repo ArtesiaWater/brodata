@@ -431,7 +431,10 @@ def _get_data_for_bro_ids(
     data = {}
     if isinstance(bro_ids, str):
         bro_ids = [bro_ids]
-    for bro_id in util.tqdm(bro_ids, disable=silent, desc=desc):
+    total = len(bro_ids)
+    for i, bro_id in util.tqdm(enumerate(bro_ids), total=total, disable=silent, desc=desc):
+        if progress_callback is not None:
+            progress_callback(i, total)
         if zipfile is not None:
             fname = f"{bro_id}.xml"
             data[bro_id] = bro_cl(fname, zipfile=zipfile)
@@ -453,8 +456,6 @@ def _get_data_for_bro_ids(
         else:
             data[bro_id] = bro_cl.from_bro_id(bro_id, **kwargs)
 
-        if progress_callback is not None:
-            progress_callback(len(data), len(bro_ids))
     return data
 
 

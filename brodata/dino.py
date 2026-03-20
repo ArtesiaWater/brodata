@@ -154,12 +154,12 @@ def _get_data_within_extent(
         If to_gdf is False, returns a dictionary of DINO objects.
     """
     if isinstance(extent, (str, Path)):
-        data = _get_data_from_path(extent, dino_cl, silent=silent)
+        data = _get_data_from_path(extent, dino_cl, silent=silent, progress_callback=progress_callback)
         return objects_to_gdf(data, x, y, geometry, index, to_gdf)
 
     if to_zip is not None:
         if not redownload and os.path.isfile(to_zip):
-            data = _get_data_from_zip(to_zip, dino_cl, silent=silent, extent=extent)
+            data = _get_data_from_zip(to_zip, dino_cl, silent=silent, extent=extent, progress_callback=progress_callback)
             return objects_to_gdf(data, x, y, geometry, index, to_gdf)
         if to_path is None:
             to_path = os.path.splitext(to_zip)[0]
@@ -220,19 +220,22 @@ def _get_data_within_extent(
     return objects_to_gdf(data, x, y, geometry, index, to_gdf)
 
 
-def _get_data_from_path(from_path, dino_class, silent=False, ext=".csv"):
+def _get_data_from_path(from_path, dino_class, silent=False, ext=".csv", progress_callback=None):
     if str(from_path).endswith(".zip"):
-        return _get_data_from_zip(from_path, dino_class, silent=silent)
+        return _get_data_from_zip(from_path, dino_class, silent=silent, progress_callback=progress_callback)
     files = os.listdir(from_path)
     files = [file for file in files if file.endswith(ext)]
     data = {}
-    for file in util.tqdm(files, disable=silent):
+    total = len(files)
+    for i, file in util.tqdm(enumerate(files), total=total, disable=silent):
+        if progress_callback is not None:
+            progress_callback(i, total)
         fname = os.path.join(from_path, file)
         data[os.path.splitext(file)[0]] = dino_class(fname)
     return data
 
 
-def _get_data_from_zip(to_zip, dino_class, silent=False, extent=None):
+def _get_data_from_zip(to_zip, dino_class, silent=False, extent=None, progress_callback=None):
     # read data from zipfile
     data = {}
     with ZipFile(to_zip) as zf:
@@ -246,7 +249,10 @@ def _get_data_from_zip(to_zip, dino_class, silent=False, extent=None):
             gdf = gdf.set_index("DINO_NR")
             gdf = gdf.cx[extent[0] : extent[1], extent[2] : extent[3]]
             names = [f"{name}.csv" for name in gdf.index]
-        for name in util.tqdm(names, disable=silent):
+        total = len(names)
+        for i, name in util.tqdm(enumerate(names), total=total, disable=silent):
+            if progress_callback is not None:
+                progress_callback(i, total)
             data[name] = dino_class(name, zipfile=zf)
     return data
 
@@ -330,12 +336,12 @@ def get_grondwaterstand(
         skip = [skip]
 
     if isinstance(extent, str):
-        data = _get_data_from_path(extent, dino_class, silent=silent)
+        data = _get_data_from_path(extent, dino_class, silent=silent, progress_callback=progress_callback)
         return objects_to_gdf(data, index=index, to_gdf=to_gdf)
 
     if to_zip is not None:
         if not redownload and os.path.isfile(to_zip):
-            data = _get_data_from_zip(to_zip, dino_class, silent=silent)
+            data = _get_data_from_zip(to_zip, dino_class, silent=silent, progress_callback=progress_callback)
             return objects_to_gdf(data, index=index, to_gdf=to_gdf)
         if to_path is None:
             to_path = os.path.splitext(to_zip)[0]
