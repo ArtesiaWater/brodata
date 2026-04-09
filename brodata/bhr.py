@@ -587,7 +587,7 @@ class GeologicalBoreholeResearch(_BoreholeResearch):
     _object_name = "BHR_G_O"
     _xmlns = "http://www.broservices.nl/xsd/dsbhrg/3.1"
     _rest_url = "https://publiek.broservices.nl/sr/bhrg/v3"
-    _char = "BHR_C"
+    _char = "BHR_G_C"
 
 
 def get_bro_ids_of_bronhouder(bronhouder, bhr_class=GeotechnicalBoreholeResearch):
