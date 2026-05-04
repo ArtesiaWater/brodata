@@ -41,7 +41,7 @@ def _get_bro_ids_of_bronhouder(cl, bronhouder):
     """
     url = f"{cl._rest_url}/bro-ids?"
     params = dict(bronhouder=bronhouder)
-    req = requests.get(url, params=params)
+    req = util.get_with_rate_limit(url, params=params)
     if req.status_code > 200:
         logger.error(req.json()["errors"][0]["message"])
         return
@@ -173,7 +173,7 @@ def _get_characteristics(
                 "lowerCorner": {"lat": lat_ll, "lon": lon_ll},
                 "upperCorner": {"lat": lat_ur, "lon": lon_ur},
             }
-        req = requests.post(url, json=data, timeout=timeout)
+        req = util.post_with_rate_limit(url, json=data, timeout=timeout)
         if req.status_code > 200:
             root = ElementTree.fromstring(req.text)
             FileOrUrl._check_for_rejection(root)
@@ -432,7 +432,9 @@ def _get_data_for_bro_ids(
     if isinstance(bro_ids, str):
         bro_ids = [bro_ids]
     total = len(bro_ids)
-    for i, bro_id in util.tqdm(enumerate(bro_ids), total=total, disable=silent, desc=desc):
+    for i, bro_id in util.tqdm(
+        enumerate(bro_ids), total=total, disable=silent, desc=desc
+    ):
         if progress_callback is not None:
             progress_callback(i, total)
         if zipfile is not None:
@@ -556,9 +558,12 @@ class FileOrUrl(ABC):
                         adapter = requests.adapters.HTTPAdapter(max_retries=max_retries)
                         session = requests.Session()
                         session.mount("https://", adapter)
+                        util.wait_for_rate_limit(url_or_file)
                         req = session.get(url_or_file, params=params, timeout=timeout)
                     else:
-                        req = requests.get(url_or_file, params=params, timeout=timeout)
+                        req = util.get_with_rate_limit(
+                            url_or_file, params=params, timeout=timeout
+                        )
                     if not req.ok:
                         if req.reason == "Bad Request":
                             root = ElementTree.fromstring(req.text)
@@ -1109,7 +1114,7 @@ def get_brondocumenten_per_bronhouder(index=("kvk", "type"), timeout=5, **kwargs
 
     """
     url = "https://bromonitor.nl/api/rapporten/brondocumenten-per-bronhouder"
-    r = requests.get(url, timeout=timeout)
+    r = util.get_with_rate_limit(url, timeout=timeout)
     if not r.ok:
         raise (Exception("Download of brondocumenten per bronhouder failed"))
     df = pd.DataFrame(r.json()["data"], **kwargs)

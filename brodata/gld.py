@@ -6,9 +6,8 @@ from io import StringIO
 
 import numpy as np
 import pandas as pd
-import requests
 
-from . import bro
+from . import bro, util
 
 logger = logging.getLogger(__name__)
 
@@ -74,7 +73,7 @@ def get_objects_as_csv(
     parameters can be used to filter the data.
     """
     if bro_id.startswith("http"):
-        req = requests.get(bro_id)
+        req = util.get_with_rate_limit(bro_id)
     else:
         url = f"{GroundwaterLevelDossier._rest_url}/objectsAsCsv/{bro_id}"
         params = {
@@ -82,7 +81,7 @@ def get_objects_as_csv(
         }
         if observatietype is not None:
             params["observatietype"] = observatietype
-        req = requests.get(url, params=params)
+        req = util.get_with_rate_limit(url, params=params)
     req = _check_request_status(req)
     if to_file is not None:
         with open(to_file, "w") as f:
@@ -111,7 +110,7 @@ def _check_request_status(req):
         for wait_time in wait_times:
             logger.warning(f"Waiting for {wait_time} seconds before retrying...")
             time.sleep(wait_time)
-            req = requests.get(req.url)
+            req = util.get_with_rate_limit(req.url)
             if req.status_code <= 200:
                 break
         if req.status_code == 429:
@@ -167,7 +166,7 @@ def get_series_as_csv(
         params["filterOnStatusQualityControl"] = filter_on_status_quality_control
     if asISO8601:
         params["asISO8601"] = ""
-    req = requests.get(url, params=params)
+    req = util.get_with_rate_limit(url, params=params)
     req = _check_request_status(req)
     if to_file is not None:
         with open(to_file, "w") as f:
@@ -367,7 +366,7 @@ def get_observations_summary(bro_id):
     """
     url = GroundwaterLevelDossier._rest_url
     url = "{}/objects/{}/observationsSummary".format(url, bro_id)
-    req = requests.get(url)
+    req = util.get_with_rate_limit(url)
     req = _check_request_status(req)
     df = pd.DataFrame(req.json())
     if "observationId" in df.columns:
