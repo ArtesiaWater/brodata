@@ -3,7 +3,6 @@ import tempfile
 from functools import partial
 
 import pandas as pd
-import requests
 
 from . import bro
 
@@ -134,7 +133,7 @@ def get_graph_types(timeout=5):
 
     """
     url = "https://publiek.broservices.nl/sr/cpt/v1/result/graph/types"
-    r = requests.get(url)
+    r = bro.util.get_with_rate_limit(url)
     supported_graphs = r.json()["supportedGraphs"]
     assert len(supported_graphs) == 1
     return pd.DataFrame(supported_graphs[0]["graphs"]).set_index("graphType")
@@ -171,7 +170,9 @@ def graph(
 
     params = {"graphType": graphType}
     with open(xml_file, "rb") as data:
-        r = requests.post(url, data=data, timeout=timeout, params=params)
+        r = bro.util.post_with_rate_limit(
+            url, data=data, timeout=timeout, params=params
+        )
     r.raise_for_status()
     if to_file is None:
         to_file = tempfile.NamedTemporaryFile(suffix=".svg").name

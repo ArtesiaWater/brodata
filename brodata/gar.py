@@ -2,7 +2,6 @@ import logging
 from functools import partial
 
 import pandas as pd
-import requests
 
 from . import bro
 
@@ -149,7 +148,7 @@ def get_parameter_list(url=None, timeout=5, to_file=None, **kwargs):
     """Download a DataFrame with gar-parameters from the BRO"""
     if url is None:
         url = "https://publiek.broservices.nl/bro/refcodes/v1/attribute_values?domain=urn:bro:gar:ParameterList&version=latest"
-    r = requests.get(url, timeout=timeout, **kwargs)
+    r = bro.util.get_with_rate_limit(url, timeout=timeout, **kwargs)
     if not r.ok:
         raise (Exception((f"Retieving data from {url} failed")))
     if to_file is not None:

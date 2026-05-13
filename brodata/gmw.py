@@ -6,7 +6,6 @@ from zipfile import ZipFile
 
 import numpy as np
 import pandas as pd
-import requests
 
 from . import bro, gld, gar, frd, gmn, util
 
@@ -33,7 +32,7 @@ def get_well_code(bro_id):
     """
 
     url = f"{GroundwaterMonitoringWell._rest_url}/well-code/{bro_id}"
-    req = requests.get(url)
+    req = bro.util.get_with_rate_limit(url)
     if req.status_code > 200:
         logger.error(req.reason)
         return
@@ -293,7 +292,7 @@ def get_observations(
             redownload or to_rel_file is None or not os.path.isfile(to_rel_file)
         ):
             url = f"https://publiek.broservices.nl/gm/v1/gmw-relations/{bro_id}"
-            req = requests.get(url)
+            req = bro.util.get_with_rate_limit(url)
             if req.status_code > 200:
                 logger.error(req.json()["errors"][0]["message"])
                 return

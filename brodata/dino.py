@@ -98,6 +98,7 @@ def _get_data_within_extent(
     to_gdf=True,
     max_retries=2,
     continue_on_error=False,
+    progress_callback=None,
 ):
     """Retrieve DINO data within a specified geographical extent or from local files.
 
@@ -142,6 +143,9 @@ def _get_data_within_extent(
     continue_on_error : bool, optional
         If True, continue after an error occurs during downloading or processing of
         individual observation data. Defaults to False.
+    progress_callback : function, optional
+        A callback function that takes two arguments (current, total) to report
+        progress. If None, no progress reporting is done. Defaults to None.
 
     Returns
     -------
@@ -150,12 +154,12 @@ def _get_data_within_extent(
         If to_gdf is False, returns a dictionary of DINO objects.
     """
     if isinstance(extent, (str, Path)):
-        data = _get_data_from_path(extent, dino_cl, silent=silent)
+        data = _get_data_from_path(extent, dino_cl, silent=silent, progress_callback=progress_callback)
         return objects_to_gdf(data, x, y, geometry, index, to_gdf)
 
     if to_zip is not None:
         if not redownload and os.path.isfile(to_zip):
-            data = _get_data_from_zip(to_zip, dino_cl, silent=silent, extent=extent)
+            data = _get_data_from_zip(to_zip, dino_cl, silent=silent, extent=extent, progress_callback=progress_callback)
             return objects_to_gdf(data, x, y, geometry, index, to_gdf)
         if to_path is None:
             to_path = os.path.splitext(to_zip)[0]
@@ -191,7 +195,9 @@ def _get_data_within_extent(
     to_file = None
 
     data = {}
-    for dino_nr in util.tqdm(gdf.index, disable=silent):
+    for i, dino_nr in util.tqdm(enumerate(gdf.index), disable=silent):
+        if progress_callback is not None:
+            progress_callback(i, len(gdf))
         if to_path is not None:
             to_file = os.path.join(to_path, f"{dino_nr}.csv")
             if to_zip is not None:
@@ -214,19 +220,22 @@ def _get_data_within_extent(
     return objects_to_gdf(data, x, y, geometry, index, to_gdf)
 
 
-def _get_data_from_path(from_path, dino_class, silent=False, ext=".csv"):
+def _get_data_from_path(from_path, dino_class, silent=False, ext=".csv", progress_callback=None):
     if str(from_path).endswith(".zip"):
-        return _get_data_from_zip(from_path, dino_class, silent=silent)
+        return _get_data_from_zip(from_path, dino_class, silent=silent, progress_callback=progress_callback)
     files = os.listdir(from_path)
     files = [file for file in files if file.endswith(ext)]
     data = {}
-    for file in util.tqdm(files, disable=silent):
+    total = len(files)
+    for i, file in util.tqdm(enumerate(files), total=total, disable=silent):
+        if progress_callback is not None:
+            progress_callback(i, total)
         fname = os.path.join(from_path, file)
         data[os.path.splitext(file)[0]] = dino_class(fname)
     return data
 
 
-def _get_data_from_zip(to_zip, dino_class, silent=False, extent=None):
+def _get_data_from_zip(to_zip, dino_class, silent=False, extent=None, progress_callback=None):
     # read data from zipfile
     data = {}
     with ZipFile(to_zip) as zf:
@@ -240,7 +249,10 @@ def _get_data_from_zip(to_zip, dino_class, silent=False, extent=None):
             gdf = gdf.set_index("DINO_NR")
             gdf = gdf.cx[extent[0] : extent[1], extent[2] : extent[3]]
             names = [f"{name}.csv" for name in gdf.index]
-        for name in util.tqdm(names, disable=silent):
+        total = len(names)
+        for i, name in util.tqdm(enumerate(names), total=total, disable=silent):
+            if progress_callback is not None:
+                progress_callback(i, total)
             data[name] = dino_class(name, zipfile=zf)
     return data
 
@@ -264,6 +276,7 @@ def get_grondwaterstand(
     to_gdf=True,
     skip=None,
     continue_on_error=False,
+    progress_callback=None,
 ):
     """
     Get groundwater level (Grondwaterstand) data as a GeoDataFrame or raw objects.
@@ -301,6 +314,9 @@ def get_grondwaterstand(
     continue_on_error : bool, optional
         If True, continue after an error occurs during downloading or processing of
         individual observation data. Defaults to False.
+    progress_callback : function, optional
+        A callback function that takes two arguments (current, total) to report
+        progress. If None, no progress reporting is done. Defaults to None.
 
     Returns
     -------
@@ -320,12 +336,12 @@ def get_grondwaterstand(
         skip = [skip]
 
     if isinstance(extent, str):
-        data = _get_data_from_path(extent, dino_class, silent=silent)
+        data = _get_data_from_path(extent, dino_class, silent=silent, progress_callback=progress_callback)
         return objects_to_gdf(data, index=index, to_gdf=to_gdf)
 
     if to_zip is not None:
         if not redownload and os.path.isfile(to_zip):
-            data = _get_data_from_zip(to_zip, dino_class, silent=silent)
+            data = _get_data_from_zip(to_zip, dino_class, silent=silent, progress_callback=progress_callback)
             return objects_to_gdf(data, index=index, to_gdf=to_gdf)
         if to_path is None:
             to_path = os.path.splitext(to_zip)[0]
@@ -347,7 +363,9 @@ def get_grondwaterstand(
     if to_path is not None and not os.path.isdir(to_path):
         os.makedirs(to_path)
     data = {}
-    for name in util.tqdm(gdf.index, disable=silent):
+    for i, name in util.tqdm(enumerate(gdf.index), disable=silent):
+        if progress_callback is not None:
+            progress_callback(i, len(gdf))
         if skip is not None and name in skip:
             continue
         for i_st in range(1, gdf.at[name, "ST_CNT"] + 1):

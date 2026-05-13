@@ -1,8 +1,13 @@
 import logging
 import os
+import threading
+import time
+from collections import deque
+from urllib.parse import urlparse
 from zipfile import ZipFile, ZIP_DEFLATED, ZIP_STORED
 
 import numpy as np
+import requests
 
 logger = logging.getLogger(__name__)
 
@@ -12,6 +17,95 @@ except ImportError:
     # fallback: generate a dummy method with the same interface
     def tqdm(iterable=None, **kwargs):
         return iterable if iterable is not None else []
+
+
+class _SlidingWindowRateLimiter:
+    def __init__(self, max_requests, period_seconds=1.0):
+        self.max_requests = max_requests
+        self.period_seconds = period_seconds
+        self._timestamps = deque()
+        self._lock = threading.Lock()
+
+    def wait_for_slot(self):
+        while True:
+            with self._lock:
+                now = time.monotonic()
+                window_start = now - self.period_seconds
+                while self._timestamps and self._timestamps[0] <= window_start:
+                    self._timestamps.popleft()
+
+                if len(self._timestamps) < self.max_requests:
+                    self._timestamps.append(now)
+                    return
+
+                wait_seconds = self.period_seconds - (now - self._timestamps[0])
+
+            if wait_seconds > 0:
+                time.sleep(wait_seconds)
+
+
+_BRO_HOST = "publiek.broservices.nl"
+_BRO_RATE_LIMITER = _SlidingWindowRateLimiter(max_requests=5)
+_GLD_RATE_LIMITER = _SlidingWindowRateLimiter(max_requests=3)
+
+
+def _get_rate_limiter_for_url(url):
+    """Return the matching BRO rate limiter for a URL.
+
+    Official limits reference:
+    https://basisregistratieondergrond.nl/actueel/nieuws/nieuws/2024/december/opvraaglimieten-publieke-rest-services/
+    """
+    try:
+        parsed = urlparse(url)
+    except Exception:
+        return None
+
+    if parsed.netloc.lower() != _BRO_HOST:
+        return None
+
+    path = parsed.path.lower()
+    if "/gm/gld/" in path:
+        return _GLD_RATE_LIMITER
+    return _BRO_RATE_LIMITER
+
+
+def wait_for_rate_limit(url):
+    """Wait for an available request slot when calling BRO endpoints.
+
+    Official limits reference:
+    https://basisregistratieondergrond.nl/actueel/nieuws/nieuws/2024/december/opvraaglimieten-publieke-rest-services/
+    """
+    limiter = _get_rate_limiter_for_url(url)
+    if limiter is not None:
+        limiter.wait_for_slot()
+
+
+def request_with_rate_limit(method, url, **kwargs):
+    """Issue an HTTP request and enforce BRO-specific rate limits when needed.
+
+    Official limits reference:
+    https://basisregistratieondergrond.nl/actueel/nieuws/nieuws/2024/december/opvraaglimieten-publieke-rest-services/
+    """
+    wait_for_rate_limit(url)
+    return requests.request(method, url, **kwargs)
+
+
+def get_with_rate_limit(url, **kwargs):
+    """Perform a GET request with BRO rate limiting.
+
+    Official limits reference:
+    https://basisregistratieondergrond.nl/actueel/nieuws/nieuws/2024/december/opvraaglimieten-publieke-rest-services/
+    """
+    return request_with_rate_limit("GET", url, **kwargs)
+
+
+def post_with_rate_limit(url, **kwargs):
+    """Perform a POST request with BRO rate limiting.
+
+    Official limits reference:
+    https://basisregistratieondergrond.nl/actueel/nieuws/nieuws/2024/december/opvraaglimieten-publieke-rest-services/
+    """
+    return request_with_rate_limit("POST", url, **kwargs)
 
 
 def read_zipfile(fname, pathnames=None, use_bro_abbreviation=False, override_ext=None):

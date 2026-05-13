@@ -6,7 +6,7 @@ from abc import ABC, abstractmethod
 from io import StringIO
 from zipfile import ZipFile
 
-from shapely.geometry import Point
+from shapely.geometry import MultiPolygon, Point, Polygon
 import shapely
 import numpy as np
 import geopandas as gpd
@@ -41,7 +41,7 @@ def _get_bro_ids_of_bronhouder(cl, bronhouder):
     """
     url = f"{cl._rest_url}/bro-ids?"
     params = dict(bronhouder=bronhouder)
-    req = requests.get(url, params=params)
+    req = util.get_with_rate_limit(url, params=params)
     if req.status_code > 200:
         logger.error(req.json()["errors"][0]["message"])
         return
@@ -71,9 +71,9 @@ def _get_characteristics(
 
     Parameters
     ----------
-    extent : list or tuple of 4 floats, optional
-        Download the characteristics within extent ([xmin, xmax, ymin, ymax]). The
-        default is None.
+    extent : list, tuple, shapely.geometry.Polygon or shapely.geometry.MultiPolygon, optional
+        Download the characteristics within extent ([xmin, xmax, ymin, ymax]) or
+        within the bounds of a polygon. The default is None.
     tmin : str or pd.Timestamp, optional
         The minimum registrationPeriod of the requested characteristics. The default is
         None.
@@ -154,11 +154,16 @@ def _get_characteristics(
                 "radius": radius / 1000,
             }
         if extent is not None:
-            lat_ll, lon_ll = transformer.transform(extent[0], extent[2])
-            lat_ur, lon_ur = transformer.transform(extent[1], extent[3])
+            if isinstance(extent, (Polygon, MultiPolygon)):
+                xmin, ymin, xmax, ymax = extent.bounds
+            else:
+                xmin, xmax, ymin, ymax = extent
+
+            lat_ll, lon_ll = transformer.transform(xmin, ymin)
+            lat_ur, lon_ur = transformer.transform(xmax, ymax)
             if use_all_corners_of_extent:
-                lat_ul, lon_ul = transformer.transform(extent[0], extent[3])
-                lat_lr, lon_lr = transformer.transform(extent[1], extent[2])
+                lat_ul, lon_ul = transformer.transform(xmin, ymax)
+                lat_lr, lon_lr = transformer.transform(xmax, ymin)
                 lat_ll = min(lat_ll, lat_lr)
                 lon_ll = min(lon_ll, lon_ul)
                 lat_ur = max(lat_ul, lat_ur)
@@ -168,7 +173,7 @@ def _get_characteristics(
                 "lowerCorner": {"lat": lat_ll, "lon": lon_ll},
                 "upperCorner": {"lat": lat_ur, "lon": lon_ur},
             }
-        req = requests.post(url, json=data, timeout=timeout)
+        req = util.post_with_rate_limit(url, json=data, timeout=timeout)
         if req.status_code > 200:
             root = ElementTree.fromstring(req.text)
             FileOrUrl._check_for_rejection(root)
@@ -236,8 +241,11 @@ def _get_characteristics(
         data.append(d)
 
     gdf = objects_to_gdf(data)
-    if zipfile is not None and extent is not None:
-        gdf = gdf.cx[extent[0] : extent[1], extent[2] : extent[3]]
+    if zipfile is not None and extent is not None and isinstance(gdf, gpd.GeoDataFrame):
+        if isinstance(extent, (Polygon, MultiPolygon)):
+            gdf = gdf[gdf.intersects(extent)]
+        else:
+            gdf = gdf.cx[extent[0] : extent[1], extent[2] : extent[3]]
     return gdf
 
 
@@ -423,7 +431,12 @@ def _get_data_for_bro_ids(
     data = {}
     if isinstance(bro_ids, str):
         bro_ids = [bro_ids]
-    for bro_id in util.tqdm(bro_ids, disable=silent, desc=desc):
+    total = len(bro_ids)
+    for i, bro_id in util.tqdm(
+        enumerate(bro_ids), total=total, disable=silent, desc=desc
+    ):
+        if progress_callback is not None:
+            progress_callback(i, total)
         if zipfile is not None:
             fname = f"{bro_id}.xml"
             data[bro_id] = bro_cl(fname, zipfile=zipfile)
@@ -445,8 +458,6 @@ def _get_data_for_bro_ids(
         else:
             data[bro_id] = bro_cl.from_bro_id(bro_id, **kwargs)
 
-        if progress_callback is not None:
-            progress_callback(len(data), len(bro_ids))
     return data
 
 
@@ -547,9 +558,12 @@ class FileOrUrl(ABC):
                         adapter = requests.adapters.HTTPAdapter(max_retries=max_retries)
                         session = requests.Session()
                         session.mount("https://", adapter)
+                        util.wait_for_rate_limit(url_or_file)
                         req = session.get(url_or_file, params=params, timeout=timeout)
                     else:
-                        req = requests.get(url_or_file, params=params, timeout=timeout)
+                        req = util.get_with_rate_limit(
+                            url_or_file, params=params, timeout=timeout
+                        )
                     if not req.ok:
                         if req.reason == "Bad Request":
                             root = ElementTree.fromstring(req.text)
@@ -1100,7 +1114,7 @@ def get_brondocumenten_per_bronhouder(index=("kvk", "type"), timeout=5, **kwargs
 
     """
     url = "https://bromonitor.nl/api/rapporten/brondocumenten-per-bronhouder"
-    r = requests.get(url, timeout=timeout)
+    r = util.get_with_rate_limit(url, timeout=timeout)
     if not r.ok:
         raise (Exception("Download of brondocumenten per bronhouder failed"))
     df = pd.DataFrame(r.json()["data"], **kwargs)
