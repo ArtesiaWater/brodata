@@ -41,8 +41,19 @@ def test_gmw_get_gld_data_in_extent():
 
 
 def test_gmw_get_gld_data_in_extent_as_csv():
+    to_path = os.path.join(
+        tempfile.gettempdir(), "test_gmw_get_gld_data_in_extent_as_csv"
+    )
     extent = [118200, 118400, 439700, 440000]
-    brodata.gmw.get_data_in_extent(extent=extent, combine=True, as_csv=True)
+    gdf1 = brodata.gmw.get_data_in_extent(
+        extent=extent, combine=True, as_csv=True, to_path=to_path, redownload=True
+    )
+
+    gdf2 = brodata.gmw.get_data_in_extent(
+        extent=extent, combine=True, as_csv=True, to_path=to_path, redownload=False
+    )
+
+    pd.testing.assert_frame_equal(gdf1, gdf2)
 
 
 def test_gmw_get_gar_data_in_extent():
