@@ -353,6 +353,75 @@ def get_data_in_extent(
     if kind is None:
         return tubes
 
+    obs_df = get_observations(
+        extent,
+        kind=kind,
+        tmin=tmin,
+        tmax=tmax,
+        silent=silent,
+        as_csv=as_csv,
+        status=status,
+        observation_type=observation_type,
+        qualifier=qualifier,
+        to_path=to_path,
+        redownload=redownload,
+        continue_on_error=continue_on_error,
+        sort=sort,
+        drop_duplicates=drop_duplicates,
+        progress_callback=progress_callback,
+        zipfile=zipfile,
+        _files=_files,
+    )
+    # set the index of obs_df to the same index as tubes, so that they can be easily combined later on
+    obs_df["gmw_bro_id"] = (
+        tubes.reset_index()
+        .set_index("gm_gmw_monitoringtube_pk")["gmw_bro_id"]
+        .loc[obs_df["gm_gmw_monitoringtube_fk"].values]
+        .values
+    )
+    obs_df["tube_number"] = (
+        tubes.reset_index()
+        .set_index("gm_gmw_monitoringtube_pk")["tube_number"]
+        .loc[obs_df["gm_gmw_monitoringtube_fk"].values]
+        .values
+    )
+    obs_df = obs_df.set_index(["gmw_bro_id", "tube_number"])
+
+    if zipfile is not None:
+        zipfile.close()
+    if zipfile is None and to_zip is not None:
+        util._save_data_to_zip(to_zip, _files, remove_path_again, to_path)
+
+    # only keep tubes with active measurements
+    mask = tubes.index.isin(obs_df.index)
+    tubes = tubes[mask]
+
+    if combine and kind in ["gld", "gar"]:
+        tubes = gmw.add_observations_to_tubes(tubes, obs_df, kind=kind)
+        return tubes
+    else:
+        return tubes, obs_df
+
+
+def get_observations(
+    extent,
+    kind="gld",
+    tmin=None,
+    tmax=None,
+    silent=False,
+    as_csv=False,
+    status=None,
+    observation_type=None,
+    qualifier=None,
+    to_path=None,
+    redownload=False,
+    continue_on_error=False,
+    sort=True,
+    drop_duplicates=True,
+    progress_callback=None,
+    zipfile=None,
+    _files=None,
+):
     if kind == "gar":
         to_file = util._get_to_file("gm_gar.json", zipfile, to_path, _files)
         meas_gdf = gar_items(
@@ -387,7 +456,7 @@ def get_data_in_extent(
     if zipfile is None:
         desc = f"Downloading {kind}-observations"
     else:
-        desc = f"Reading {kind}-observations from {to_zip}"
+        desc = f"Reading {kind}-observations from {zipfile.filename}"
     if as_csv and kind != "gld":
         raise (Exception("as_csv=True is only supported for kind=='gld'"))
     if qualifier is not None and kind != "gld":
@@ -418,38 +487,7 @@ def get_data_in_extent(
         if progress_callback is not None:
             progress_callback(len(measurement_objects), len(meas_gdf.index))
     obs_df = pd.DataFrame(measurement_objects)
-
-    if zipfile is not None:
-        zipfile.close()
-    if zipfile is None and to_zip is not None:
-        util._save_data_to_zip(to_zip, _files, remove_path_again, to_path)
-
-    # only keep tubes with active measurements
-    mask = tubes["gm_gmw_monitoringtube_pk"].isin(meas_gdf["gm_gmw_monitoringtube_fk"])
-    tubes = tubes[mask]
-
-    if combine and kind in ["gld", "gar"]:
-        logger.info("Adding observations to tube-properties")
-
-        if kind == "gld":
-            idcol = "groundwaterLevelDossier"
-        elif kind == "gar":
-            idcol = "groundwaterAnalysisReport"
-
-        data = {}
-        ids = {}
-        for index in tubes.index:
-            mask = (
-                obs_df["gm_gmw_monitoringtube_fk"]
-                == tubes.at[index, "gm_gmw_monitoringtube_pk"]
-            )
-            data[index] = gmw._combine_observations(obs_df.loc[mask, datcol], kind=kind)
-            ids[index] = list(obs_df.loc[mask, "broId"])
-        tubes[datcol] = data
-        tubes[idcol] = ids
-        return tubes
-    else:
-        return tubes, obs_df
+    return obs_df
 
 
 def get_kenset_geopackage(to_file=None, layer=None, redownload=False, index="bro_id"):

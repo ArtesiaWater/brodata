@@ -742,32 +742,64 @@ def get_data_in_extent(
         ).sort_index()
 
     if combine and kind in ["gld", "gar"]:
-        if kind == "gld":
-            idcol = "groundwaterLevelDossier"
-        elif kind == "gar":
-            idcol = "groundwaterAnalysisReport"
-        datcol = _get_data_column(kind)
-
-        logger.info("Combining well-properties, tube-properties and observations")
-
-        data = {}
-        ids = {}
-        for index in gdf.index:
-            if index not in obs_df.index:
-                continue
-
-            data[index] = _combine_observations(
-                obs_df.loc[[index], datcol], kind=kind, bro_id=f"{index[0]}_{index[1]}"
-            )
-            ids[index] = list(obs_df.loc[[index], "broId"])
-        gdf[datcol] = data
-        gdf[idcol] = ids
+        gdf = add_observations_to_tubes(gdf, obs_df, kind=kind)
         return gdf
     else:
         if kind is None:
             return gdf
         else:
             return gdf, obs_df
+
+
+def add_observations_to_tubes(gdf, obs_df, kind="gld"):
+    """
+    Add observations to a GeoDataFrame of tube properties.
+
+    This function takes a GeoDataFrame containing tube properties and a DataFrame of
+    observations, and adds the observations to the GeoDataFrame based on matching
+    'groundwaterMonitoringWell' and 'tubeNumber' indices. The observations are combined
+    for each tube and added as a new column in the GeoDataFrame.
+
+    Parameters
+    ----------
+    gdf : gpd.GeoDataFrame
+        A GeoDataFrame containing tube properties with a MultiIndex of
+        ['groundwaterMonitoringWell', 'tubeNumber'].
+    obs_df : pd.DataFrame
+        A DataFrame containing observations with a MultiIndex of
+        ['groundwaterMonitoringWell', 'tubeNumber'] and a column containing the observation data.
+    kind : str, optional
+        The type of observations to add. Can be one of {'gld', 'gar'}. Defaults to 'gld'.
+
+    Returns
+    -------
+    gpd.GeoDataFrame
+        The input GeoDataFrame with an additional column containing the combined observations.
+
+    Raises
+    ------
+    ValueError
+        If `kind` is not one of the supported types ('gld', 'gar').
+    """
+    logger.info("Adding observations to tube-properties")
+    if kind == "gld":
+        idcol = "groundwaterLevelDossier"
+    elif kind == "gar":
+        idcol = "groundwaterAnalysisReport"
+    datcol = _get_data_column(kind)
+
+    data = {}
+    ids = {}
+    for index in gdf.index:
+        if index not in obs_df.index:
+            continue
+
+        data[index] = _combine_observations(
+            obs_df.loc[[index], datcol], kind=kind, bro_id=f"{index[0]}_{index[1]}"
+        )
+        ids[index] = list(obs_df.loc[[index], "broId"])
+    gdf[datcol] = data
+    gdf[idcol] = ids
 
 
 def _get_data_column(kind):

@@ -615,10 +615,10 @@ def process_observations(
             df = df[df["qualifier"].isin(qualifier)]
 
     if tmin is not None:
-        df = df.loc[pd.Timestamp(tmin) :]
+        df = df.loc[df.index >= pd.Timestamp(tmin)]
 
     if tmax is not None:
-        df = df.loc[: pd.Timestamp(tmax)]
+        df = df.loc[df.index <= pd.Timestamp(tmax)]
 
     if sort:
         df = sort_observations(df)
