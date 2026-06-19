@@ -373,19 +373,12 @@ def get_data_in_extent(
         _files=_files,
     )
     # set the index of obs_df to the same index as tubes, so that they can be easily combined later on
-    obs_df["gmw_bro_id"] = (
-        tubes.reset_index()
-        .set_index("gm_gmw_monitoringtube_pk")["gmw_bro_id"]
-        .loc[obs_df["gm_gmw_monitoringtube_fk"].values]
-        .values
-    )
-    obs_df["tube_number"] = (
-        tubes.reset_index()
-        .set_index("gm_gmw_monitoringtube_pk")["tube_number"]
-        .loc[obs_df["gm_gmw_monitoringtube_fk"].values]
-        .values
-    )
-    obs_df = obs_df.set_index(["gmw_bro_id", "tube_number"])
+    if as_csv:
+        tube_pk = tubes.reset_index().set_index("gm_gmw_monitoringtube_pk")
+        fk = obs_df["gm_gmw_monitoringtube_fk"].values
+        obs_df["groundwaterMonitoringWell"] = tube_pk["gmw_bro_id"].loc[fk].values
+        obs_df["tubeNumber"] = tube_pk["tube_number"].loc[fk].values
+    obs_df = obs_df.set_index(["groundwaterMonitoringWell", "tubeNumber"])
 
     if zipfile is not None:
         zipfile.close()
@@ -397,7 +390,9 @@ def get_data_in_extent(
     tubes = tubes[mask]
 
     if combine and kind in ["gld", "gar"]:
-        tubes = gmw.add_observations_to_tubes(tubes, obs_df, kind=kind)
+        tubes = gmw.add_observations_to_tubes(
+            tubes, obs_df, kind=kind, sort=sort, drop_duplicates=drop_duplicates
+        )
         return tubes
     else:
         return tubes, obs_df

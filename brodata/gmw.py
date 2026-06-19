@@ -742,7 +742,9 @@ def get_data_in_extent(
         ).sort_index()
 
     if combine and kind in ["gld", "gar"]:
-        gdf = add_observations_to_tubes(gdf, obs_df, kind=kind)
+        gdf = add_observations_to_tubes(
+            gdf, obs_df, kind=kind, sort=sort, drop_duplicates=drop_duplicates
+        )
         return gdf
     else:
         if kind is None:
@@ -751,7 +753,7 @@ def get_data_in_extent(
             return gdf, obs_df
 
 
-def add_observations_to_tubes(gdf, obs_df, kind="gld"):
+def add_observations_to_tubes(gdf, obs_df, kind="gld", sort=True, drop_duplicates=True):
     """
     Add observations to a GeoDataFrame of tube properties.
 
@@ -767,9 +769,15 @@ def add_observations_to_tubes(gdf, obs_df, kind="gld"):
         ['groundwaterMonitoringWell', 'tubeNumber'].
     obs_df : pd.DataFrame
         A DataFrame containing observations with a MultiIndex of
-        ['groundwaterMonitoringWell', 'tubeNumber'] and a column containing the observation data.
+        ['groundwaterMonitoringWell', 'tubeNumber'] and a column containing the
+        observation data.
     kind : str, optional
         The type of observations to add. Can be one of {'gld', 'gar'}. Defaults to 'gld'.
+    sort : bool, optional
+        If True, sort the observations. Only used if `kind` is 'gld'. Defaults to True.
+    drop_duplicates : bool, optional
+        If True, drop duplicate observations based on their timestamp. Only used if
+        `kind` is 'gld'. Defaults to True.
 
     Returns
     -------
@@ -795,11 +803,16 @@ def add_observations_to_tubes(gdf, obs_df, kind="gld"):
             continue
 
         data[index] = _combine_observations(
-            obs_df.loc[[index], datcol], kind=kind, bro_id=f"{index[0]}_{index[1]}"
+            obs_df.loc[[index], datcol],
+            kind=kind,
+            bro_id=f"{index[0]}_{index[1]}",
+            sort=sort,
+            drop_duplicates=drop_duplicates,
         )
         ids[index] = list(obs_df.loc[[index], "broId"])
     gdf[datcol] = data
     gdf[idcol] = ids
+    return gdf
 
 
 def _get_data_column(kind):
