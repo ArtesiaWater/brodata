@@ -346,6 +346,9 @@ def get_data_in_extent(
         extent, to_file=to_file, redownload=redownload, zipfile=zipfile
     )
 
+    if tubes is None:
+        return tubes
+
     if index is None:
         index = ["gmw_bro_id", "tube_number"]
     tubes = tubes.set_index(index)
@@ -378,7 +381,7 @@ def get_data_in_extent(
         fk = obs_df["gm_gmw_monitoringtube_fk"].values
         obs_df["groundwaterMonitoringWell"] = tube_pk["gmw_bro_id"].loc[fk].values
         obs_df["tubeNumber"] = tube_pk["tube_number"].loc[fk].values
-    obs_df = obs_df.set_index(["groundwaterMonitoringWell", "tubeNumber"])
+    obs_df = obs_df.reset_index().set_index(["groundwaterMonitoringWell", "tubeNumber"])
 
     if zipfile is not None:
         zipfile.close()
@@ -417,6 +420,72 @@ def get_observations(
     zipfile=None,
     _files=None,
 ):
+    """
+    Retrieve observations for monitoring wells within a specified spatial extent.
+
+    Parameters
+    ----------
+    extent : object
+        The spatial extent ([xmin, xmax, ymin, ymax]) to filter the data.
+    kind : str, optional
+        The type of observations to retrieve. Valid values are {'gld', 'gar'} for
+        groundwater level dossier or groundwater analysis report. Defaults to 'gld'.
+    tmin : str or datetime, optional
+        The minimum time for filtering observations. Defaults to None.
+    tmax : str or datetime, optional
+        The maximum time for filtering observations. Defaults to None.
+    silent : bool, optional
+        If True, suppresses progress logging. Defaults to False.
+    as_csv : bool, optional
+        If True, the measurement data is requested as CSV files instead of XML files
+        (only supported for 'gld'). Defaults to False.
+    status : str, optional
+        A status string for additional filtering. Possible values are
+        "volledigBeoordeeld", "voorlopig" and "onbekend" Only valid if `kind` is 'gld'.
+        Defaults to None.
+    observation_type : str, optional
+        An observation type string for additional filtering. Possible values are
+        "reguliereMeting" and "controleMeting". Only valid if `kind` is 'gld'. Defaults
+        to None.
+    qualifier : str or list of str, optional
+        A string or list of strings used to filter the observations. Only valid if
+        `kind` is 'gld'. Defaults to None.
+    to_path : str, optional
+        If not None, save the downloaded files in the directory named to_path. The
+        default is None.
+    redownload : bool, optional
+        When downloaded files exist in to_path or to_zip, read from these files when
+        redownload is False. If redownload is True, download the data again from the
+        BRO-servers. The default is False.
+    continue_on_error : bool, optional
+        If True, continue after an error occurs during downloading or processing of
+        individual observation data. Defaults to False.
+    sort : bool, optional
+        If True, sort the observations. Only used if `kind` is 'gld'. Defaults to True.
+    drop_duplicates : bool, optional
+        If True, drop duplicate observations based on their timestamp. Only used if
+        `kind` is 'gld'. Defaults to True.
+    progress_callback : function, optional
+        A callback function that takes two arguments (current, total) to report
+        progress. If None, no progress reporting is done. Defaults to None.
+    zipfile : ZipFile, optional
+        A `zipfile.ZipFile` object from which to read the `to_file` if provided.
+    _files : list, optional
+        A list of file paths to read the `to_file` if provided.
+
+    Returns
+    -------
+    obs_df : pd.DataFrame
+        A dataframe containing the observations for the specified wells, where each row
+        corresponds to an individual observation. The index is the BRO-id
+        of the observation-objects.
+
+    Raises
+    ------
+    ValueError
+        If the specified `kind` is not supported, or if `as_csv=True` and `kind` is not
+        'gld', or if `qualifier` is provided for a kind other than 'gld'.
+    """
     if kind == "gar":
         to_file = util._get_to_file("gm_gar.json", zipfile, to_path, _files)
         meas_gdf = gar_items(
@@ -453,9 +522,9 @@ def get_observations(
     else:
         desc = f"Reading {kind}-observations from {zipfile.filename}"
     if as_csv and kind != "gld":
-        raise (Exception("as_csv=True is only supported for kind=='gld'"))
+        raise (ValueError("as_csv=True is only supported for kind=='gld'"))
     if qualifier is not None and kind != "gld":
-        raise (Exception("A qualifier is only supported for kind=='gld'"))
+        raise (ValueError("A qualifier is only supported for kind=='gld'"))
     datcol = gmw._get_data_column(kind)
     for bro_id in util.tqdm(meas_gdf.index, disable=silent, desc=desc):
         obsdata = gmw._download_observations_for_bro_id(
@@ -481,7 +550,7 @@ def get_observations(
 
         if progress_callback is not None:
             progress_callback(len(measurement_objects), len(meas_gdf.index))
-    obs_df = pd.DataFrame(measurement_objects)
+    obs_df = pd.DataFrame(measurement_objects).set_index("broId")
     return obs_df
 
 

@@ -222,13 +222,14 @@ def get_observations(
     -------
     pd.DataFrame
         A DataFrame containing the observations for the specified monitoring wells,
-        where each row corresponds to an individual observation.
+        where each row corresponds to an individual observation. The index is the BRO-id
+        of the observation-objects.
 
     Raises
     ------
-    Exception
-        If `as_csv=True` and `kind` is not 'gld', or if `qualifier` is provided for
-        a kind other than 'gld'.
+    ValueError
+        If the specified `kind` is not supported, or if `as_csv=True` and `kind` is not
+        'gld', or if `qualifier` is provided for a kind other than 'gld'.
     """
     tubes = []
 
@@ -261,9 +262,9 @@ def get_observations(
 
     desc = f"Downloading {kind}-observations"
     if as_csv and kind != "gld":
-        raise (Exception("as_csv=True is only supported for kind=='gld'"))
+        raise (ValueError("as_csv=True is only supported for kind=='gld'"))
     if qualifier is not None and kind != "gld":
-        raise (Exception("A qualifier is only supported for kind=='gld'"))
+        raise (ValueError("A qualifier is only supported for kind=='gld'"))
     if to_path is not None and not os.path.isdir(to_path):
         os.makedirs(to_path)
 
@@ -348,7 +349,7 @@ def get_observations(
             progress_callback(igmw + 1, len(bro_ids))
     if to_zip is not None:
         util._save_data_to_zip(to_zip, _files, remove_path_again, to_path)
-    return pd.DataFrame(tubes)
+    return pd.DataFrame(tubes).set_index("broId")
 
 
 def _download_observations_for_bro_id(
@@ -737,9 +738,11 @@ def get_data_in_extent(
         util._save_data_to_zip(to_zip, _files, remove_path_again, to_path)
 
     if not obs_df.empty:
-        obs_df = obs_df.set_index(
-            ["groundwaterMonitoringWell", "tubeNumber"]
-        ).sort_index()
+        obs_df = (
+            obs_df.reset_index()
+            .set_index(["groundwaterMonitoringWell", "tubeNumber"])
+            .sort_index()
+        )
 
     if combine and kind in ["gld", "gar"]:
         gdf = add_observations_to_tubes(
