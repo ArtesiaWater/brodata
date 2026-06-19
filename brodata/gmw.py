@@ -800,6 +800,7 @@ def add_observations_to_tubes(gdf, obs_df, kind="gld"):
         ids[index] = list(obs_df.loc[[index], "broId"])
     gdf[datcol] = data
     gdf[idcol] = ids
+    return gdf
 
 
 def _get_data_column(kind):

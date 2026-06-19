@@ -61,6 +61,28 @@ def test_gmw_get_gar_data_in_extent():
     brodata.gmw.get_data_in_extent(extent=extent, kind="gar", combine=True)
 
 
+def test_add_observations_to_tubes_returns_updated_dataframe():
+    index = pd.MultiIndex.from_tuples(
+        [("GMW000000000001", 1)],
+        names=["groundwaterMonitoringWell", "tubeNumber"],
+    )
+    tubes = pd.DataFrame(index=index)
+    observations = pd.DataFrame(
+        {
+            "broId": ["GAR000000000001"],
+            "laboratoryAnalysis": [pd.DataFrame({"value": [1.0]})],
+        },
+        index=index,
+    )
+
+    result = brodata.gmw.add_observations_to_tubes(tubes, observations, kind="gar")
+
+    assert result is tubes
+    assert result.at[("GMW000000000001", 1), "groundwaterAnalysisReport"] == [
+        "GAR000000000001"
+    ]
+
+
 # def test_gmw_get_frd_data_in_extent():
 #    extent = [115000, 120000, 438000, 441000]
 #    gdf, frd = brodata.gmw.get_data_in_extent(extent=extent, kind="frd")
