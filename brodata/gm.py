@@ -358,6 +358,7 @@ def get_data_in_extent(
 
     obs_df = get_observations(
         extent,
+        tubes=tubes,
         kind=kind,
         tmin=tmin,
         tmax=tmax,
@@ -376,11 +377,6 @@ def get_data_in_extent(
         _files=_files,
     )
     # set the index of obs_df to the same index as tubes, so that they can be easily combined later on
-    if as_csv:
-        tube_pk = tubes.reset_index().set_index("gm_gmw_monitoringtube_pk")
-        fk = obs_df["gm_gmw_monitoringtube_fk"].values
-        obs_df["groundwaterMonitoringWell"] = tube_pk["gmw_bro_id"].loc[fk].values
-        obs_df["tubeNumber"] = tube_pk["tube_number"].loc[fk].values
     obs_df = obs_df.reset_index().set_index(["groundwaterMonitoringWell", "tubeNumber"])
 
     if zipfile is not None:
@@ -403,6 +399,7 @@ def get_data_in_extent(
 
 def get_observations(
     extent,
+    tubes=None,
     kind="gld",
     tmin=None,
     tmax=None,
@@ -427,6 +424,11 @@ def get_observations(
     ----------
     extent : object
         The spatial extent ([xmin, xmax, ymin, ymax]) to filter the data.
+    tubes : gpd.GeoDataFrame, optional
+        A GeoDataFrame containing monitoring tube properties. If provided, the
+        observations will be filtered to only include those associated with the
+        tubes in this GeoDataFrame. If None, all observations within the extent are
+        returned.
     kind : str, optional
         The type of observations to retrieve. Valid values are {'gld', 'gar'} for
         groundwater level dossier or groundwater analysis report. Defaults to 'gld'.
@@ -511,6 +513,11 @@ def get_observations(
     else:
         raise (ValueError(f"kind='{kind}' not supported"))
 
+    if tubes is not None:
+        # only download measurements for tubes that are present in the tubes-gdf
+        tube_pk = tubes["gm_gmw_monitoringtube_pk"].values
+        meas_gdf = meas_gdf[meas_gdf["gm_gmw_monitoringtube_fk"].isin(tube_pk)]
+
     gld_kwargs = gmw._get_gld_kwargs(
         kind, tmin, tmax, qualifier, status, observation_type, sort, drop_duplicates
     )
@@ -550,7 +557,17 @@ def get_observations(
 
         if progress_callback is not None:
             progress_callback(len(measurement_objects), len(meas_gdf.index))
+    if len(measurement_objects) == 0:
+        return None
     obs_df = pd.DataFrame(measurement_objects).set_index("broId")
+
+    if as_csv and tubes is not None:
+        # obs_df does not contain the gmw-id or the tube-number
+        # so we need to add these columns to the dataframe
+        tube_pk = tubes.reset_index().set_index("gm_gmw_monitoringtube_pk")
+        fk = obs_df["gm_gmw_monitoringtube_fk"].values
+        obs_df["groundwaterMonitoringWell"] = tube_pk["gmw_bro_id"].loc[fk].values
+        obs_df["tubeNumber"] = tube_pk["tube_number"].loc[fk].values
     return obs_df
 
 
