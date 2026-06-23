@@ -449,14 +449,14 @@ def _get_gld_kwargs(
 
 
 def get_tube_observations(
-    gwm_id, tube_number, kind="gld", sort=True, drop_duplicates=True, **kwargs
+    gmw_id, tube_number, kind="gld", sort=True, drop_duplicates=True, **kwargs
 ):
     """
     Get the observations of a single groundwater monitoring tube.
 
     Parameters
     ----------
-    gwm_id : str
+    gmw_id : str
         The bro_id of the groundwater monitoring well.
     tube_number : int
         The tube number.
@@ -480,7 +480,7 @@ def get_tube_observations(
     # sorting and dropping duplicates is done after combining the observations
     # to avoid doing this multiple times
     df = get_observations(
-        gwm_id,
+        gmw_id,
         tube_number=tube_number,
         kind=kind,
         sort=False,
@@ -494,7 +494,7 @@ def get_tube_observations(
         return _combine_observations(
             df[data_column],
             kind=kind,
-            bro_id=f"{gwm_id}_{tube_number}",
+            bro_id=f"{gmw_id}_{tube_number}",
             sort=sort,
             drop_duplicates=drop_duplicates,
         )
