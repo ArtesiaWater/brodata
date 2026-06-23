@@ -566,8 +566,8 @@ def get_kenset_geopackage(to_file=None, layer=None, redownload=False, index="bro
     layer : str, optional
         The layer within the geopackage. Possible values are 'gm_gmw',
         'gm_gmw_monitoringtube', 'gm_gld', 'gm_gar', 'gm_gmn', 'gm_gmn_measuringpoint'
-        and 'gm_gmn_reference'. The default is None, which read data from the layer
-        "gm_gmw".
+        and 'gm_gmn_reference'. The default is None, which reads data from the layer
+        "gm_gmw", and displays a warning that shows the available layers.
     redownload : bool, optional
         If True, forces redownload of the data even if `to_file` exists. The default is
         False.
