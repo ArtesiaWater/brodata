@@ -586,7 +586,7 @@ def get_kenset_geopackage(to_file=None, layer=None, redownload=False, index="bro
         if redownload or not os.path.isfile(to_file):
             urllib.request.urlretrieve(url, to_file)
         url = to_file
-    gdf = gpd.read_file(url, layer=layer)
+    gdf = gpd.read_file(url, layer=layer, fid_as_index=True)
     if index in gdf.columns:
         gdf = gdf.set_index(index)
     return gdf
