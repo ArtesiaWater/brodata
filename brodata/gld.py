@@ -185,7 +185,7 @@ def get_series_as_csv(
 
 
 def read_gld_csv(
-    fname, bro_id, rapportagetype="volledig", observatietype=None, **kwargs
+    fname, bro_id="gld", rapportagetype="volledig", observatietype=None, **kwargs
 ):
     """
     Read and process a Groundwater Level Dossier (GLD) CSV file.
@@ -201,7 +201,8 @@ def read_gld_csv(
     fname : str
         The path to the CSV file containing the groundwater level observations.
     bro_id : str
-        The BRO-ID of the Groundwater Level Dossier being processed.
+        The BRO-ID of the Groundwater Level Dossier being processed. Only used for
+        logging-purposes. The default is "gld".
     rapportagetype : str, optional
         The report type. Can be one of:
         - 'volledig': as complete as possible
