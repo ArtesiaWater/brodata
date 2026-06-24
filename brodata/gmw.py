@@ -799,10 +799,20 @@ def add_observations_to_tubes(gdf, obs_df, kind="gld", sort=True, drop_duplicate
         idcol = "groundwaterAnalysisReport"
     datcol = _get_data_column(kind)
 
+    # check if all indices of obs_df are in gdf
+    if not obs_df.index.isin(gdf.index).all():
+        missing = obs_df.index[~obs_df.index.isin(gdf.index)]
+        logger.warning(
+            "Not all indices of obs_df are in gdf: %s. Only adding observations for tubes "
+            "with matching indices.",
+            missing,
+        )
+
     data = {}
     ids = {}
     for index in gdf.index:
         if index not in obs_df.index:
+            data[index] = _get_empty_observation_df(kind)
             continue
 
         data[index] = _combine_observations(
