@@ -39,6 +39,18 @@ def test_gm_gld():
     )
 
 
+def test_gm_gld_two_step():
+    extent = [117700, 118700, 439400, 440400]
+    tubes = brodata.gm.get_data_in_extent(extent, kind=None)
+    tubes = tubes[tubes["screen_top_position"] < -10]
+    obs_df = brodata.gm.get_observations(
+        extent=extent, tubes=tubes, kind="gld", as_csv=True
+    )
+    obs_df = obs_df.reset_index().set_index(["groundwaterMonitoringWell", "tubeNumber"])
+    tubes = brodata.gmw.add_observations_to_tubes(tubes, obs_df, kind="gld")
+    assert not tubes.iloc[0]["observation"].empty
+
+
 def test_gm_gld_polygon():
     polygon = Polygon(
         [

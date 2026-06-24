@@ -184,7 +184,9 @@ def get_series_as_csv(
         return df
 
 
-def read_gld_csv(fname, bro_id, rapportagetype, observatietype, **kwargs):
+def read_gld_csv(
+    fname, bro_id="gld", rapportagetype="volledig", observatietype=None, **kwargs
+):
     """
     Read and process a Groundwater Level Dossier (GLD) CSV file.
 
@@ -199,12 +201,25 @@ def read_gld_csv(fname, bro_id, rapportagetype, observatietype, **kwargs):
     fname : str
         The path to the CSV file containing the groundwater level observations.
     bro_id : str
-        The BRO-ID of the Groundwater Level Dossier being processed.
-    rapportagetype : str
+        The BRO-ID of the Groundwater Level Dossier being processed. Only used for
+        logging-purposes. The default is "gld".
+    rapportagetype : str, optional
         The report type. Can be one of:
-        - 'volledig': as complete as possible (not supported yet)
+        - 'volledig': as complete as possible
         - 'compact': simple format with time and value.
         - 'compact_met_timestamps': format with timestamps for each observation.
+        Default is "volledig".
+    observatietype : str, optional
+        Type of observations. The valid values are:
+        - "regulier_beoordeeld" : Regular measurement with full evaluation
+        (observatietype = reguliere meting en mate beoordeling = volledig beoordeeld)
+        - "regulier_voorlopig" : Regular measurement with preliminary evaluation
+        (observatietype = reguliere meting en mate beoordeling = voorlopig)
+        - "controle" : Control measurement
+        (observatietype = controle meting)
+        - "onbekend" : Unknown evaluation
+        (observatietype = reguliere meting en mate beoordeling = onbekend)
+        If None, all observation types will be returned. Default is None.
     **kwargs : additional keyword arguments
         Additional arguments passed to the `process_observations` function.
 
@@ -601,10 +616,10 @@ def process_observations(
             df = df[df["qualifier"].isin(qualifier)]
 
     if tmin is not None:
-        df = df.loc[pd.Timestamp(tmin) :]
+        df = df.loc[df.index >= pd.Timestamp(tmin)]
 
     if tmax is not None:
-        df = df.loc[: pd.Timestamp(tmax)]
+        df = df.loc[df.index <= pd.Timestamp(tmax)]
 
     if sort:
         df = sort_observations(df)

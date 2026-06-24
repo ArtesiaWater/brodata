@@ -346,6 +346,9 @@ def get_data_in_extent(
         extent, to_file=to_file, redownload=redownload, zipfile=zipfile
     )
 
+    if tubes is None:
+        return tubes
+
     if index is None:
         index = ["gmw_bro_id", "tube_number"]
     tubes = tubes.set_index(index)
@@ -353,6 +356,138 @@ def get_data_in_extent(
     if kind is None:
         return tubes
 
+    obs_df = get_observations(
+        extent,
+        tubes=tubes,
+        kind=kind,
+        tmin=tmin,
+        tmax=tmax,
+        silent=silent,
+        as_csv=as_csv,
+        status=status,
+        observation_type=observation_type,
+        qualifier=qualifier,
+        to_path=to_path,
+        redownload=redownload,
+        continue_on_error=continue_on_error,
+        sort=sort,
+        drop_duplicates=drop_duplicates,
+        progress_callback=progress_callback,
+        zipfile=zipfile,
+        _files=_files,
+    )
+    # set the index of obs_df to the same index as tubes, so that they can be easily combined later on
+    obs_df = obs_df.reset_index().set_index(["groundwaterMonitoringWell", "tubeNumber"])
+
+    if zipfile is not None:
+        zipfile.close()
+    if zipfile is None and to_zip is not None:
+        util._save_data_to_zip(to_zip, _files, remove_path_again, to_path)
+
+    # only keep tubes with active measurements
+    mask = tubes.index.isin(obs_df.index)
+    tubes = tubes[mask]
+
+    if combine and kind in ["gld", "gar"]:
+        tubes = gmw.add_observations_to_tubes(
+            tubes, obs_df, kind=kind, sort=sort, drop_duplicates=drop_duplicates
+        )
+        return tubes
+    else:
+        return tubes, obs_df
+
+
+def get_observations(
+    extent,
+    tubes=None,
+    kind="gld",
+    tmin=None,
+    tmax=None,
+    silent=False,
+    as_csv=False,
+    status=None,
+    observation_type=None,
+    qualifier=None,
+    to_path=None,
+    redownload=False,
+    continue_on_error=False,
+    sort=True,
+    drop_duplicates=True,
+    progress_callback=None,
+    zipfile=None,
+    _files=None,
+):
+    """
+    Retrieve observations for monitoring wells within a specified spatial extent.
+
+    Parameters
+    ----------
+    extent : object
+        The spatial extent ([xmin, xmax, ymin, ymax]) to filter the data.
+    tubes : gpd.GeoDataFrame, optional
+        A GeoDataFrame containing monitoring tube properties. If provided, the
+        observations will be filtered to only include those associated with the
+        tubes in this GeoDataFrame. If None, all observations within the extent are
+        returned.
+    kind : str, optional
+        The type of observations to retrieve. Valid values are {'gld', 'gar'} for
+        groundwater level dossier or groundwater analysis report. Defaults to 'gld'.
+    tmin : str or datetime, optional
+        The minimum time for filtering observations. Defaults to None.
+    tmax : str or datetime, optional
+        The maximum time for filtering observations. Defaults to None.
+    silent : bool, optional
+        If True, suppresses progress logging. Defaults to False.
+    as_csv : bool, optional
+        If True, the measurement data is requested as CSV files instead of XML files
+        (only supported for 'gld'). Defaults to False.
+    status : str, optional
+        A status string for additional filtering. Possible values are
+        "volledigBeoordeeld", "voorlopig" and "onbekend" Only valid if `kind` is 'gld'.
+        Defaults to None.
+    observation_type : str, optional
+        An observation type string for additional filtering. Possible values are
+        "reguliereMeting" and "controleMeting". Only valid if `kind` is 'gld'. Defaults
+        to None.
+    qualifier : str or list of str, optional
+        A string or list of strings used to filter the observations. Only valid if
+        `kind` is 'gld'. Defaults to None.
+    to_path : str, optional
+        If not None, save the downloaded files in the directory named to_path. The
+        default is None.
+    redownload : bool, optional
+        When downloaded files exist in to_path or to_zip, read from these files when
+        redownload is False. If redownload is True, download the data again from the
+        BRO-servers. The default is False.
+    continue_on_error : bool, optional
+        If True, continue after an error occurs during downloading or processing of
+        individual observation data. Defaults to False.
+    sort : bool, optional
+        If True, sort the observations. Only used if `kind` is 'gld'. Defaults to True.
+    drop_duplicates : bool, optional
+        If True, drop duplicate observations based on their timestamp. Only used if
+        `kind` is 'gld'. Defaults to True.
+    progress_callback : function, optional
+        A callback function that takes two arguments (current, total) to report
+        progress. If None, no progress reporting is done. Defaults to None.
+    zipfile : ZipFile, optional
+        A `zipfile.ZipFile` object from which to read the `to_file` if provided.
+    _files : list, optional
+        A list of file paths to read the `to_file` if provided.
+
+    Returns
+    -------
+    obs_df : pd.DataFrame
+        A dataframe containing the observations for the specified wells, where each row
+        corresponds to an individual observation. The index is the BRO-id
+        of the observation-objects.
+
+    Raises
+    ------
+    ValueError
+        If the specified `kind` is not supported, or if `as_csv=True` and `kind` is not
+        'gld', or if `qualifier` is provided for a kind other than 'gld'.
+    """
     if kind == "gar":
         to_file = util._get_to_file("gm_gar.json", zipfile, to_path, _files)
         meas_gdf = gar_items(
@@ -378,6 +513,11 @@ def get_data_in_extent(
     else:
         raise (ValueError(f"kind='{kind}' not supported"))
 
+    if tubes is not None:
+        # only download measurements for tubes that are present in the tubes-gdf
+        tube_pk = tubes["gm_gmw_monitoringtube_pk"].values
+        meas_gdf = meas_gdf[meas_gdf["gm_gmw_monitoringtube_fk"].isin(tube_pk)]
+
     gld_kwargs = gmw._get_gld_kwargs(
         kind, tmin, tmax, qualifier, status, observation_type, sort, drop_duplicates
     )
@@ -387,11 +527,11 @@ def get_data_in_extent(
     if zipfile is None:
         desc = f"Downloading {kind}-observations"
     else:
-        desc = f"Reading {kind}-observations from {to_zip}"
+        desc = f"Reading {kind}-observations from {zipfile.filename}"
     if as_csv and kind != "gld":
-        raise (Exception("as_csv=True is only supported for kind=='gld'"))
+        raise (ValueError("as_csv=True is only supported for kind=='gld'"))
     if qualifier is not None and kind != "gld":
-        raise (Exception("A qualifier is only supported for kind=='gld'"))
+        raise (ValueError("A qualifier is only supported for kind=='gld'"))
     datcol = gmw._get_data_column(kind)
     for bro_id in util.tqdm(meas_gdf.index, disable=silent, desc=desc):
         obsdata = gmw._download_observations_for_bro_id(
@@ -417,39 +557,18 @@ def get_data_in_extent(
 
         if progress_callback is not None:
             progress_callback(len(measurement_objects), len(meas_gdf.index))
-    obs_df = pd.DataFrame(measurement_objects)
+    if len(measurement_objects) == 0:
+        return None
+    obs_df = pd.DataFrame(measurement_objects).set_index("broId")
 
-    if zipfile is not None:
-        zipfile.close()
-    if zipfile is None and to_zip is not None:
-        util._save_data_to_zip(to_zip, _files, remove_path_again, to_path)
-
-    # only keep tubes with active measurements
-    mask = tubes["gm_gmw_monitoringtube_pk"].isin(meas_gdf["gm_gmw_monitoringtube_fk"])
-    tubes = tubes[mask]
-
-    if combine and kind in ["gld", "gar"]:
-        logger.info("Adding observations to tube-properties")
-
-        if kind == "gld":
-            idcol = "groundwaterLevelDossier"
-        elif kind == "gar":
-            idcol = "groundwaterAnalysisReport"
-
-        data = {}
-        ids = {}
-        for index in tubes.index:
-            mask = (
-                obs_df["gm_gmw_monitoringtube_fk"]
-                == tubes.at[index, "gm_gmw_monitoringtube_pk"]
-            )
-            data[index] = gmw._combine_observations(obs_df.loc[mask, datcol], kind=kind)
-            ids[index] = list(obs_df.loc[mask, "broId"])
-        tubes[datcol] = data
-        tubes[idcol] = ids
-        return tubes
-    else:
-        return tubes, obs_df
+    if as_csv and tubes is not None:
+        # obs_df does not contain the gmw-id or the tube-number
+        # so we need to add these columns to the dataframe
+        tube_pk = tubes.reset_index().set_index("gm_gmw_monitoringtube_pk")
+        fk = obs_df["gm_gmw_monitoringtube_fk"].values
+        obs_df["groundwaterMonitoringWell"] = tube_pk["gmw_bro_id"].loc[fk].values
+        obs_df["tubeNumber"] = tube_pk["tube_number"].loc[fk].values
+    return obs_df
 
 
 def get_kenset_geopackage(to_file=None, layer=None, redownload=False, index="bro_id"):
@@ -464,8 +583,8 @@ def get_kenset_geopackage(to_file=None, layer=None, redownload=False, index="bro
     layer : str, optional
         The layer within the geopackage. Possible values are 'gm_gmw',
         'gm_gmw_monitoringtube', 'gm_gld', 'gm_gar', 'gm_gmn', 'gm_gmn_measuringpoint'
-        and 'gm_gmn_reference'. The default is None, which read data from the layer
-        "gm_gmw".
+        and 'gm_gmn_reference'. The default is None, which reads data from the layer
+        "gm_gmw", and displays a warning that shows the available layers.
     redownload : bool, optional
         If True, forces redownload of the data even if `to_file` exists. The default is
         False.
@@ -484,7 +603,7 @@ def get_kenset_geopackage(to_file=None, layer=None, redownload=False, index="bro
         if redownload or not os.path.isfile(to_file):
             urllib.request.urlretrieve(url, to_file)
         url = to_file
-    gdf = gpd.read_file(url, layer=layer)
+    gdf = gpd.read_file(url, layer=layer, fid_as_index=True)
     if index in gdf.columns:
         gdf = gdf.set_index(index)
     return gdf

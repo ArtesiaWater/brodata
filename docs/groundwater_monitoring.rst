@@ -11,3 +11,4 @@ The following examples are available as Jupyter Notebooks.
   examples/1_1_2_bro_gld.ipynb
   examples/1_1_3_bro_gar.ipynb
   examples/1_1_4_bro_gmn.ipynb
+  examples/1_1_5_bro_gm.ipynb

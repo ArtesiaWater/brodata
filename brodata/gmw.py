@@ -169,7 +169,8 @@ def get_observations(
         Defaults to 'gld' (groundwater level dossier).
     drop_references : bool or list of str, optional
         Specifies whether to drop reference fields in the returned data. Defaults to True,
-        in which case 'gmnReferences', 'gldReferences', and 'garReferences' are removed.
+        in which case 'gmnReferences', 'gldReferences', 'garReferences' and
+        'frdReferences' are removed. Only used when as_csv=True.
     silent : bool, optional
         If True, suppresses progress logging. Defaults to False.
     tmin : str or datetime, optional
@@ -222,13 +223,14 @@ def get_observations(
     -------
     pd.DataFrame
         A DataFrame containing the observations for the specified monitoring wells,
-        where each row corresponds to an individual observation.
+        where each row corresponds to an individual observation. The index is the BRO-id
+        of the observation-objects.
 
     Raises
     ------
-    Exception
-        If `as_csv=True` and `kind` is not 'gld', or if `qualifier` is provided for
-        a kind other than 'gld'.
+    ValueError
+        If the specified `kind` is not supported, or if `as_csv=True` and `kind` is not
+        'gld', or if `qualifier` is provided for a kind other than 'gld'.
     """
     tubes = []
 
@@ -239,13 +241,13 @@ def get_observations(
     if isinstance(bro_ids, pd.DataFrame):
         bro_ids = bro_ids.index
 
-    if isinstance(drop_references, bool):
+    if as_csv and isinstance(drop_references, bool):
         if drop_references:
             drop_references = [
                 "gmnReferences",
                 "gldReferences",
                 "garReferences",
-                # "frdReferences",
+                "frdReferences",
             ]
         else:
             drop_references = []
@@ -261,9 +263,9 @@ def get_observations(
 
     desc = f"Downloading {kind}-observations"
     if as_csv and kind != "gld":
-        raise (Exception("as_csv=True is only supported for kind=='gld'"))
+        raise (ValueError("as_csv=True is only supported for kind=='gld'"))
     if qualifier is not None and kind != "gld":
-        raise (Exception("A qualifier is only supported for kind=='gld'"))
+        raise (ValueError("A qualifier is only supported for kind=='gld'"))
     if to_path is not None and not os.path.isdir(to_path):
         os.makedirs(to_path)
 
@@ -326,21 +328,16 @@ def get_observations(
                     continue_on_error=continue_on_error,
                 )
                 if as_csv:
-                    tube_ref["observation"] = obsdata
+                    gld_dict = tube_ref.copy()
+                    gld_dict["observation"] = obsdata
+                    # drop references, as these are dictionaries of no interest to the user
                     for key in drop_references:
-                        if key in tube_ref:
-                            tube_ref.pop(key)
-                        else:
-                            logger.warning(
-                                "{} not defined for {}, filter {}".format(
-                                    key,
-                                    tube_ref["groundwaterMonitoringWell"],
-                                    tube_ref["tubeNumber"],
-                                )
-                            )
-
-                    tube_ref["broId"] = ref["broId"]
-                    tubes.append(tube_ref)
+                        if key in gld_dict:
+                            gld_dict.pop(key)
+                    # add fields of the ref to gld_dict, like the broId of the GLD
+                    for key in ref:
+                        gld_dict[key] = ref[key]
+                    tubes.append(gld_dict)
                 else:
                     tubes.append(obsdata.to_dict())
 
@@ -348,7 +345,7 @@ def get_observations(
             progress_callback(igmw + 1, len(bro_ids))
     if to_zip is not None:
         util._save_data_to_zip(to_zip, _files, remove_path_again, to_path)
-    return pd.DataFrame(tubes)
+    return pd.DataFrame(tubes).set_index("broId")
 
 
 def _download_observations_for_bro_id(
@@ -448,14 +445,14 @@ def _get_gld_kwargs(
 
 
 def get_tube_observations(
-    gwm_id, tube_number, kind="gld", sort=True, drop_duplicates=True, **kwargs
+    gmw_id, tube_number, kind="gld", sort=True, drop_duplicates=True, **kwargs
 ):
     """
     Get the observations of a single groundwater monitoring tube.
 
     Parameters
     ----------
-    gwm_id : str
+    gmw_id : str
         The bro_id of the groundwater monitoring well.
     tube_number : int
         The tube number.
@@ -479,7 +476,7 @@ def get_tube_observations(
     # sorting and dropping duplicates is done after combining the observations
     # to avoid doing this multiple times
     df = get_observations(
-        gwm_id,
+        gmw_id,
         tube_number=tube_number,
         kind=kind,
         sort=False,
@@ -493,7 +490,7 @@ def get_tube_observations(
         return _combine_observations(
             df[data_column],
             kind=kind,
-            bro_id=f"{gwm_id}_{tube_number}",
+            bro_id=f"{gmw_id}_{tube_number}",
             sort=sort,
             drop_duplicates=drop_duplicates,
         )
@@ -737,37 +734,94 @@ def get_data_in_extent(
         util._save_data_to_zip(to_zip, _files, remove_path_again, to_path)
 
     if not obs_df.empty:
-        obs_df = obs_df.set_index(
-            ["groundwaterMonitoringWell", "tubeNumber"]
-        ).sort_index()
+        obs_df = (
+            obs_df.reset_index()
+            .set_index(["groundwaterMonitoringWell", "tubeNumber"])
+            .sort_index()
+        )
 
     if combine and kind in ["gld", "gar"]:
-        if kind == "gld":
-            idcol = "groundwaterLevelDossier"
-        elif kind == "gar":
-            idcol = "groundwaterAnalysisReport"
-        datcol = _get_data_column(kind)
-
-        logger.info("Combining well-properties, tube-properties and observations")
-
-        data = {}
-        ids = {}
-        for index in gdf.index:
-            if index not in obs_df.index:
-                continue
-
-            data[index] = _combine_observations(
-                obs_df.loc[[index], datcol], kind=kind, bro_id=f"{index[0]}_{index[1]}"
-            )
-            ids[index] = list(obs_df.loc[[index], "broId"])
-        gdf[datcol] = data
-        gdf[idcol] = ids
+        gdf = add_observations_to_tubes(
+            gdf, obs_df, kind=kind, sort=sort, drop_duplicates=drop_duplicates
+        )
         return gdf
     else:
         if kind is None:
             return gdf
         else:
             return gdf, obs_df
+
+
+def add_observations_to_tubes(gdf, obs_df, kind="gld", sort=True, drop_duplicates=True):
+    """
+    Add observations to a GeoDataFrame of tube properties.
+
+    This function takes a GeoDataFrame containing tube properties and a DataFrame of
+    observations, and adds the observations to the GeoDataFrame based on matching
+    'groundwaterMonitoringWell' and 'tubeNumber' indices. The observations are combined
+    for each tube and added as a new column in the GeoDataFrame.
+
+    Parameters
+    ----------
+    gdf : gpd.GeoDataFrame
+        A GeoDataFrame containing tube properties with a MultiIndex of
+        ['groundwaterMonitoringWell', 'tubeNumber'].
+    obs_df : pd.DataFrame
+        A DataFrame containing observations with a MultiIndex of
+        ['groundwaterMonitoringWell', 'tubeNumber'] and a column containing the
+        observation data.
+    kind : str, optional
+        The type of observations to add. Can be one of {'gld', 'gar'}. Defaults to 'gld'.
+    sort : bool, optional
+        If True, sort the observations. Only used if `kind` is 'gld'. Defaults to True.
+    drop_duplicates : bool, optional
+        If True, drop duplicate observations based on their timestamp. Only used if
+        `kind` is 'gld'. Defaults to True.
+
+    Returns
+    -------
+    gpd.GeoDataFrame
+        The input GeoDataFrame with an additional column containing the combined observations.
+
+    Raises
+    ------
+    ValueError
+        If `kind` is not one of the supported types ('gld', 'gar').
+    """
+    logger.info("Adding observations to tube-properties")
+    if kind == "gld":
+        idcol = "groundwaterLevelDossier"
+    elif kind == "gar":
+        idcol = "groundwaterAnalysisReport"
+    datcol = _get_data_column(kind)
+
+    # check if all indices of obs_df are in gdf
+    if not obs_df.index.isin(gdf.index).all():
+        missing = obs_df.index[~obs_df.index.isin(gdf.index)]
+        logger.warning(
+            "Not all indices of obs_df are in gdf: %s. Only adding observations for tubes "
+            "with matching indices.",
+            missing,
+        )
+
+    data = {}
+    ids = {}
+    for index in gdf.index:
+        if index not in obs_df.index:
+            data[index] = _get_empty_observation_df(kind)
+            continue
+
+        data[index] = _combine_observations(
+            obs_df.loc[[index], datcol],
+            kind=kind,
+            bro_id=f"{index[0]}_{index[1]}",
+            sort=sort,
+            drop_duplicates=drop_duplicates,
+        )
+        ids[index] = list(obs_df.loc[[index], "broId"])
+    gdf[datcol] = data
+    gdf[idcol] = ids
+    return gdf
 
 
 def _get_data_column(kind):
