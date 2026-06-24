@@ -169,7 +169,8 @@ def get_observations(
         Defaults to 'gld' (groundwater level dossier).
     drop_references : bool or list of str, optional
         Specifies whether to drop reference fields in the returned data. Defaults to True,
-        in which case 'gmnReferences', 'gldReferences', and 'garReferences' are removed.
+        in which case 'gmnReferences', 'gldReferences', 'garReferences' and
+        'frdReferences' are removed. Only used when as_csv=True.
     silent : bool, optional
         If True, suppresses progress logging. Defaults to False.
     tmin : str or datetime, optional
@@ -240,13 +241,13 @@ def get_observations(
     if isinstance(bro_ids, pd.DataFrame):
         bro_ids = bro_ids.index
 
-    if isinstance(drop_references, bool):
+    if as_csv and isinstance(drop_references, bool):
         if drop_references:
             drop_references = [
                 "gmnReferences",
                 "gldReferences",
                 "garReferences",
-                # "frdReferences",
+                "frdReferences",
             ]
         else:
             drop_references = []
@@ -327,21 +328,16 @@ def get_observations(
                     continue_on_error=continue_on_error,
                 )
                 if as_csv:
-                    tube_ref["observation"] = obsdata
+                    gld_dict = tube_ref.copy()
+                    gld_dict["observation"] = obsdata
+                    # drop references, as these are dictionaries of no interest to the user
                     for key in drop_references:
-                        if key in tube_ref:
-                            tube_ref.pop(key)
-                        else:
-                            logger.warning(
-                                "{} not defined for {}, filter {}".format(
-                                    key,
-                                    tube_ref["groundwaterMonitoringWell"],
-                                    tube_ref["tubeNumber"],
-                                )
-                            )
-
-                    tube_ref["broId"] = ref["broId"]
-                    tubes.append(tube_ref)
+                        if key in gld_dict:
+                            gld_dict.pop(key)
+                    # add fields of the ref to gld_dict, like the broId of the GLD
+                    for key in ref:
+                        gld_dict[key] = ref[key]
+                    tubes.append(gld_dict)
                 else:
                     tubes.append(obsdata.to_dict())
 

@@ -82,3 +82,16 @@ def test_groundwater_monitoring_well():
 def test_unknwon_gmw_raises_value_error():
     with pytest.raises(ValueError):
         brodata.gmw.GroundwaterMonitoringWell.from_bro_id("GMW000000000000")
+
+
+def test_get_tube_observations_as_csv():
+    # The following gmw_id and tube_number have two GLD's. This test checks that the
+    # returned data is the same for both as_csv=True and as_csv=False, which was not the
+    # case in version 0.1.7 of brodata. When as_csv=True, the returned data only
+    # contained the last (second) GLD.
+    gmw_id = "GMW000000033010"
+    tube_number = 1
+
+    obs_xml = brodata.gmw.get_tube_observations(gmw_id, tube_number, as_csv=False)
+    obs_csv = brodata.gmw.get_tube_observations(gmw_id, tube_number, as_csv=True)
+    pd.testing.assert_frame_equal(obs_xml, obs_csv)
