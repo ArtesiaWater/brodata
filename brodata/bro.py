@@ -628,12 +628,20 @@ class FileOrUrl(ABC):
     def _check_for_rejection(tree):
         ns = {"brocom": "http://www.broservices.nl/xsd/brocommon/3.0"}
         response_type = tree.find("brocom:responseType", ns)
-        if response_type.text == "rejection":
+        if response_type is not None and response_type.text == "rejection":
             criterionError = tree.find("brocom:criterionError", ns)
             if criterionError is None:
-                msg = tree.find("brocom:rejectionReason", ns).text
+                rejection_reason = tree.find("brocom:rejectionReason", ns)
+                if rejection_reason is None:
+                    msg = "Unknown rejection reason"
+                else:
+                    msg = rejection_reason.text
             else:
-                msg = criterionError.find("brocom:specification", ns).text
+                specification = criterionError.find("brocom:specification", ns)
+                if specification is None:
+                    msg = "Unknown specification"
+                else:
+                    msg = specification.text
             raise (ValueError(msg))
 
     @staticmethod
