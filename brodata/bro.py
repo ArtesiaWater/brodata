@@ -626,7 +626,7 @@ class FileOrUrl(ABC):
 
     @staticmethod
     def _check_for_rejection(tree):
-        ns = {"brocom": "http://www.broservices.nl/xsd/brocommon/3.0"}
+        ns = {"brocom": "http://www.broservices.nl/xsd/brocommon/3"}
         response_type = tree.find("brocom:responseType", ns)
         if response_type is not None and response_type.text == "rejection":
             criterionError = tree.find("brocom:criterionError", ns)
