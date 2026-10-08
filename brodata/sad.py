@@ -1,6 +1,8 @@
-import pandas as pd
-import geopandas as gpd
 from functools import partial
+
+import geopandas as gpd
+import pandas as pd
+
 from . import bro
 
 

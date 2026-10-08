@@ -40,7 +40,7 @@ def _get_bro_ids_of_bronhouder(cl, bronhouder):
         fails.
     """
     url = f"{cl._rest_url}/bro-ids?"
-    params = dict(bronhouder=bronhouder)
+    params = {"bronhouder": bronhouder}
     req = util.get_with_rate_limit(url, params=params)
     if req.status_code > 200:
         logger.error(req.json()["errors"][0]["message"])

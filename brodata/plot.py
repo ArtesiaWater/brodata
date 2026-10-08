@@ -1,9 +1,9 @@
 import logging
 
 import matplotlib.pyplot as plt
-from matplotlib.patches import Rectangle
 import numpy as np
 import pandas as pd
+from matplotlib.patches import Rectangle
 
 logger = logging.getLogger(__name__)
 
