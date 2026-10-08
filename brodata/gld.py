@@ -287,7 +287,7 @@ def read_gld_csv(
                         headers.append(i)
             header_length = 2
 
-        dfs = []
+        rows = []
         for i, header in enumerate(headers):
             line = lines[header]
             # split string by comma, but ignore commas between quotes
@@ -300,22 +300,27 @@ def read_gld_csv(
                 current_lines = lines[header + header_length : headers[i + 1] - 1]
             else:
                 current_lines = lines[header + header_length :]
-            df = pd.read_csv(
-                StringIO("".join(current_lines)),
-                names=names,
-                index_col="time",
-                parse_dates=parse_dates,
-                usecols=[0, 1, 2],
-            )
-            # remove empty indices
-            mask = df.index.isna() & df.isna().all(axis=1)
-            if mask.any():
-                df = df[~mask]
-            df["status"] = status
-            df["observation_type"] = observation_type
-            dfs.append(df)
-        if len(dfs) > 0:
-            df = pd.concat(dfs)
+            for values in csv.reader(current_lines):
+                if len(values) < 3:
+                    continue
+                time_value, measurement_value, qualifier_value = values[:3]
+                if time_value == "" and measurement_value == "" and qualifier_value == "":
+                    continue
+                rows.append(
+                    (
+                        time_value,
+                        measurement_value,
+                        qualifier_value,
+                        status,
+                        observation_type,
+                    )
+                )
+        if rows:
+            df = pd.DataFrame(
+                rows,
+                columns=["time", "value", "qualifier", "status", "observation_type"],
+            ).set_index("time")
+            df["value"] = pd.to_numeric(df["value"], errors="coerce")
         else:
             df = _get_empty_observation_df()
     else:
@@ -452,7 +457,25 @@ class GroundwaterLevelDossier(bro.FileOrUrl):
             "om": "http://www.opengis.net/om/2.0",
             "xlink": "http://www.w3.org/1999/xlink",
         }
+
+        def _direct_child(element, local_name):
+            if element is None:
+                return None
+            for child_element in element:
+                if child_element.tag.rsplit("}", 1)[-1] == local_name:
+                    return child_element
+            return None
+
+        def _nested_text(element, *local_names):
+            current = element
+            for local_name in local_names:
+                current = _direct_child(current, local_name)
+                if current is None:
+                    return None
+            return current.text
+
         gld = self._get_main_object(tree, "GLD_O", ns)
+        observation_rows = []
         for key in gld.attrib:
             setattr(self, key.split("}", 1)[1], gld.attrib[key])
         for child in gld:
@@ -462,9 +485,9 @@ class GroundwaterLevelDossier(bro.FileOrUrl):
             elif key == "monitoringPoint":
                 well = child.find("gldcommon:GroundwaterMonitoringTube", ns)
                 gmw_id = well.find("gldcommon:broId", ns).text
-                setattr(self, "groundwaterMonitoringWell", gmw_id)
+                self.groundwaterMonitoringWell = gmw_id
                 tube_nr = int(well.find("gldcommon:tubeNumber", ns).text)
-                setattr(self, "tubeNumber", tube_nr)
+                self.tubeNumber = tube_nr
             elif key in ["registrationHistory"]:
                 self._read_children_of_children(child)
             elif key == "groundwaterMonitoringNet":
@@ -476,14 +499,14 @@ class GroundwaterLevelDossier(bro.FileOrUrl):
                         logger.warning(f"Unknown key: {key2}")
             elif key == "observation":
                 # get observation_metadata
-                om_observation = child.find("om:OM_Observation", ns)
+                om_observation = _direct_child(child, "OM_Observation")
                 if om_observation is None:
                     continue
-                metadata = om_observation.find("om:metadata", ns)
-                observation_metadata = metadata.find("waterml:ObservationMetadata", ns)
+                metadata = _direct_child(om_observation, "metadata")
+                observation_metadata = _direct_child(metadata, "ObservationMetadata")
 
                 # get status
-                water_ml_status = observation_metadata.find("waterml:status", ns)
+                water_ml_status = _direct_child(observation_metadata, "status")
                 if water_ml_status is None:
                     status_value = None
                 else:
@@ -494,14 +517,14 @@ class GroundwaterLevelDossier(bro.FileOrUrl):
                     continue
 
                 # get observation_type
-                parameter = observation_metadata.find("waterml:parameter", ns)
-                named_value = parameter.find("om:NamedValue", ns)
-                name = named_value.find("om:name", ns)
+                parameter = _direct_child(observation_metadata, "parameter")
+                named_value = _direct_child(parameter, "NamedValue")
+                name = _direct_child(named_value, "name")
                 assert (
                     name.attrib[f"{{{ns['xlink']}}}href"]
                     == "urn:bro:gld:ObservationMetadata:observationType"
                 )
-                value = named_value.find("om:value", ns)
+                value = _direct_child(named_value, "value")
                 observation_type_value = value.text
                 if (
                     observation_type is not None
@@ -509,38 +532,37 @@ class GroundwaterLevelDossier(bro.FileOrUrl):
                 ):
                     continue
 
-                times = []
-                values = []
-                qualifiers = []
-                for measurement in child.findall(".//waterml:MeasurementTVP", ns):
-                    times.append(measurement.find("waterml:time", ns).text)
-                    value = measurement.find("waterml:value", ns).text
-                    if value is None:
-                        values.append(np.nan)
+                for measurement in child.iterfind(".//{*}MeasurementTVP"):
+                    time_text = _nested_text(measurement, "time")
+                    measurement_value = _nested_text(measurement, "value")
+                    if measurement_value is None:
+                        value_float = np.nan
                     else:
-                        values.append(float(value))
-                    metadata = measurement.find("waterml:metadata", ns)
-                    TVPMM = metadata.find("waterml:TVPMeasurementMetadata", ns)
-                    qualifier = TVPMM.find("waterml:qualifier", ns)
-                    value = qualifier.find("swe:Category", ns).find("swe:value", ns)
-                    qualifiers.append(value.text)
-                observation = pd.DataFrame(
-                    {
-                        "time": times,
-                        "value": values,
-                        "qualifier": qualifiers,
-                        "status": status_value,
-                        "observation_type": observation_type_value,
-                    }
-                ).set_index("time")
-
-                if not hasattr(self, key):
-                    self.observation = []
-                self.observation.append(observation)
+                        value_float = float(measurement_value)
+                    qualifier_value = _nested_text(
+                        measurement,
+                        "metadata",
+                        "TVPMeasurementMetadata",
+                        "qualifier",
+                        "Category",
+                        "value",
+                    )
+                    observation_rows.append(
+                        (
+                            time_text,
+                            value_float,
+                            qualifier_value,
+                            status_value,
+                            observation_type_value,
+                        )
+                    )
             else:
                 self._warn_unknown_tag(key)
-        if hasattr(self, "observation"):
-            self.observation = pd.concat(self.observation)
+        if observation_rows:
+            self.observation = pd.DataFrame(
+                observation_rows,
+                columns=["time", "value", "qualifier", "status", "observation_type"],
+                ).set_index("time")
             self.observation = process_observations(
                 self.observation, self.broId, **kwargs
             )
