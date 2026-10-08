@@ -1,20 +1,20 @@
 import logging
 import os
 import types
-from xml.etree import ElementTree
 from abc import ABC, abstractmethod
 from io import StringIO
+from xml.etree import ElementTree
 from zipfile import ZipFile
 
-from shapely.geometry import MultiPolygon, Point, Polygon
-import shapely
-import numpy as np
 import geopandas as gpd
+import numpy as np
 import pandas as pd
 import requests
+import shapely
 from pyproj import Transformer
+from shapely.geometry import MultiPolygon, Point, Polygon
 
-from . import util, gml
+from . import gml, util
 
 logger = logging.getLogger(__name__)
 
@@ -203,15 +203,9 @@ def _get_characteristics(
             key = util._get_tag(child)
             if len(child) == 0:
                 d[key] = child.text
-            elif key == "standardizedLocation":
+            elif key == "standardizedLocation" or key == "deliveredLocation":
                 d[key] = FileOrUrl._read_geometry(child)
-            elif key == "deliveredLocation":
-                d[key] = FileOrUrl._read_geometry(child)
-            elif (
-                key.endswith("Date")
-                or key.endswith("Overview")
-                or key in ["startTime", "endTime"]
-            ):
+            elif key.endswith(("Date", "Overview")) or key in ["startTime", "endTime"]:
                 d[key] = child[0].text
             elif key in ["diameterRange", "screenPositionRange"]:
                 for grandchild in child:
