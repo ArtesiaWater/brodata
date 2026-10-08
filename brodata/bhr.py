@@ -586,7 +586,7 @@ class GeologicalBoreholeResearch(_BoreholeResearch):
     """Class to represent a Geological Borehole Research (BHR_G) from the BRO."""
 
     _object_name = "BHR_G_O"
-    _xmlns = "http://www.broservices.nl/xsd/dsbhrg/3.1"
+    _xmlns = "http://www.broservices.nl/xsd/dsbhrg/3"
     _rest_url = "https://publiek.broservices.nl/sr/bhrg/v3"
     _char = "BHR_G_C"
 
