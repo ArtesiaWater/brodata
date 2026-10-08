@@ -476,14 +476,18 @@ class CsvFileOrUrl:
                 if is_zipfile:
                     # BoorgatMetingen are las files that are delivered in a zip-file
                     with ZipFile(BytesIO(req.content)) as myzip:
-                        files = myzip.namelist()
-                        files = [f for f in files if f.endswith(".las")]
-                        assert len(files) == 1, "Only one file in the zipfile supported"
-                        with myzip.open(files[0]) as myfile:
-                            if to_file is not None:
-                                with open(to_file, "wb") as f:
-                                    f.write(myfile.read())
-                            self._read_contents(TextIOWrapper(myfile))
+                        files = [f for f in myzip.namelist() if f.endswith(".las")]
+                        if len(files) == 0:
+                            logger.warning("Zipfile contains no las files.")
+                            self._read_contents(None)
+                        else:
+                            if len(files) > 1:
+                                logger.warning(f"Zipfile contains {len(files)} las files. Only first file will be read.")
+                            with myzip.open(files[0]) as myfile:
+                                if to_file is not None:
+                                    with open(to_file, "wb") as f:
+                                        f.write(myfile.read())
+                                self._read_contents(TextIOWrapper(myfile))
                 else:
                     if to_file is not None:
                         with open(to_file, "w") as f:

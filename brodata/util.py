@@ -4,7 +4,7 @@ import threading
 import time
 from collections import deque
 from urllib.parse import urlparse
-from zipfile import ZipFile, ZIP_DEFLATED, ZIP_STORED
+from zipfile import ZIP_DEFLATED, ZIP_STORED, ZipFile
 
 import numpy as np
 import requests

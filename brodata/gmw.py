@@ -7,7 +7,7 @@ from zipfile import ZipFile
 import numpy as np
 import pandas as pd
 
-from . import bro, gld, gar, frd, gmn, util
+from . import bro, frd, gar, gld, gmn, util
 
 logger = logging.getLogger(__name__)
 
@@ -311,9 +311,8 @@ def get_observations(
                     data = json.load(f)
         for tube_ref in data["monitoringTubeReferences"]:
             tube_ref["groundwaterMonitoringWell"] = data["gmwBroId"]
-            if tube_number is not None:
-                if tube_ref["tubeNumber"] != tube_number:
-                    continue
+            if tube_number is not None and tube_ref["tubeNumber"] != tube_number:
+                continue
             ref_key = f"{kind}References"
             for ref in tube_ref[ref_key]:
                 obsdata = _download_observations_for_bro_id(
@@ -389,25 +388,27 @@ def _download_observations_for_bro_id(
                 )
             except Exception as e:
                 if not continue_on_error:
-                    raise e
+                    raise
                 logger.error(
                     "Error processing %s csv for broid %s: %s",
                     meas_cl.__name__,
                     bro_id,
                     e,
                 )
+                return None
         else:
             try:
                 data = meas_cl.from_bro_id(bro_id, to_file=to_file, **gld_kwargs)
             except Exception as e:
                 if not continue_on_error:
-                    raise e
+                    raise
                 logger.error(
                     "Error processing %s xml for broid %s: %s",
                     meas_cl.__name__,
                     bro_id,
                     e,
                 )
+                return None
     else:
         # read the data from a file
         if as_csv:
@@ -659,7 +660,7 @@ def get_data_in_extent(
         combine = False
     if isinstance(extent, str):
         if to_zip is not None:
-            raise (Exception("When extent is a string, do not supply to_zip"))
+            raise (ValueError("When extent is a string, do not supply to_zip"))
         to_zip = extent
         extent = None
         redownload = False
