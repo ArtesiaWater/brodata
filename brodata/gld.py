@@ -652,15 +652,17 @@ def sort_observations(df):
     if "observation_type" in df.columns:
         # make sure measurements with observation_type set to reguliereMeting are first
         sort_dict = {"reguliereMeting": 0, "controleMeting": 1}
-        df = df.sort_values("observation_type", key=lambda x: x.map(sort_dict))
+        df = df.sort_values(
+            "observation_type", key=lambda x: x.map(sort_dict), kind="mergesort"
+        )
 
     if "status" in df.columns:
         # make sure measurements with status set to volledigBeoordeeld are first
         sort_dict = {"volledigBeoordeeld": 0, "voorlopig": 1, "onbekend": 2}
-        df = df.sort_values("status", key=lambda x: x.map(sort_dict))
+        df = df.sort_values("status", key=lambda x: x.map(sort_dict), kind="mergesort")
 
     # sort based on DatetimeIndex
-    df = df.sort_index()
+    df = df.sort_index(kind="mergesort")
 
     return df
 

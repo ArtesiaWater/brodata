@@ -15,10 +15,25 @@ def test_gld_observations_summary():
 
 
 def test_gld_get_objects_as_csv():
-    df = brodata.gld.get_objects_as_csv("GLD000000012893")
+    csv_obs = brodata.gld.get_objects_as_csv("GLD000000012893", drop_duplicates=False)
 
-    gld = brodata.gld.GroundwaterLevelDossier.from_bro_id("GLD000000012893")
-    assert (df == gld.observation).all(axis=None)
+    gld = brodata.gld.GroundwaterLevelDossier.from_bro_id(
+        "GLD000000012893", drop_duplicates=False
+    )
+
+    xml_obs = gld.observation
+
+    # the order of the measurements in csv and xml could be different,
+    # therefore we downloaded with `drop_duplicates=False`
+    # we now sort for the values as well
+    columns = ["value", "qualifier", "status", "observation_type"]
+    csv_obs = csv_obs.sort_values(by=columns)
+    xml_obs = xml_obs.sort_values(by=columns)
+
+    # make sure the shape of csv_obs and gld.observation are the same
+    assert csv_obs.shape == xml_obs.shape
+    assert (csv_obs.index == xml_obs.index).all()
+    assert (csv_obs == xml_obs).all(axis=None)
 
 
 def test_gld_get_series_as_csv():
