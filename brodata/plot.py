@@ -121,9 +121,9 @@ def cone_penetration_test(
 
 lithology_colors = {
     "ballast": (200 / 255, 200 / 255, 200 / 255),  # checked at B38D4055
-    "baggert": (144 / 255, 144 / 255, 144 / 255),  # checked at B60C5217 
-    "baksteen": (200 / 255, 200 / 255, 200 / 255),  # checked at B31H2923 
-    "beton": (200 / 255, 200 / 255, 200 / 255),  # same as baksteen, checked at B31H2925     
+    "baggert": (144 / 255, 144 / 255, 144 / 255),  # checked at B60C5217
+    "baksteen": (200 / 255, 200 / 255, 200 / 255),  # checked at B31H2923
+    "beton": (200 / 255, 200 / 255, 200 / 255),  # same as baksteen, checked at B31H2925
     "bruinkool": (140 / 255, 92 / 255, 54 / 255),  # checked at B51G2426
     "detritus": (157 / 255, 78 / 255, 64 / 255),  # checked at B44A0733
     "glauconietzand": (204 / 255, 1, 153 / 255),  # checked at B49E1446
@@ -133,14 +133,18 @@ lithology_colors = {
     "kalksteen": (140 / 255, 180 / 255, 1),  # checked at B44B0062
     "klei": (0, 146 / 255, 0),
     "leem": (194 / 255, 207 / 255, 92 / 255),
-    "mergel ": (140 / 255, 180 / 255, 1), # checked at B60C0656 
-    "mijnsteen": (200 / 255, 200 / 255, 200 / 255), # checked at B60C3651
-    "moeraskalk": (204 / 255, 102 / 255, 1), # checked at B31D1237
+    "mergel ": (140 / 255, 180 / 255, 1),  # checked at B60C0656
+    "mijnsteen": (200 / 255, 200 / 255, 200 / 255),  # checked at B60C3651
+    "moeraskalk": (204 / 255, 102 / 255, 1),  # checked at B31D1237
     "oer": (200 / 255, 200 / 255, 200 / 255),
-    "puin": (200 / 255, 200 / 255, 200 / 255), # same as beton
+    "puin": (200 / 255, 200 / 255, 200 / 255),  # same as beton
     "slurrie": (144 / 255, 144 / 255, 144 / 255),  # same as slib, checked at B25A3512
     "stenen": (216 / 255, 163 / 255, 32 / 255),
-    "stigmaria": (144 / 255, 144 / 255, 144 / 255), # same as baggert , checked at B60C5003 
+    "stigmaria": (
+        144 / 255,
+        144 / 255,
+        144 / 255,
+    ),  # same as baggert , checked at B60C5003
     "veen": (157 / 255, 78 / 255, 64 / 255),
     "zand": (1, 1, 0),
     "zand fijn": (1, 1, 0),  # same as zand
@@ -148,15 +152,15 @@ lithology_colors = {
     "zand grof": (231 / 255, 195 / 255, 22 / 255),
     "sideriet": (242 / 255, 128 / 255, 13 / 255),  # checked at B51D2864
     "slib": (144 / 255, 144 / 255, 144 / 255),
-    "schalie": (156 / 255, 158 / 255, 99 / 255), # checked at B60C4442
+    "schalie": (156 / 255, 158 / 255, 99 / 255),  # checked at B60C4442
     "schelpen": (95 / 255, 95 / 255, 1),
     "sterkGrindigZand": (
         231 / 255,
         195 / 255,
         22 / 255,
     ),  # same as zand grove categorie
-    "steenkool": (58 / 255, 37 / 255, 22 / 255), # checked at B60C4442  
-    "vast gesteente": (97 / 255, 97 / 255, 97 / 255), # checked at B60C5112 
+    "steenkool": (58 / 255, 37 / 255, 22 / 255),  # checked at B60C4442
+    "vast gesteente": (97 / 255, 97 / 255, 97 / 255),  # checked at B60C5112
     "wegverhardingsmateriaal": (
         200 / 255,
         200 / 255,
@@ -649,6 +653,10 @@ def get_bro_lithology_properties():
             {"width": 42 / 60} | legend["veen"],
             {"width": 18 / 60} | legend["klei"],
         ],
+        "veenNietGespecificeerd": [
+            {"width": (39 / 60)} | legend["veen"],
+            {"width": (21 / 60)} | legend["grondNietGespecificeerd"],
+        ],
         "zwakZandigSilt": [
             {"width": 48 / 60} | legend["silt"],
             {"width": 12 / 60} | legend["zand"],
@@ -678,12 +686,12 @@ def get_bro_lithology_properties():
             {"width": 24 / 60} | legend["leem"],  # with a hatch
         ],
         "zwakSiltigeKlei": [
-            {"width": 50 / 60} | legend["klei"],
-            {"width": 10 / 60} | legend["leem"],  # with a hatch
+            {"width": 48 / 60} | legend["klei"],
+            {"width": 12 / 60} | legend["leem"],  # with a hatch
         ],
         "matigSiltigeKlei": [
-            {"width": 41 / 60} | legend["klei"],
-            {"width": 19 / 60} | legend["leem"],  # with a hatch
+            {"width": 39 / 60} | legend["klei"],
+            {"width": 21 / 60} | legend["leem"],  # with a hatch
         ],
         "sterkSiltigeKlei": [
             {"width": 30 / 60} | legend["klei"],
@@ -714,12 +722,16 @@ def get_bro_lithology_properties():
             {"width": 10 / 60} | legend["leem"],
         ],
         "matigSiltigZand": [
-            {"width": 41 / 60} | legend["zand"],
-            {"width": 19 / 60} | legend["leem"],
+            {"width": 39 / 60} | legend["zand"],
+            {"width": 21 / 60} | legend["leem"],
         ],
         "sterkSiltigZand": [
             {"width": 30 / 60} | legend["zand"],
             {"width": 30 / 60} | legend["leem"],
+        ],
+        "uiterstSiltigZand": [
+            {"width": 24 / 60} | legend["zand"],
+            {"width": 36 / 60} | legend["silt"],
         ],
         "siltigZandMetGrind": [
             {"width": 42 / 60} | legend["zand"],
