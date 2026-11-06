@@ -888,6 +888,7 @@ class FileOrUrl(ABC):
                         "bedding",
                         "rooted",
                         "identification",
+                        "structure",
                     ]:
                         layer[key2] = grandchild.text
                     elif key2 == "soil":
@@ -954,6 +955,7 @@ class FileOrUrl(ABC):
                 "gravelContentClass",
                 "chunk",
                 "moistness",
+                "shellMatterContentClassArchive",
             ]:
                 d[key] = child.text
             elif key in ["estimatedOrganicMatterContent", "estimatedClayContent"]:
@@ -1033,6 +1035,18 @@ class FileOrUrl(ABC):
                     key = self._get_tag(grandchild)
                     if key in ["sandMedianClass", "sandSorting"]:
                         d[key] = grandchild.text
+                    else:
+                        self._warn_unknown_tag(key)
+            elif key == "peatFraction":
+                for grandchild in child:
+                    key = self._get_tag(grandchild)
+                    if key == "peatConstituent":
+                        for greatgrandchild in grandchild:
+                            key = self._get_tag(greatgrandchild)
+                            if key in ["plantRemainType", "archiveClass"]:
+                                d[key] = greatgrandchild.text
+                            else:
+                                self._warn_unknown_tag(key)
                     else:
                         self._warn_unknown_tag(key)
             else:
