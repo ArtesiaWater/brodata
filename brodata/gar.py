@@ -104,8 +104,10 @@ class GroundwaterAnalysisReport(bro.FileOrUrl):
                     if key2 in ["parameter", "qualityControlStatus"]:
                         d2[key2] = greatgrandchild.text
                     elif key2 in ["fieldMeasurementValue"]:
-                        d2[key2] = float(greatgrandchild.text)
-                        d2["uom"] = greatgrandchild.attrib["uom"]
+                        if greatgrandchild.text is not None:
+                            d2[key2] = float(greatgrandchild.text)
+                        if "uom" in greatgrandchild.attrib:
+                            d2["uom"] = greatgrandchild.attrib["uom"]
                     else:
                         self._read_children_of_children(node, d2)
                 field_research.append(d2)
@@ -132,8 +134,10 @@ class GroundwaterAnalysisReport(bro.FileOrUrl):
                         if key2 in ["parameter", "qualityControlStatus", "limitSymbol"]:
                             d2[key2] = greatgrandchild.text
                         elif key2 in ["analysisMeasurementValue", "reportingLimit"]:
-                            d2[key2] = float(greatgrandchild.text)
-                            d2["uom"] = greatgrandchild.attrib["uom"]
+                            if greatgrandchild.text is not None:
+                                d2[key2] = float(greatgrandchild.text)
+                            if "uom" in greatgrandchild.attrib:
+                                d2["uom"] = greatgrandchild.attrib["uom"]
                         else:
                             logger.warning(f"Unknown key: {key2}")
                     laboratory_analysis.append(d2)
