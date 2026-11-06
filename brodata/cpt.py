@@ -52,9 +52,7 @@ class ConePenetrationTest(bro.FileOrUrl):
                         self._read_children_of_children(grandchild)
                     elif key == "parameters":
                         self._read_parameters(grandchild)
-                    elif key == "conePenetrationTest":
-                        self._read_cone_penetration_test(grandchild, key)
-                    elif key == "dissipationTest":
+                    elif key == "conePenetrationTest" or key == "dissipationTest":
                         self._read_cone_penetration_test(grandchild, key)
                     else:
                         self._warn_unknown_tag(key)

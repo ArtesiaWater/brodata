@@ -1,6 +1,8 @@
-import pandas as pd
-import geopandas as gpd
 from functools import partial
+
+import geopandas as gpd
+import pandas as pd
+
 from . import bro
 
 
@@ -67,7 +69,7 @@ class SiteAssessmentData(bro.FileOrUrl):
                     self.measurementPoint, geometry="deliveredLocation"
                 )
             if "name" in self.measurementPoint.columns:
-                self.measurementPoint.set_index("name", inplace=True)
+                self.measurementPoint = self.measurementPoint.set_index("name")
         if hasattr(self, "mixedSampleAnalysis"):
             self.mixedSampleAnalysis = pd.DataFrame(self.mixedSampleAnalysis)
 

@@ -1,5 +1,6 @@
 import os
 
+import matplotlib.pyplot as plt
 import pandas as pd
 
 import brodata
@@ -31,7 +32,15 @@ def test_pedological_borehole_research_with_borehole_sample_analysis():
 
 
 def test_geological_borehole_research():
-    brodata.bhr.GeologicalBoreholeResearch.from_bro_id("BHR000000429481")
+    bhr = brodata.bhr.GeologicalBoreholeResearch.from_bro_id("BHR000000429481")
+    df = bhr.descriptiveBoreholeLog[0]["layer"]
+    _, ax = plt.subplots(figsize=(10, 6))
+    brodata.plot.bro_lithology_advanced(
+        df, soil_name_column="soilNameNEN5104", z=bhr.offset, ax=ax
+    )
+    ax.set_ylim(
+        [bhr.offset - df["lowerBoundary"].max(), bhr.offset - df["upperBoundary"].min()]
+    )
 
 
 def test_get_bhr_in_extent():

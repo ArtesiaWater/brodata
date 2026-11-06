@@ -1,13 +1,12 @@
 from shapely.geometry import (
-    Point,
-    LineString,
-    Polygon,
-    MultiPoint,
-    MultiLineString,
-    MultiPolygon,
     GeometryCollection,
+    LineString,
+    MultiLineString,
+    MultiPoint,
+    MultiPolygon,
+    Point,
+    Polygon,
 )
-
 
 # GML 3.2 namespace
 ns = {"gml": "http://www.opengis.net/gml/3.2"}

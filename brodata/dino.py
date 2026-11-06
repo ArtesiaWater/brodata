@@ -1,16 +1,16 @@
+import json
 import logging
 import os
 from io import BytesIO, StringIO, TextIOWrapper
 from pathlib import Path
 from zipfile import ZipFile
 
+import geopandas as gpd
+import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
-import geopandas as gpd
 import requests
-import json
 from shapely.geometry import LineString
-import matplotlib.pyplot as plt
 
 from . import util
 from .webservices import get_configuration, get_gdf

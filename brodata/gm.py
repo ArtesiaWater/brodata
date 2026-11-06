@@ -1,14 +1,15 @@
-import os
-from zipfile import ZipFile
-import logging
-import requests
-import urllib.request
 import json
-import pandas as pd
-import geopandas as gpd
-from shapely.geometry import MultiPolygon, Polygon
-from . import gmw, gld, gar, util
+import logging
+import os
+import urllib.request
+from zipfile import ZipFile
 
+import geopandas as gpd
+import pandas as pd
+import requests
+from shapely.geometry import MultiPolygon, Polygon
+
+from . import gar, gld, gmw, util
 
 base_url = "https://api.pdok.nl/bzk/bro-gminsamenhang-karakteristieken/ogc/v1"
 

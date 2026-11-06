@@ -1,20 +1,20 @@
 import logging
 import os
 import types
-from xml.etree import ElementTree
 from abc import ABC, abstractmethod
 from io import StringIO
+from xml.etree import ElementTree
 from zipfile import ZipFile
 
-from shapely.geometry import MultiPolygon, Point, Polygon
-import shapely
-import numpy as np
 import geopandas as gpd
+import numpy as np
 import pandas as pd
 import requests
+import shapely
 from pyproj import Transformer
+from shapely.geometry import MultiPolygon, Point, Polygon
 
-from . import util, gml
+from . import gml, util
 
 logger = logging.getLogger(__name__)
 
@@ -40,7 +40,7 @@ def _get_bro_ids_of_bronhouder(cl, bronhouder):
         fails.
     """
     url = f"{cl._rest_url}/bro-ids?"
-    params = dict(bronhouder=bronhouder)
+    params = {"bronhouder": bronhouder}
     req = util.get_with_rate_limit(url, params=params)
     if req.status_code > 200:
         logger.error(req.json()["errors"][0]["message"])
@@ -203,15 +203,9 @@ def _get_characteristics(
             key = util._get_tag(child)
             if len(child) == 0:
                 d[key] = child.text
-            elif key == "standardizedLocation":
+            elif key == "standardizedLocation" or key == "deliveredLocation":
                 d[key] = FileOrUrl._read_geometry(child)
-            elif key == "deliveredLocation":
-                d[key] = FileOrUrl._read_geometry(child)
-            elif (
-                key.endswith("Date")
-                or key.endswith("Overview")
-                or key in ["startTime", "endTime"]
-            ):
+            elif key.endswith(("Date", "Overview")) or key in ["startTime", "endTime"]:
                 d[key] = child[0].text
             elif key in ["diameterRange", "screenPositionRange"]:
                 for grandchild in child:
@@ -781,12 +775,7 @@ class FileOrUrl(ABC):
     def _read_validity_period(self, node, d=None):
         for child in node:
             key = self._get_tag(child)
-            if key == "startValidity":
-                if d is None:
-                    setattr(self, key, self._read_date(child))
-                else:
-                    d[key] = self._read_date(child)
-            elif key == "endValidity":
+            if key in ["startValidity", "endValidity"]:
                 if d is None:
                     setattr(self, key, self._read_date(child))
                 else:
@@ -805,7 +794,9 @@ class FileOrUrl(ABC):
             return Point(x, y)
         geometry = gml.parse_geometry(node[0])
         if FileOrUrl._is_epsg_4258(node[0]):
-            geometry = shapely.ops.transform(lambda x, y: (y, x), geometry)
+            geometry = shapely.transform(
+                geometry, lambda x, y: (y, x), interleaved=False
+            )
         return geometry
 
     @staticmethod
@@ -840,9 +831,7 @@ class FileOrUrl(ABC):
                 ns = {"swe": "http://www.opengis.net/swe/2.0"}
                 text_encoding = child.find("swe:TextEncoding", ns)
                 encoding = text_encoding.attrib.copy()
-            elif key == "elementCount":
-                pass
-            elif key == "elementType":
+            elif key in ["elementCount", "elementType"]:
                 pass
             elif key == "values":
                 values = pd.read_csv(
@@ -894,6 +883,7 @@ class FileOrUrl(ABC):
                         "bedding",
                         "rooted",
                         "identification",
+                        "structure",
                     ]:
                         layer[key2] = grandchild.text
                     elif key2 == "soil":
@@ -960,6 +950,7 @@ class FileOrUrl(ABC):
                 "gravelContentClass",
                 "chunk",
                 "moistness",
+                "shellMatterContentClassArchive",
             ]:
                 d[key] = child.text
             elif key in ["estimatedOrganicMatterContent", "estimatedClayContent"]:
@@ -1039,6 +1030,18 @@ class FileOrUrl(ABC):
                     key = self._get_tag(grandchild)
                     if key in ["sandMedianClass", "sandSorting"]:
                         d[key] = grandchild.text
+                    else:
+                        self._warn_unknown_tag(key)
+            elif key == "peatFraction":
+                for grandchild in child:
+                    key = self._get_tag(grandchild)
+                    if key == "peatConstituent":
+                        for greatgrandchild in grandchild:
+                            key = self._get_tag(greatgrandchild)
+                            if key in ["plantRemainType", "archiveClass"]:
+                                d[key] = greatgrandchild.text
+                            else:
+                                self._warn_unknown_tag(key)
                     else:
                         self._warn_unknown_tag(key)
             else:
@@ -1184,6 +1187,6 @@ def get_kvk_df(fn_bronhouder_kvk=None):
     df_bron_kvk = df_bron_kvk.map(lambda x: x.strip() if isinstance(x, str) else x)
 
     # make kvk index
-    df_bron_kvk.set_index("KVK-nummer", inplace=True)
+    df_bron_kvk = df_bron_kvk.set_index("KVK-nummer")
 
     return df_bron_kvk
