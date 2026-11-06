@@ -775,12 +775,7 @@ class FileOrUrl(ABC):
     def _read_validity_period(self, node, d=None):
         for child in node:
             key = self._get_tag(child)
-            if key == "startValidity":
-                if d is None:
-                    setattr(self, key, self._read_date(child))
-                else:
-                    d[key] = self._read_date(child)
-            elif key == "endValidity":
+            if key in ["startValidity", "endValidity"]:
                 if d is None:
                     setattr(self, key, self._read_date(child))
                 else:
@@ -799,7 +794,7 @@ class FileOrUrl(ABC):
             return Point(x, y)
         geometry = gml.parse_geometry(node[0])
         if FileOrUrl._is_epsg_4258(node[0]):
-            geometry = shapely.ops.transform(lambda x, y: (y, x), geometry)
+            geometry = shapely.transform(lambda x, y: (y, x), geometry)
         return geometry
 
     @staticmethod
@@ -834,9 +829,7 @@ class FileOrUrl(ABC):
                 ns = {"swe": "http://www.opengis.net/swe/2.0"}
                 text_encoding = child.find("swe:TextEncoding", ns)
                 encoding = text_encoding.attrib.copy()
-            elif key == "elementCount":
-                pass
-            elif key == "elementType":
+            elif key in ["elementCount", "elementType"]:
                 pass
             elif key == "values":
                 values = pd.read_csv(
@@ -1192,6 +1185,6 @@ def get_kvk_df(fn_bronhouder_kvk=None):
     df_bron_kvk = df_bron_kvk.map(lambda x: x.strip() if isinstance(x, str) else x)
 
     # make kvk index
-    df_bron_kvk.set_index("KVK-nummer", inplace=True)
+    df_bron_kvk = df_bron_kvk.set_index("KVK-nummer")
 
     return df_bron_kvk

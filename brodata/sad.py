@@ -69,7 +69,7 @@ class SiteAssessmentData(bro.FileOrUrl):
                     self.measurementPoint, geometry="deliveredLocation"
                 )
             if "name" in self.measurementPoint.columns:
-                self.measurementPoint.set_index("name", inplace=True)
+                self.measurementPoint = self.measurementPoint.set_index("name")
         if hasattr(self, "mixedSampleAnalysis"):
             self.mixedSampleAnalysis = pd.DataFrame(self.mixedSampleAnalysis)
 
