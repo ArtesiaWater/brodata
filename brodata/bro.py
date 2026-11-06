@@ -794,7 +794,9 @@ class FileOrUrl(ABC):
             return Point(x, y)
         geometry = gml.parse_geometry(node[0])
         if FileOrUrl._is_epsg_4258(node[0]):
-            geometry = shapely.transform(lambda x, y: (y, x), geometry)
+            geometry = shapely.transform(
+                geometry, lambda x, y: (y, x), interleaved=False
+            )
         return geometry
 
     @staticmethod
