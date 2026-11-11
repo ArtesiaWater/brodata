@@ -25,6 +25,8 @@ def objects_to_gdf(
     geometry=None,
     index=None,
     to_gdf=True,
+    from_crs=28992,
+    to_crs=28992,
 ):
     """
     Convert a dictionary of dino-objects to a geopandas GeoDataFrame.
@@ -43,6 +45,12 @@ def objects_to_gdf(
         name of column to use as index
     to_gdf: bool
         convert to geodataframe
+    from_crs: int or str
+        coordinate reference system of the coordinates in the data. The default is
+        28992 (RD New), the coordinate system of the coordinates in DINO.
+    to_crs: int or str
+        coordinate reference system of the resulting GeoDataFrame. The default is
+        28992 (RD New), as for the BRO data.
 
     Returns
     -------
@@ -70,7 +78,13 @@ def objects_to_gdf(
                 logger.warning(f"{y} not found in data. No geometry column created.")
             else:
                 geometry = gpd.points_from_xy(df[x], df[y])
-    gdf = gpd.GeoDataFrame(df, geometry=geometry)
+    if geometry is None:
+        # Assigning CRS to a GeoDataFrame without a geometry column is not supported
+        gdf = gpd.GeoDataFrame(df)
+    else:
+        gdf = gpd.GeoDataFrame(df, geometry=geometry, crs=from_crs)
+        if to_crs is not None and from_crs is not None and to_crs != from_crs:
+            gdf = gdf.to_crs(to_crs)
     if index is not None and not gdf.empty:
         if isinstance(index, str):
             if index in gdf.columns:

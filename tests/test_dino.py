@@ -82,6 +82,16 @@ def test_geologisch_booronderzoek_from_file():
     brodata.plot.dino_lithology(gb.lithologie_lagen, x=None)
 
 
+def test_objects_to_gdf_crs():
+    fname = os.path.join("tests", "data", "B38B2152.csv")
+    gb = brodata.dino.Boormonsterprofiel(fname)
+    gdf = brodata.dino.objects_to_gdf({"B38B2152": gb}, index="NITG-nr")
+    assert gdf.crs == 28992
+    assert gdf.geometry.x.iloc[0] == 118435
+    gdf = brodata.dino.objects_to_gdf({"B38B2152": gb}, index="NITG-nr", to_crs=4326)
+    assert gdf.crs == 4326
+
+
 def test_boorgatmeting():
     brodata.dino.Boorgatmeting.from_dino_nr("B02G0308")
 
